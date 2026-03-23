@@ -233,3 +233,19 @@ feature/*         → 기능 개발
 * 서비스 통합 테스트 → `develop`
 * 최종 배포 → `main`
 * 브랜치는 깊게 만들지 않고, 이름으로 구분
+
+# Port 번호
+
+## 8. Port 번호
+
+### 서비스별 포트 매핑
+
+| Service     | Port |
+|-------------|------|
+| gateway     | 8000 |
+| creator     | 8080 |
+| payment     | 8081 |
+| schedule    | 8082 |
+| settlement  | 8083 |
+| ticket      | 8084 |
+| user        | 8085 |
