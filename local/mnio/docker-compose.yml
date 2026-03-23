@@ -1,0 +1,15 @@
+services:
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"       # API 포트 (S3 SDK 연결용)
+      - "9001:9001"       # Web Console 포트 (웹 브라우저 접속용)
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password1234
+    volumes:
+      - ./minio_data:/data
+    command: server /data --console-address ":9001"
+    restart: always
+  

@@ -103,3 +103,10 @@ logs/
 # Docker
 # ===========================
 docker-compose.override.yml
+
+# ===========================
+# Local Dev Environment
+# ===========================
+# Docker volume data (generated at runtime)
+local/db/postgres_data/
+local/mnio/minio_data/
