@@ -229,7 +229,7 @@ feature/*         → 기능 개발
 
 ## 7. 핵심 정리
 
-* 서비스별 CI/CD → `develop/{service}` 기준으로 배포
+* 서비스별 CI/CD → `dev/{service}` 기준으로 배포
 * 서비스 통합 테스트 → `develop`
 * 최종 배포 → `main`
 * 브랜치는 깊게 만들지 않고, 이름으로 구분
