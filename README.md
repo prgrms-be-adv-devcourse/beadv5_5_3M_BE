@@ -240,12 +240,13 @@ feature/*         → 기능 개발
 
 ### 서비스별 포트 매핑
 
-| Service     | Port |
-|-------------|------|
-| gateway     | 8000 |
-| creator     | 8080 |
-| payment     | 8081 |
-| schedule    | 8082 |
-| settlement  | 8083 |
-| ticket      | 8084 |
-| user        | 8085 |
+| Service    | Port |
+|------------|------|
+| gateway    | 8000 |
+| creator    | 8080 |
+| payment    | 8081 |
+| schedule   | 8082 |
+| settlement | 8083 |
+| ticket     | 8084 |
+| user       | 8085 |
+| movie      | 8086 |
