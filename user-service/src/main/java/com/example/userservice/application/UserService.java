@@ -4,7 +4,10 @@ import com.example.userservice.domain.model.Permission;
 import com.example.userservice.domain.model.User;
 import com.example.userservice.domain.repository.PermissionRepository;
 import com.example.userservice.domain.repository.UserRepository;
+import com.example.userservice.exception.DuplicateEmailException;
+import com.example.userservice.exception.DuplicateNicknameException;
 import com.example.userservice.presentation.dto.req.AuthorizationRequest;
+import com.example.userservice.presentation.dto.req.JoinRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +29,31 @@ public class UserService implements UserUseCase {
         return permissions.stream()
                 .filter(p -> p.getHttpMethod() == null || p.getHttpMethod().equals(request.httpMethod().name()))
                 .anyMatch(p -> request.requestPath().startsWith(p.getPathPattern()));
+    }
+
+    @Override
+    public void checkEmailDuplicate(String email) {
+        if (userRepository.existsByEmail(email)) {
+            throw new DuplicateEmailException();
+        }
+    }
+
+    @Override
+    public void checkNicknameDuplicate(String nickname) {
+        if (userRepository.existsByNickname(nickname)) {
+            throw new DuplicateNicknameException();
+        }
+    }
+
+    @Override
+    public UUID join(JoinRequest request) {
+        checkEmailDuplicate(request.email());
+        checkNicknameDuplicate(request.nickname());
+
+        User user = User.create(request.email(), request.password(), request.nickname());
+        userRepository.save(user);
+
+        return user.getUserId();
     }
 
     private UUID toUUID(String userId) {
