@@ -18,4 +18,16 @@ public class UserRepositoryAdapter implements UserRepository {
         return userJpaRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("존재하지 않는 유저입니다."));
     }
+
+    public boolean existsByEmail(String email) {
+        return userJpaRepository.existsByEmail(email);
+    }
+
+    public boolean existsByNickname(String nickname) {
+        return userJpaRepository.existsByNickname(nickname);
+    }
+
+    public void save(User user) {
+        userJpaRepository.save(user);
+    }
 }
