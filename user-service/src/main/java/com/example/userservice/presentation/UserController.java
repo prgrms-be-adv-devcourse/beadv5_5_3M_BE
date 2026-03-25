@@ -3,6 +3,9 @@ package com.example.userservice.presentation;
 import com.example.userservice.application.UserUseCase;
 import com.example.userservice.presentation.dto.req.AuthorizationRequest;
 import com.example.userservice.presentation.dto.req.JoinRequest;
+import com.example.userservice.presentation.dto.req.LoginRequest;
+import com.example.userservice.presentation.dto.res.LoginResponse;
+import com.example.userservice.presentation.dto.res.TokenResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,4 +45,12 @@ public class UserController {
     public ResponseEntity<UUID> join(@Valid @RequestBody JoinRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(userUseCase.join(request));
     }
+
+    @PostMapping("/login")
+    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
+        TokenResponse response = userUseCase.login(request);
+
+        return ResponseEntity.ok().body(response);
+    }
+
 }
