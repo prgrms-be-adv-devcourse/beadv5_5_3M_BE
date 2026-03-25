@@ -1,7 +1,8 @@
-package com.example.userservice.infrastructure;
+package com.example.userservice.infrastructure.user;
 
 import com.example.userservice.domain.model.User;
 import com.example.userservice.domain.repository.UserRepository;
+import com.example.userservice.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -17,6 +18,11 @@ public class UserRepositoryAdapter implements UserRepository {
     public User findById(UUID userId) {
         return userJpaRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("존재하지 않는 유저입니다."));
+    }
+
+    public User findByEmail(String email) {
+        return userJpaRepository.findByEmail(email)
+                .orElseThrow(UserNotFoundException::new);
     }
 
     public boolean existsByEmail(String email) {
