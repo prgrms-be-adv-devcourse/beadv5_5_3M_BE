@@ -6,13 +6,15 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "movie_info")
+@Table(name = "movie")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 public class Movie {
 
@@ -63,7 +65,28 @@ public class Movie {
     @Column(name = "review_count")
     private Integer reviewCount;
 
+    @ManyToMany
+    @JoinTable(
+            name = "movie_category",
+            joinColumns = @JoinColumn(name = "movie_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    @Builder.Default // builder로 만들어도 빈 리스트로 초기화할 수 있게
+    private List<Category> categories = new ArrayList<>();
+
     public enum Visibility {
         PUBLIC, PRIVATE
+    }
+
+    public void updateVisibility(Visibility visibility){
+        this.visibility = visibility;
+    }
+
+    public void addCategory(Category category){
+        this.categories.add(category);
+    }
+
+    public void removeCategory(Category category){
+        this.categories.remove(category);
     }
 }
