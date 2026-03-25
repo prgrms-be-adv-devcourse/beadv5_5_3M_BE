@@ -8,6 +8,7 @@ import com.example.movieservice.domain.repository.MovieRepository;
 import com.example.movieservice.global.exception.ErrorStatus;
 import com.example.movieservice.global.exception.GeneralException;
 import com.example.movieservice.presentation.dto.request.RegisterMovieRequest;
+import com.example.movieservice.presentation.dto.request.UpdateDetailRequest;
 import com.example.movieservice.presentation.dto.request.UpdateVisibilityRequest;
 import com.example.movieservice.presentation.dto.response.RegisterMovieResponse;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +63,27 @@ public class MovieService implements MovieUseCase {
             throw new GeneralException(ErrorStatus.MOVIE_INVALID_CREATOR);
         }
         movie.updateVisibility(request.visibility());
+    }
+
+    @Override
+    @Transactional
+    public void updateDetail(UUID creatorId, Long movieId, UpdateDetailRequest request) {
+        Movie movie = movieRepository.findByMovieId(movieId).orElseThrow(()->new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
+        if(!movie.getCreatorId().equals(creatorId)){
+            throw new GeneralException(ErrorStatus.MOVIE_INVALID_CREATOR);
+        }
+        movie.updateDetail(request.title(), request.description(), request.additionalCookie());
+
+        movie.getCategories().clear();
+
+        if(request.categoryIds() != null){
+            request.categoryIds().forEach(categoryId -> {
+                Category category = categoryRepository.findById(categoryId)
+                        .orElseThrow(() -> new GeneralException(ErrorStatus.CATEGORY_NOT_FOUND));
+                movie.addCategory(category);
+            });
+        }
+
     }
 
 }

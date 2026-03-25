@@ -3,6 +3,7 @@ package com.example.movieservice.presentation.controller;
 import com.example.movieservice.application.usecase.MovieUseCase;
 import com.example.movieservice.global.response.ApiResponse;
 import com.example.movieservice.presentation.dto.request.RegisterMovieRequest;
+import com.example.movieservice.presentation.dto.request.UpdateDetailRequest;
 import com.example.movieservice.presentation.dto.request.UpdateVisibilityRequest;
 import com.example.movieservice.presentation.dto.response.RegisterMovieResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -59,11 +60,16 @@ public class MovieController {
         return ApiResponse.onSuccess();
     }
 
-    //    @PatchMapping("/{movieId}/detail")
-//    public ApiResponse<Void> updateDetail(
-//            @PathVariable Long movieId,
-//            @Valid @RequestBody UpdateDetailRequest request){
-////        movieUseCase.updateVisibility(movieId, request);
-//        return ApiResponse.onSuccess();
-//    }
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PatchMapping("/{movieId}/detail")
+    public ApiResponse<Void> updateDetail(
+            @RequestHeader("X-Creator-Id") UUID creatorId,
+            @PathVariable Long movieId,
+            @Valid @RequestBody UpdateDetailRequest request){
+        // todo : 포스터 이미지 수정도 로직에 추가해야 함
+        movieUseCase.updateDetail(creatorId, movieId, request);
+        return ApiResponse.onSuccess();
+    }
+
+
 }

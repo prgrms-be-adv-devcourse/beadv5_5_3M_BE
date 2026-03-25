@@ -89,4 +89,10 @@ public class Movie {
     public void removeCategory(Category category){
         this.categories.remove(category);
     }
+
+    public void updateDetail(String title, String description, Integer additionalCookie){
+        this.title = title;
+        this.description = description;
+        this.additionalCookie = additionalCookie;
+    }
 }
