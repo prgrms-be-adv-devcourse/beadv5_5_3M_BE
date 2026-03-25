@@ -41,6 +41,8 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    private Integer balance;
+
     private LocalDateTime createAt;
     private LocalDateTime updateAt;
 
@@ -52,6 +54,7 @@ public class User {
         user.role = Role.USER;
         user.saltKey = generateSalt();
         user.password = new BCryptPasswordEncoder().encode(rawPassword + user.saltKey);
+        user.balance = 0;
         return user;
     }
 

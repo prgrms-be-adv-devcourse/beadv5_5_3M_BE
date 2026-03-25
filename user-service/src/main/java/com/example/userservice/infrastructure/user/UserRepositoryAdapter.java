@@ -6,7 +6,6 @@ import com.example.userservice.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @Repository
@@ -17,7 +16,7 @@ public class UserRepositoryAdapter implements UserRepository {
 
     public User findById(UUID userId) {
         return userJpaRepository.findById(userId)
-                .orElseThrow(() -> new NoSuchElementException("존재하지 않는 유저입니다."));
+                .orElseThrow(UserNotFoundException::new);
     }
 
     public User findByEmail(String email) {

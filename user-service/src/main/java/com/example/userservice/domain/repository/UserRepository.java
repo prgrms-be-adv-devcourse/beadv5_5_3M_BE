@@ -6,6 +6,7 @@ import java.util.UUID;
 
 public interface UserRepository {
     User findById(UUID userId);
+    User findByEmail(String email);
     boolean existsByEmail(String email);
     boolean existsByNickname(String nickname);
     void save(User user);
