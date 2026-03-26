@@ -25,7 +25,7 @@ public class UserService implements UserUseCase {
 
         return permissions.stream()
                 .filter(p -> p.getHttpMethod() == null || p.getHttpMethod().equals(request.httpMethod().name()))
-                .anyMatch(p -> request.requestPath().startsWith(p.getPathPattern()));
+                .noneMatch(p -> request.requestPath().startsWith(p.getPathPattern()));
     }
 
     private UUID toUUID(String userId) {
