@@ -7,6 +7,6 @@ public record MovieByCreatorResponse(
         String title,
         Float averageRating,
         List<Long> categoryIds
-        // todo: 나중에 이미지도 추가
+        // 나중에 이미지도 추가
 ) {
 }

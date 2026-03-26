@@ -134,8 +134,7 @@ public class MovieController {
     public ApiResponse<List<MovieByCreatorResponse>> getMovieListByCreator(
             @RequestParam("creatorId") UUID creatorId
     ){
-        // 특정 크리에이터의 영화 목록을 출력한다 (사용자 입장)
-        // public 이여아지 보이게
+        // todo: 나중에 이미지도 추가
         return ApiResponse.onSuccess(movieUseCase.getMovieListByCreator(creatorId));
     }
 
@@ -147,7 +146,7 @@ public class MovieController {
     public ApiResponse<List<MovieForCreatorResponse>> getMovieListForCreator(
             @RequestHeader("X-Creator-Id") UUID creatorId
     ){
-        // 특정 크리에이터의 영화 목록을 출력한다 (크리에이터 입장)
+        // todo: 나중에 이미지도 추가
         return ApiResponse.onSuccess(movieUseCase.getMovieListForCreator(creatorId));
     }
 }
