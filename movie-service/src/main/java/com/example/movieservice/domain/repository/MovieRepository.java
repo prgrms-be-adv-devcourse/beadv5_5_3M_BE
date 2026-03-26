@@ -11,4 +11,6 @@ public interface MovieRepository {
     long countByCreatorId(UUID creatorId);
 
     Optional<Movie> findByMovieId(Long movieId);
+
+    void delete(Movie movie);
 }

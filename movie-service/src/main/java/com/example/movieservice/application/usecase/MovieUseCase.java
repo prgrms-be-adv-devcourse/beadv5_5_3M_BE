@@ -13,4 +13,6 @@ public interface MovieUseCase {
     void updateVisibility(UUID creatorId, Long movieId, UpdateVisibilityRequest request);
 
     void updateDetail(UUID creatorId, Long movieId, UpdateDetailRequest request);
+
+    void delete(UUID creatorId, Long movieId);
 }

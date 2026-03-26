@@ -86,4 +86,15 @@ public class MovieService implements MovieUseCase {
 
     }
 
+    @Override
+    @Transactional
+    public void delete(UUID creatorId, Long movieId) {
+        Movie movie = movieRepository.findByMovieId(movieId).orElseThrow(()->new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
+        if(!movie.getCreatorId().equals(creatorId)){
+            throw new GeneralException(ErrorStatus.MOVIE_INVALID_CREATOR);
+        }
+        movie.getCategories().clear();
+        movieRepository.delete(movie);
+    }
+
 }

@@ -71,5 +71,14 @@ public class MovieController {
         return ApiResponse.onSuccess();
     }
 
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DeleteMapping("/{movieId}")
+    public ApiResponse<Void> delete(
+            @RequestHeader("X-Creator-Id") UUID creatorId,
+            @PathVariable Long movieId){
+        // todo : 나중에 s3에 올라간 자원을 지우는 로직이 들어가야 함
+        movieUseCase.delete(creatorId, movieId);
+        return ApiResponse.onSuccess();
+    }
 
 }
