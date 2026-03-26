@@ -6,15 +6,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.util.Arrays;
@@ -38,21 +35,6 @@ import java.util.List;
 public class TicketConfirmBatchConfig {
 
     private final TicketJpaRepository ticketJpaRepository;
-
-    /**
-     * Spring Batch 6.x에서 SimpleJobLauncher가 제거됨.
-     * SyncTaskExecutor를 사용해 동기 실행 보장 →
-     * Scheduler에서 jobLauncher.run() 반환 시 BatchStatus가 COMPLETED/FAILED로 확정되어
-     * 정합성 체크(BatchStatus.COMPLETED 후 Redis 삭제 + Kafka 발행)가 올바르게 동작함.
-     */
-    @Bean
-    public JobLauncher jobLauncher(JobRepository jobRepository) throws Exception {
-        TaskExecutorJobLauncher launcher = new TaskExecutorJobLauncher();
-        launcher.setJobRepository(jobRepository);
-        launcher.setTaskExecutor(new SyncTaskExecutor());
-        launcher.afterPropertiesSet();
-        return launcher;
-    }
 
     @Bean
     public Job ticketConfirmJob(JobRepository jobRepository, Step ticketConfirmStep) {
