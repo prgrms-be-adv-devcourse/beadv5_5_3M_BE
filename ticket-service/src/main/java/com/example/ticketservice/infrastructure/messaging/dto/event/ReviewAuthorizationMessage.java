@@ -8,6 +8,7 @@ import java.util.UUID;
 public record ReviewAuthorizationMessage(
         Long ticketId,
         Long movieId,
+        Long scheduleId,
         UUID userId
 ){
 }

@@ -25,8 +25,18 @@ public class TicketRepositoryImpl implements TicketRepository{
     }
 
     @Override
+    public List<Ticket> saveAll(List<Ticket> tickets) {
+        return jpaRepository.saveAll(tickets);
+    }
+
+    @Override
     public Optional<Ticket> findById(Long id) {
         return jpaRepository.findById(id);
+    }
+
+    @Override
+    public Optional<Ticket> findFirstAvailableBySchedule(Schedule schedule) {
+        return jpaRepository.findFirstByScheduleAndStatusOrderByTicketNumAsc(schedule, TicketStatus.AVAILABLE);
     }
 
     @Override

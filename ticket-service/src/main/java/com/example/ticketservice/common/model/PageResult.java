@@ -11,7 +11,7 @@ public record PageResult<T>(
         long totalElements,
         int totalPages
 ) {
-    public static <T> PageResult<T> of(Page<T> springPage) {
+    public static <T> PageResult<T> from(Page<T> springPage) {
         return new PageResult<>(
                 springPage.getContent(),
                 springPage.getNumber(),

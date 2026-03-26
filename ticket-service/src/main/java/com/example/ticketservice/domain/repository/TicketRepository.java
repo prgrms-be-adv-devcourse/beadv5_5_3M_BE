@@ -12,7 +12,9 @@ import java.util.UUID;
 
 public interface TicketRepository {
     Ticket save(Ticket ticket);
+    List<Ticket> saveAll(List<Ticket> tickets);
     Optional<Ticket> findById(Long id);
+    Optional<Ticket> findFirstAvailableBySchedule(Schedule schedule);
     Page<Ticket> findAllByUserId(UUID userId, int page, int size);
     List<Ticket> findAllBySchedule(Schedule schedule);
     List<Ticket> findAllByStatusAndProvideFlag(TicketStatus status, boolean provideFlag);
