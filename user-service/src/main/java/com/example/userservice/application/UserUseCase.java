@@ -14,5 +14,5 @@ public interface UserUseCase {
     void checkNicknameDuplicate(String nickname);
     UUID join(JoinRequest request);
     TokenResponse login(LoginRequest request);
-
+    TokenResponse refresh(String refreshToken);
 }

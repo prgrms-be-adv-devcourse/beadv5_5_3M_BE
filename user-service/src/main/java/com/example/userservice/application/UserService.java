@@ -84,6 +84,30 @@ public class UserService implements UserUseCase {
         return new TokenResponse(accessToken, rawRefreshToken);
     }
 
+    @Override
+    @Transactional
+    public TokenResponse refresh(String refreshToken) {
+        UUID userId;
+        try {
+            userId = jwtProvider.getUserIdFromToken(refreshToken);
+        } catch (Exception e) {
+            throw new InvalidRefreshTokenException();
+        }
+
+        RefreshToken stored = refreshTokenRepository.findByUserId(userId)
+                .orElseThrow(InvalidRefreshTokenException::new);
+
+        if (!stored.getToken().equals(refreshToken)) {
+            throw new InvalidRefreshTokenException();
+        }
+
+        String accessToken = jwtProvider.generateAccessToken(userId);
+        String newRefreshToken = jwtProvider.generateRefreshToken(userId);
+
+        refreshTokenRepository.save(RefreshToken.create(userId.toString(), newRefreshToken, jwtProvider.getRefreshTokenExpirySeconds()));
+
+        return new TokenResponse(accessToken, newRefreshToken);
+    }
 
     private UUID toUUID(String userId) {
         return UUID.fromString(userId);
