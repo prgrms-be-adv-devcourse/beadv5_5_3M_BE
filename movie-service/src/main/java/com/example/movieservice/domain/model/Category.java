@@ -8,7 +8,7 @@ import lombok.*;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@EqualsAndHashCode(of = "categoryId")
+@EqualsAndHashCode(of = "categoryId") // equals()와 hashCode() 메서드를 categoryId 필드만을 기준으로 생성
 @Builder
 public class Category {
 
