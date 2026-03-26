@@ -9,7 +9,7 @@ main
 
 develop
 
-develop/{service}
+dev/{service}
 
 feature/{service}/{기능명}
 fix/{service}/{버그명}
@@ -36,14 +36,14 @@ chore/{service}/{작업명}
 
 ---
 
-#### develop/{service}
+#### dev/{service}
 
 예시:
 
 ```
-develop/user
-develop/payment
-develop/ticket
+dev/user
+dev/payment
+dev/ticket
 ```
 
 * 서비스별 개발 및 배포 기준 브랜치
@@ -62,7 +62,7 @@ feature/payment/payment-process
 ```
 
 * 기능 개발용 브랜치
-* `develop/{service}` 기준으로 생성
+* `dev/{service}` 기준으로 생성
 
 ---
 
@@ -96,8 +96,8 @@ chore/gateway/docker-config
 ### 2.1 기능 개발
 
 ```
-develop/{service} → feature/{service}/{기능}
-feature/{service}/{기능} → develop/{service} (PR)
+dev/{service} → feature/{service}/{기능}
+feature/{service}/{기능} → dev/{service} (PR)
 ```
 
 ---
@@ -105,18 +105,18 @@ feature/{service}/{기능} → develop/{service} (PR)
 ### 2.2 서비스 배포
 
 ```
-develop/{service} → CI/CD → 해당 서비스 배포
+dev/{service} → CI/CD → 해당 서비스 배포
 ```
 
 * 서비스별 독립 배포
-* `develop/{service}` 기준으로 배포 트리거
+* `dev/{service}` 기준으로 배포 트리거
 
 ---
 
 ### 2.3 통합 테스트
 
 ```
-develop/{service} → develop (PR)
+dev/{service} → develop (PR)
 ```
 
 * 여러 서비스 변경사항을 `develop`에 통합
@@ -139,7 +139,7 @@ develop → main (PR)
 항상 최신 상태에서 브랜치 생성
 
 ```
-git checkout develop/{service}
+git checkout dev/{service}
 git pull
 git checkout -b feature/{service}/{기능명}
 ```
@@ -211,8 +211,8 @@ refactor(schedule): 쿼리 성능 개선
 
 ## 5. Pull Request 규칙
 
-* feature → develop/{service}
-* develop/{service} → develop
+* feature → dev/{service}
+* dev/{service} → develop
 * develop → main
 
 
@@ -221,7 +221,7 @@ refactor(schedule): 쿼리 성능 개선
 ```
 main              → 운영 배포
 develop           → 전체 통합
-develop/{service} → 서비스별 배포
+dev/{service} → 서비스별 배포
 feature/*         → 기능 개발
 ```
 
@@ -233,3 +233,19 @@ feature/*         → 기능 개발
 * 서비스 통합 테스트 → `develop`
 * 최종 배포 → `main`
 * 브랜치는 깊게 만들지 않고, 이름으로 구분
+
+# Port 번호
+
+## 8. Port 번호
+
+### 서비스별 포트 매핑
+
+| Service     | Port |
+|-------------|------|
+| gateway     | 8000 |
+| creator     | 8080 |
+| payment     | 8081 |
+| schedule    | 8082 |
+| settlement  | 8083 |
+| ticket      | 8084 |
+| user        | 8085 |
