@@ -5,15 +5,29 @@ spring:
   profiles:
     active: dev
 
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: false
+
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: always
+
+server:
+  port: 8081
+
+logging:
+  level:
+    root: INFO
+    com.example: DEBUG
+
 springdoc:
   api-docs:
-    enabled: false
-
-#eureka:
-#  client:
-#    service-url:
-#      defaultZone: http://localhost:8761/eureka
-#  instance:
-#    prefer-ip-address: true
-
-
+    enabled: true
