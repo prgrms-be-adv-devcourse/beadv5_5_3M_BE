@@ -131,7 +131,7 @@ public class UserService implements UserUseCase {
         if (profileUrl == null) {
             profileUrl = user.getProfileUrl();
         }
-        return new UserInfoResponse(user.getNickname(), user.getBalance(), user.getEmail(), profileUrl);
+        return new UserInfoResponse(user.getNickname(), user.getBalance(), user.getEmail(), profileUrl, user.getPhone());
     }
 
     @Override
