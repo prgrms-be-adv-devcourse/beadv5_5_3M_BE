@@ -21,7 +21,10 @@ public enum ErrorStatus implements BaseErrorCode {
     MOVIE_NOT_PUBLIC(HttpStatus.NOT_FOUND, "MOVIE_NOT_PUBLIC", "비공개 영화입니다"),
 
     // Category
-    CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CATEGORY_NOT_FOUND", "카테고리를 찾을 수 없습니다");
+    CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CATEGORY_NOT_FOUND", "카테고리를 찾을 수 없습니다"),
+
+    // Schedule
+    SCHEDULE_NO_REMAINING_SEATS(HttpStatus.BAD_REQUEST, "SCHEDULE_NO_REMAINING_SEATS", "남은 좌석이 없습니다");
 
     private final HttpStatus httpStatus;
     private final String code;
