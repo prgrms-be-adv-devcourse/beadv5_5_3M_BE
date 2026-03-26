@@ -24,7 +24,7 @@ public class SecurityConfig {
     private final static String[] PERMITALL_ANTPATTERNS = {
             "/", "/csrf",
             "/api/users/login", "/api/users/email/check", "/api/users/nickname/check", "/api/user/join",
-            "api/users/refresh/token",
+            "/api/users/refresh",
             "/?*-service/actuator/?*", "/actuator/?*",
             "/actuator/gateway/**",
             "/v3/api-docs/**", "/?*-service/v3/api-docs", "/swagger*/**", "/webjars/**"
