@@ -13,8 +13,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "movie")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED) // jpa가 엔티티 만들 때 사용, 외부에서 생성하지 못하게 제한
+@AllArgsConstructor(access = AccessLevel.PRIVATE) // builder가 사용, 외부에서 빌더 패턴 사용하도록 강제
 @Builder
 public class Movie {
 
