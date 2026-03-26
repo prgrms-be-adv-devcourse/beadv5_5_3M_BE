@@ -5,8 +5,11 @@ import jakarta.validation.constraints.NotEmpty;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.UUID;
 
 @Entity
@@ -25,6 +28,10 @@ public class User {
     @NotEmpty
     private String password;
 
+    @NotEmpty
+    @Column(unique = true, length = 50)
+    private String nickname;
+
     private String profileUrl;
 
     @Column(length = 20)
@@ -34,8 +41,28 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    private Integer balance;
+
     private LocalDateTime createAt;
     private LocalDateTime updateAt;
+
+    public static User create(String email, String rawPassword, String nickname) {
+        User user = new User();
+        user.userId = UUID.randomUUID();
+        user.email = email;
+        user.nickname = nickname;
+        user.role = Role.USER;
+        user.saltKey = generateSalt();
+        user.password = new BCryptPasswordEncoder().encode(rawPassword + user.saltKey);
+        user.balance = 0;
+        return user;
+    }
+
+    private static String generateSalt() {
+        SecureRandom random = new SecureRandom();
+        byte[] salt = random.generateSeed(8);
+        return Base64.getEncoder().encodeToString(salt);
+    }
 
     @PrePersist
     public void onCreate() {
