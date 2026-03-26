@@ -28,5 +28,10 @@ public class MovieRepositoryImpl implements MovieRepository {
         return movieJpaRepository.findById(movieId);
     }
 
+    @Override
+    public void delete(Movie movie) {
+        movieJpaRepository.delete(movie);
+    }
+
 
 }
