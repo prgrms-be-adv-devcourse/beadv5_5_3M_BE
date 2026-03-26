@@ -5,7 +5,7 @@ import com.example.movieservice.global.response.ApiResponse;
 import com.example.movieservice.presentation.dto.request.RegisterMovieRequest;
 import com.example.movieservice.presentation.dto.request.UpdateDetailRequest;
 import com.example.movieservice.presentation.dto.request.UpdateVisibilityRequest;
-import com.example.movieservice.presentation.dto.response.RegisterMovieResponse;
+import com.example.movieservice.presentation.dto.response.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Movie", description = "영화 관련 API")
@@ -60,6 +61,12 @@ public class MovieController {
         return ApiResponse.onSuccess();
     }
 
+    @Operation(summary = "영화 상세 정보 수정", description = "크리에이터가 본인 영화의 제목, 설명, 카테고리, 추가 쿠키를 수정합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "수정 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "해당 영화에 대한 권한 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "영화 또는 카테고리를 찾을 수 없음")
+    })
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PatchMapping("/{movieId}/detail")
     public ApiResponse<Void> updateDetail(
@@ -67,18 +74,79 @@ public class MovieController {
             @PathVariable Long movieId,
             @Valid @RequestBody UpdateDetailRequest request){
         // todo : 포스터 이미지 수정도 로직에 추가해야 함
+        // todo : 편성이 확정된 게 있으면 수정 불가
         movieUseCase.updateDetail(creatorId, movieId, request);
         return ApiResponse.onSuccess();
     }
 
+    @Operation(summary = "영화 삭제", description = "크리에이터가 본인 영화를 삭제합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "삭제 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "해당 영화에 대한 권한 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "영화를 찾을 수 없음")
+    })
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{movieId}")
     public ApiResponse<Void> delete(
             @RequestHeader("X-Creator-Id") UUID creatorId,
             @PathVariable Long movieId){
         // todo : 나중에 s3에 올라간 자원을 지우는 로직이 들어가야 함
+        // todo : 편성이 확정된 게 있으면 삭제 불가
         movieUseCase.delete(creatorId, movieId);
         return ApiResponse.onSuccess();
     }
 
+    @Operation(summary = "영화 상세 조회 (크리에이터)", description = "크리에이터가 본인 영화의 수정용 상세 정보를 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "해당 영화에 대한 권한 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "영화를 찾을 수 없음")
+    })
+    @GetMapping("/{movieId}/detail/creator")
+    public ApiResponse<DetailForCreatorResponse> detailForCreator(
+            @RequestHeader("X-Creator-Id") UUID creatorId,
+            @PathVariable Long movieId
+    ){
+        // todo: 이미지도 반환해야 함
+        return ApiResponse.onSuccess(movieUseCase.getDetailForCreator(creatorId, movieId));
+    }
+
+    @Operation(summary = "영화 상세 조회 (사용자)", description = "사용자가 공개된 영화의 상세 정보를 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "영화를 찾을 수 없음 또는 비공개 영화")
+    })
+    @GetMapping("/{movieId}/detail")
+    public ApiResponse<DetailForUserResponse> detailForUser(
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable Long movieId
+    ){
+        // todo: 이미지, 리뷰들, 상영 일정을 반환해야 함
+        // todo: 지금은 uerId 사용 안하는데 나중에 사용할까?
+        return ApiResponse.onSuccess(movieUseCase.getDetailForUser(userId, movieId));
+    }
+
+    @Operation(summary = "크리에이터 영화 목록 조회 (사용자)", description = "특정 크리에이터의 공개된 영화 목록을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/list")
+    public ApiResponse<List<MovieByCreatorResponse>> getMovieListByCreator(
+            @RequestParam("creatorId") UUID creatorId
+    ){
+        // todo: 나중에 이미지도 추가
+        return ApiResponse.onSuccess(movieUseCase.getMovieListByCreator(creatorId));
+    }
+
+    @Operation(summary = "내 영화 목록 조회 (크리에이터)", description = "크리에이터가 본인의 전체 영화 목록을 공개 여부와 함께 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/creator/list")
+    public ApiResponse<List<MovieForCreatorResponse>> getMovieListForCreator(
+            @RequestHeader("X-Creator-Id") UUID creatorId
+    ){
+        // todo: 나중에 이미지도 추가
+        return ApiResponse.onSuccess(movieUseCase.getMovieListForCreator(creatorId));
+    }
 }
