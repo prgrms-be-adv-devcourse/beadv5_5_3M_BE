@@ -148,4 +148,14 @@ public class MovieService implements MovieUseCase {
                 .toList();
     }
 
+    @Override
+    public List<MovieForScheduleResponse> getPublicMovieListForSchedule(UUID creatorId) {
+        List<Movie> movies = movieRepository.findMoviesByCreatorId(creatorId);
+        return movies.stream()
+                .filter(movie -> movie.getVisibility()== Movie.Visibility.PUBLIC)
+                .map(movie -> {
+                    return new MovieForScheduleResponse(movie.getMovieId(), movie.getTitle(), movie.getRunningTime());
+                }).toList();
+    }
+
 }
