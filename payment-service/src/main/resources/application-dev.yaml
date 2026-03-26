@@ -1,21 +1,12 @@
 spring:
-  application:
-    name: payment-service
+  config:
+    import: optional:file:.env[.properties]
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/payment-db
-    username: user
-    password: password
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/payment-db}
+    username: ${DB_USERNAME:user}
+    password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-    show-sql: false
 
   kafka:
     bootstrap-servers: 52.78.88.98:9092
@@ -26,20 +17,20 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-
-  batch:
-    job:
-      enabled: false
-    jdbc:
-      initialize-schema: always
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 toss:
   payments:
     secret-key: ${TOSS_PAYMENT_SECRET}
+    client-key: ${TOSS_PAYMENT_CK}
 
-server:
-  port: 8081
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY}
+      secret-key: ${AWS_SECRET_KEY}
+    region:
+      static: ap-northeast-2
 
 springdoc:
   api-docs:
@@ -49,16 +40,3 @@ springdoc:
     path: /swagger-ui.html
     tags-sorter: alpha
     operations-sorter: alpha
-
-logging:
-  level:
-    root: INFO
-    com.example: DEBUG
-
-cloud:
-  aws:
-    credentials:
-      access-key: ${AWS_ACCESS_KEY}
-      secret-key: ${AWS_SECRET_KEY}
-    region:
-      static: ap-northeast-2
