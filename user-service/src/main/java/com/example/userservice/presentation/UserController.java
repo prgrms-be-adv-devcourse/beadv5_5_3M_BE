@@ -53,4 +53,10 @@ public class UserController {
         return ResponseEntity.ok().body(response);
     }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenResponse> refresh(@RequestBody String refreshToken) {
+        TokenResponse response = userUseCase.refresh(refreshToken);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 }
