@@ -34,10 +34,13 @@ public class ReactiveAuthorization implements ReactiveAuthorizationManager<Autho
                 APIGATEWAY_HOST + AUTHORIZATION_URI + "?httpMethod=" + httpMethod + "&requestPath=" + requestPath;
         log.info("baseUrl={}", baseUrl);
 
+        String userId = request.getHeaders().getFirst("X-User-Id");
+
         boolean granted = false;
         try {
             Mono<Boolean> body = WebClient.create(baseUrl)
                     .get()
+                    .header("X-User-Id", userId)
                     .retrieve().bodyToMono(Boolean.class);
             granted = body.toFuture().get().booleanValue();
             log.info("Security AuthorizationDecision granted={}", granted);
