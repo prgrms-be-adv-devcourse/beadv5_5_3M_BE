@@ -149,4 +149,12 @@ public class MovieController {
         // todo: 나중에 이미지도 추가
         return ApiResponse.onSuccess(movieUseCase.getMovieListForCreator(creatorId));
     }
+
+    @GetMapping("/creator/schedulable")
+    public ApiResponse<List<MovieForScheduleResponse>> getPublicMovieListForSchedule(
+            @RequestHeader("X-Creator-Id") UUID creatorId
+    ){
+        // 크리에이터가 편성할 수 있는 영화 목록을 반환한다 (일정 편성할 때 사용)
+        return ApiResponse.onSuccess(movieUseCase.getPublicMovieListForSchedule(creatorId));
+    }
 }
