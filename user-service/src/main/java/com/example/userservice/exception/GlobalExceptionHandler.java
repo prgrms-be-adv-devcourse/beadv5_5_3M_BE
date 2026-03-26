@@ -20,6 +20,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDuplicateNickname(DuplicateNicknameException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
     }
+
+    @ExceptionHandler({UserNotFoundException.class, InvalidEmailOrPasswordException.class})
+    public ResponseEntity<ErrorResponse> handleLoginFailure(RuntimeException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request.getRequestURI());
+    }
+
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, String path) {
         ErrorResponse response = new ErrorResponse(
                 LocalDateTime.now(),
