@@ -2,6 +2,7 @@ package com.example.movieservice.domain.repository;
 
 import com.example.movieservice.domain.model.Movie;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,4 +14,6 @@ public interface MovieRepository {
     Optional<Movie> findByMovieId(Long movieId);
 
     void delete(Movie movie);
+
+    List<Movie> findMoviesByCreatorId(UUID creatorId);
 }

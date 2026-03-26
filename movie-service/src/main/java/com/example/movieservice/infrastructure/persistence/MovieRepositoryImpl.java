@@ -5,6 +5,7 @@ import com.example.movieservice.domain.repository.MovieRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,5 +34,8 @@ public class MovieRepositoryImpl implements MovieRepository {
         movieJpaRepository.delete(movie);
     }
 
-
+    @Override
+    public List<Movie> findMoviesByCreatorId(UUID creatorId){
+        return movieJpaRepository.findAllByCreatorId(creatorId);
+    }
 }
