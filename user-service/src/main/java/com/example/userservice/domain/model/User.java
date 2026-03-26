@@ -35,6 +35,9 @@ public class User {
     private String profileUrl;
 
     @Column(length = 20)
+    private String phone;
+
+    @Column(length = 20)
     private String saltKey;
 
     @Enumerated(EnumType.STRING)
@@ -62,6 +65,12 @@ public class User {
         SecureRandom random = new SecureRandom();
         byte[] salt = random.generateSeed(8);
         return Base64.getEncoder().encodeToString(salt);
+    }
+
+    public void updateProfile(String nickname, String phone, String profileUrl) {
+        if (nickname != null && !nickname.isEmpty()) this.nickname = nickname;
+        if (phone != null) this.phone = phone;
+        if (profileUrl != null) this.profileUrl = profileUrl;
     }
 
     @PrePersist

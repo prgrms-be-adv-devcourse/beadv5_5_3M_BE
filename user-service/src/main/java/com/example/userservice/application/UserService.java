@@ -1,24 +1,30 @@
 package com.example.userservice.application;
 
 import com.example.userservice.domain.model.Permission;
-import com.example.userservice.domain.model.RefreshToken;
 import com.example.userservice.domain.model.User;
 import com.example.userservice.domain.repository.PermissionRepository;
-import com.example.userservice.domain.repository.RefreshTokenRepository;
 import com.example.userservice.domain.repository.UserRepository;
+
 import com.example.userservice.exception.DuplicateEmailException;
 import com.example.userservice.exception.DuplicateNicknameException;
 import com.example.userservice.exception.InvalidEmailOrPasswordException;
+import com.example.userservice.exception.InvalidRefreshTokenException;
+
+import java.util.concurrent.TimeUnit;
+
 import com.example.userservice.presentation.dto.req.AuthorizationRequest;
 import com.example.userservice.presentation.dto.req.JoinRequest;
 import com.example.userservice.presentation.dto.req.LoginRequest;
-import com.example.userservice.presentation.dto.res.LoginResponse;
 import com.example.userservice.presentation.dto.res.TokenResponse;
+import com.example.userservice.presentation.dto.res.UserInfoResponse;
+
 import com.example.userservice.util.JwtProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,8 +35,9 @@ public class UserService implements UserUseCase {
 
     private final UserRepository userRepository;
     private final PermissionRepository permissionRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
     private final JwtProvider jwtProvider;
+    private final StorageService storageService;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Override
     public boolean checkAuthorization(AuthorizationRequest request, String userId) {
@@ -79,7 +86,12 @@ public class UserService implements UserUseCase {
 
         String accessToken = jwtProvider.generateAccessToken(user.getUserId());
         String rawRefreshToken = jwtProvider.generateRefreshToken(user.getUserId());
-        refreshTokenRepository.save(RefreshToken.create(user.getUserId().toString(), rawRefreshToken, jwtProvider.getRefreshTokenExpirySeconds()));
+        redisTemplate.opsForValue().set(
+                "refresh:token:" + user.getUserId(),
+                rawRefreshToken,
+                jwtProvider.getRefreshTokenExpirySeconds(),
+                TimeUnit.SECONDS
+        );
 
         return new TokenResponse(accessToken, rawRefreshToken);
     }
@@ -94,19 +106,47 @@ public class UserService implements UserUseCase {
             throw new InvalidRefreshTokenException();
         }
 
-        RefreshToken stored = refreshTokenRepository.findByUserId(userId)
-                .orElseThrow(InvalidRefreshTokenException::new);
-
-        if (!stored.getToken().equals(refreshToken)) {
+        String storedToken = redisTemplate.opsForValue().get("refresh:token:" + userId);
+        if (storedToken == null || !storedToken.equals(refreshToken)) {
             throw new InvalidRefreshTokenException();
         }
 
         String accessToken = jwtProvider.generateAccessToken(userId);
         String newRefreshToken = jwtProvider.generateRefreshToken(userId);
 
-        refreshTokenRepository.save(RefreshToken.create(userId.toString(), newRefreshToken, jwtProvider.getRefreshTokenExpirySeconds()));
+        redisTemplate.opsForValue().set(
+                "refresh:token:" + userId,
+                newRefreshToken,
+                jwtProvider.getRefreshTokenExpirySeconds(),
+                TimeUnit.SECONDS
+        );
 
         return new TokenResponse(accessToken, newRefreshToken);
+    }
+
+    @Override
+    public UserInfoResponse me(String userId) {
+        User user = userRepository.findById(toUUID(userId));
+        String profileUrl = redisTemplate.opsForValue().get("profile:image:" + userId);
+        if (profileUrl == null) {
+            profileUrl = user.getProfileUrl();
+        }
+        return new UserInfoResponse(user.getNickname(), user.getBalance(), user.getEmail(), profileUrl, user.getPhone());
+    }
+
+    @Override
+    @Transactional
+    public void updateProfile(String userId, String nickname, String phone, MultipartFile profileImage) {
+        User user = userRepository.findById(toUUID(userId));
+        if (nickname != null && !nickname.equals(user.getNickname())) {
+            checkNicknameDuplicate(nickname);
+        }
+        String profileUrl = null;
+        if (profileImage != null && !profileImage.isEmpty()) {
+            profileUrl = storageService.upload(profileImage, userId);
+            redisTemplate.opsForValue().set("profile:image:" + userId, profileUrl);
+        }
+        user.updateProfile(nickname, phone, profileUrl);
     }
 
     private UUID toUUID(String userId) {
