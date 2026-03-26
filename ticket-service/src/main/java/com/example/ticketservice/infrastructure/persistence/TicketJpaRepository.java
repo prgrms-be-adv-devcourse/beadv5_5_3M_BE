@@ -27,4 +27,10 @@ public interface TicketJpaRepository extends JpaRepository<Ticket, Long> {
     int bulkUpdateStatus(@Param("scheduleIds") List<Long> scheduleIds,
                          @Param("currentStatus") TicketStatus currentStatus,
                          @Param("newStatus") TicketStatus newStatus);
+
+    // Bulk Update: 대금 지급 완료된 티켓 일괄 플래그 처리
+    // clearAutomatically: 벌크 UPDATE 후 1차 캐시 자동 초기화
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Ticket t SET t.provideFlag = true WHERE t.id IN :ticketIds")
+    int bulkMarkProvided(@Param("ticketIds") List<Long> ticketIds);
 }
