@@ -10,11 +10,13 @@ import com.example.movieservice.global.exception.GeneralException;
 import com.example.movieservice.presentation.dto.request.RegisterMovieRequest;
 import com.example.movieservice.presentation.dto.request.UpdateDetailRequest;
 import com.example.movieservice.presentation.dto.request.UpdateVisibilityRequest;
-import com.example.movieservice.presentation.dto.response.RegisterMovieResponse;
+import com.example.movieservice.presentation.dto.response.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -62,7 +64,7 @@ public class MovieService implements MovieUseCase {
         if(!movie.getCreatorId().equals(creatorId)){
             throw new GeneralException(ErrorStatus.MOVIE_INVALID_CREATOR);
         }
-        movie.updateVisibility(request.visibility());
+        movie.updateVisibility(Movie.Visibility.valueOf(request.visibility().name()));
     }
 
     @Override
@@ -95,6 +97,55 @@ public class MovieService implements MovieUseCase {
         }
         movie.getCategories().clear();
         movieRepository.delete(movie);
+    }
+
+    @Override
+    public DetailForCreatorResponse getDetailForCreator(UUID creatorId, Long movieId) {
+        Movie movie = movieRepository.findByMovieId(movieId).orElseThrow(()->new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
+        if(!movie.getCreatorId().equals(creatorId)){
+            throw new GeneralException(ErrorStatus.MOVIE_INVALID_CREATOR);
+        }
+        List<Long> categoryIds = movie.getCategories().stream()
+                .map(Category::getCategoryId)
+                .toList();
+        return new DetailForCreatorResponse(movie.getTitle(), movie.getDescription(), categoryIds, movie.getBaseCookie(), movie.getAdditionalCookie());
+    }
+
+    @Override
+    public DetailForUserResponse getDetailForUser(UUID userId, Long movieId) {
+        Movie movie = movieRepository.findByMovieId(movieId).orElseThrow(()->new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
+        if(movie.getVisibility() == Movie.Visibility.PRIVATE){
+            throw new GeneralException(ErrorStatus.MOVIE_NOT_PUBLIC);
+        }
+        List<Long> categoryIds = movie.getCategories().stream()
+                .map(Category::getCategoryId)
+                .toList();
+        return new DetailForUserResponse(movie.getCreatorId(), movie.getTitle(), movie.getDescription(), categoryIds, movie.getRunningTime(), Math.round(movie.getAverageRating() * 10) / 10.0f  , movie.getBaseCookie()+movie.getAdditionalCookie());
+    }
+
+    @Override
+    public List<MovieByCreatorResponse> getMovieListByCreator(UUID creatorId) {
+        List<Movie> movies = movieRepository.findMoviesByCreatorId(creatorId);
+
+        return movies.stream()
+                .filter(movie ->
+                    movie.getVisibility()== Movie.Visibility.PUBLIC
+                )
+                .map(movie -> {
+                    List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
+                    return new MovieByCreatorResponse(movie.getMovieId(), movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f , categoryIds);
+                })
+                .toList();
+    }
+
+    @Override
+    public List<MovieForCreatorResponse> getMovieListForCreator(UUID creatorId) {
+        List<Movie> movies = movieRepository.findMoviesByCreatorId(creatorId);
+        return movies.stream()
+                .map(movie -> {
+                    return new MovieForCreatorResponse(movie.getMovieId(), movie.getTitle(), MovieForCreatorResponse.Visibility.valueOf(movie.getVisibility().name()));
+                })
+                .toList();
     }
 
 }
