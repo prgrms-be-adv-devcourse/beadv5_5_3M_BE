@@ -34,8 +34,21 @@ spring:
     jdbc:
       initialize-schema: always
 
+toss:
+  payments:
+    secret-key: ${TOSS_PAYMENT_SECRET}
+
 server:
   port: 8081
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
 
 logging:
   level:
