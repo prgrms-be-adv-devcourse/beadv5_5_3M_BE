@@ -25,6 +25,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleLoginFailure(RuntimeException ex, HttpServletRequest request) {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request.getRequestURI());
     }
+    @ExceptionHandler(ImageUploadFailedException.class)
+    public ResponseEntity<ErrorResponse> handleImageUploadFailed(ImageUploadFailedException ex, HttpServletRequest request) {
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRefreshToken(InvalidRefreshTokenException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request.getRequestURI());
+    }
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, String path) {
         ErrorResponse response = new ErrorResponse(
@@ -35,10 +44,5 @@ public class GlobalExceptionHandler {
                 path
         );
         return ResponseEntity.status(status).body(response);
-    }
-
-    @ExceptionHandler(InvalidRefreshTokenException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidRefreshToken(InvalidRefreshTokenException ex, HttpServletRequest request) {
-        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request.getRequestURI());
     }
 }
