@@ -35,4 +35,14 @@ public class ScheduleRepositoryImpl implements ScheduleRepository {
     public Optional<Schedule> findById(Long scheduleId) {
         return scheduleJpaRepository.findById(scheduleId);
     }
+
+    @Override
+    public void delete(Schedule schedule) {
+        scheduleJpaRepository.delete(schedule);
+    }
+
+    @Override
+    public List<Schedule> findUpcomingByMovieId(Long movieId, LocalDateTime now) {
+        return scheduleJpaRepository.findUpcomingByMovieId(movieId, now);
+    }
 }

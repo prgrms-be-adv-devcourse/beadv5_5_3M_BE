@@ -17,4 +17,8 @@ public interface ScheduleRepository {
     List<Schedule> findAllByCreatorIdAndDate(UUID creatorId, LocalDate date);
 
     Optional<Schedule> findById(Long scheduleId);
+
+    void delete(Schedule schedule);
+
+    List<Schedule> findUpcomingByMovieId(Long movieId, LocalDateTime now);
 }
