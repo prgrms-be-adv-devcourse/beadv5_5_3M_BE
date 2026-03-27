@@ -33,4 +33,9 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     public boolean existsByUserUserIdAndMovieId(UUID userId, Long movieId) {
         return reviewJpaRepository.existsByUserUserIdAndMovieId(userId, movieId);
     }
+
+    @Override
+    public boolean existsByTicketId(Long ticketId) {
+        return reviewJpaRepository.existsByTicketId(ticketId);
+    }
 }

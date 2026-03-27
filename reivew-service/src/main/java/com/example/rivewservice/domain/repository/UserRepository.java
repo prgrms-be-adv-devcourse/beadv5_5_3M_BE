@@ -12,4 +12,6 @@ public interface UserRepository {
     Optional<User> findById(UUID userId);
 
     boolean existsById(UUID userId);
+
+    boolean getFlagByUserId(UUID userId);
 }
