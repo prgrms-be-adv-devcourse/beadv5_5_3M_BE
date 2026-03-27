@@ -3,6 +3,7 @@ package com.example.movieservice.application.usecase;
 import com.example.movieservice.presentation.dto.request.RegisterScheduleRequest;
 import com.example.movieservice.presentation.dto.request.UpdateConfirmRequest;
 import com.example.movieservice.presentation.dto.response.DraftScheduleResponse;
+import com.example.movieservice.presentation.dto.response.ScheduleForCreatorResponse;
 import com.example.movieservice.presentation.dto.response.ScheduleForUserResponse;
 
 
@@ -20,4 +21,6 @@ public interface ScheduleUseCase {
     void delete(UUID creatorId, Long scheduleId);
 
     List<ScheduleForUserResponse> getSpecificMovieSchedule(Long movieId);
+
+    List<ScheduleForCreatorResponse> getByCreatorAndDate(UUID creatorId, LocalDate date);
 }

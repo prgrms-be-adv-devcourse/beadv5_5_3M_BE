@@ -5,6 +5,7 @@ import com.example.movieservice.global.response.ApiResponse;
 import com.example.movieservice.presentation.dto.request.RegisterScheduleRequest;
 import com.example.movieservice.presentation.dto.request.UpdateConfirmRequest;
 import com.example.movieservice.presentation.dto.response.DraftScheduleResponse;
+import com.example.movieservice.presentation.dto.response.ScheduleForCreatorResponse;
 import com.example.movieservice.presentation.dto.response.ScheduleForUserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -33,7 +34,7 @@ public class ScheduleController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "비공개 영화입니다"),
     })
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PostMapping("/register")
+    @PostMapping("/creator/register")
     public ApiResponse<Void> register(
             @RequestHeader("X-Creator-Id") UUID creatorId,
             @Valid @RequestBody RegisterScheduleRequest request
@@ -71,7 +72,7 @@ public class ScheduleController {
         return ApiResponse.onSuccess();
     }
 
-    @DeleteMapping("/{scheduleId}")
+    @DeleteMapping("/creator/{scheduleId}")
     public ApiResponse<Void> deleteDraftSchedule(
             @RequestHeader("X-Creator-Id") UUID creatorId,
             @PathVariable Long scheduleId
@@ -91,13 +92,17 @@ public class ScheduleController {
     ){
         return ApiResponse.onSuccess(scheduleUseCase.getSpecificMovieSchedule(movieId));
     }
-//
-//    @GetMapping("")
-//    public ApiResponse<> checkSpecificCreator(
-//            @RequestHeader("X-Creator-Id") UUID creatorId,
-//            @RequestParam LocalDate date
-//    ){
-//        return ApiResponse.onSuccess();
-//    }
+
+    @Operation(summary = "특정 날짜 확정 일정 조회 (크리에이터)", description = "크리에이터가 특정 날짜에 확정된 상영 일정 목록을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/creator")
+    public ApiResponse<List<ScheduleForCreatorResponse>> getByCreatorAndDate(
+            @RequestHeader("X-Creator-Id") UUID creatorId,
+            @RequestParam LocalDate date
+    ){
+        return ApiResponse.onSuccess(scheduleUseCase.getByCreatorAndDate(creatorId, date));
+    }
 
 }
