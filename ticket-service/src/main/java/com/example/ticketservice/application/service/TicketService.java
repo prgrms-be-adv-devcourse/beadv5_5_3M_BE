@@ -3,6 +3,7 @@ package com.example.ticketservice.application.service;
 import com.example.ticketservice.application.dto.request.TicketCreateRequest;
 import com.example.ticketservice.application.dto.response.TicketResponse;
 import com.example.ticketservice.application.port.out.CachePort;
+import com.example.ticketservice.application.port.out.EventPublisherPort;
 import com.example.ticketservice.application.usecase.TicketUseCase;
 import com.example.ticketservice.common.model.PageResult;
 import com.example.ticketservice.domain.model.Schedule;
@@ -12,6 +13,8 @@ import com.example.ticketservice.common.exception.TicketErrorCode;
 import com.example.ticketservice.domain.repository.ScheduleRepository;
 import com.example.ticketservice.domain.repository.TicketRepository;
 import com.example.ticketservice.infrastructure.caching.dto.ReviewAuthorizationCache;
+import com.example.ticketservice.infrastructure.messaging.dto.event.TicketCancelledMessage;
+import com.example.ticketservice.infrastructure.messaging.dto.event.TicketReservedMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
@@ -25,10 +28,14 @@ import java.util.UUID;
 public class TicketService implements TicketUseCase {
 
     private static final String REVIEW_CACHE_KEY_PREFIX = "review:auth:pending:";
+    public static final String TICKET_RESERVED_TOPIC = "ticket.reserved";
+    public static final String TICKET_CANCELLED_TOPIC = "ticket.cancelled";
+
 
     private final TicketRepository ticketRepository;
     private final ScheduleRepository scheduleRepository;
     private final CachePort cachePort;
+    private final EventPublisherPort eventPublisherPort;
 
     @Transactional
     @Override
@@ -52,6 +59,9 @@ public class TicketService implements TicketUseCase {
                 ticket.getId(), schedule.getMovieId(), schedule.getId(), userId);
         cachePort.addToZSet(REVIEW_CACHE_KEY_PREFIX + schedule.getId(), cache, ticket.getId());
 
+        eventPublisherPort.publish(TICKET_RESERVED_TOPIC, ticket.getId().toString(),
+                new TicketReservedMessage(ticket.getId(), schedule.getId(), userId, schedule.getCookie()));
+
         return TicketResponse.from(ticket);
     }
 
@@ -68,6 +78,9 @@ public class TicketService implements TicketUseCase {
         scheduleRepository.save(ticket.getSchedule());
 
         cachePort.removeFromZSetByScore(REVIEW_CACHE_KEY_PREFIX + ticket.getSchedule().getId(), ticket.getId());
+
+        eventPublisherPort.publish(TICKET_CANCELLED_TOPIC, ticket.getId().toString(),
+                new TicketCancelledMessage(ticket.getId(), ticket.getSchedule().getId(), userId, ticket.getSchedule().getCookie()));
     }
 
     @Transactional(readOnly = true)
