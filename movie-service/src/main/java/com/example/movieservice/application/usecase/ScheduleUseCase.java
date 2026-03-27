@@ -1,10 +1,10 @@
 package com.example.movieservice.application.usecase;
 
-import com.example.movieservice.presentation.dto.request.RegisterScheduleRequest;
-import com.example.movieservice.presentation.dto.request.UpdateConfirmRequest;
-import com.example.movieservice.presentation.dto.response.DraftScheduleResponse;
-import com.example.movieservice.presentation.dto.response.ScheduleForCreatorResponse;
-import com.example.movieservice.presentation.dto.response.ScheduleForUserResponse;
+import com.example.movieservice.presentation.dto.request.schedule.RegisterScheduleRequest;
+import com.example.movieservice.presentation.dto.request.schedule.UpdateConfirmRequest;
+import com.example.movieservice.presentation.dto.response.schedule.DraftScheduleResponse;
+import com.example.movieservice.presentation.dto.response.schedule.ScheduleForCreatorResponse;
+import com.example.movieservice.presentation.dto.response.schedule.ScheduleForUserResponse;
 
 
 import java.time.LocalDate;

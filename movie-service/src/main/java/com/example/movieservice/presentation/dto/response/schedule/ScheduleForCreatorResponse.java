@@ -1,4 +1,4 @@
-package com.example.movieservice.presentation.dto.response;
+package com.example.movieservice.presentation.dto.response.schedule;
 
 import java.time.LocalDateTime;
 

@@ -2,9 +2,9 @@ package com.example.movieservice.presentation.controller;
 
 import com.example.movieservice.application.usecase.CategoryUseCase;
 import com.example.movieservice.global.response.ApiResponse;
-import com.example.movieservice.presentation.dto.request.RegisterCategoryRequest;
-import com.example.movieservice.presentation.dto.response.CategoryResponse;
-import com.example.movieservice.presentation.dto.response.RegisterCategoryResponse;
+import com.example.movieservice.presentation.dto.request.category.RegisterCategoryRequest;
+import com.example.movieservice.presentation.dto.response.category.CategoryResponse;
+import com.example.movieservice.presentation.dto.response.category.RegisterCategoryResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;

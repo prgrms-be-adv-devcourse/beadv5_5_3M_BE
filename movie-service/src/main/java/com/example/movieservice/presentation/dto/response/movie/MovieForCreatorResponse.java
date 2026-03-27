@@ -1,4 +1,4 @@
-package com.example.movieservice.presentation.dto.response;
+package com.example.movieservice.presentation.dto.response.movie;
 
 public record MovieForCreatorResponse(
         Long movieId,

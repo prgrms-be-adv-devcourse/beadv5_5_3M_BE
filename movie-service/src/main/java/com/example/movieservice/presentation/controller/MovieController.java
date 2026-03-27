@@ -2,10 +2,10 @@ package com.example.movieservice.presentation.controller;
 
 import com.example.movieservice.application.usecase.MovieUseCase;
 import com.example.movieservice.global.response.ApiResponse;
-import com.example.movieservice.presentation.dto.request.RegisterMovieRequest;
-import com.example.movieservice.presentation.dto.request.UpdateDetailRequest;
-import com.example.movieservice.presentation.dto.request.UpdateVisibilityRequest;
-import com.example.movieservice.presentation.dto.response.*;
+import com.example.movieservice.presentation.dto.request.movie.RegisterMovieRequest;
+import com.example.movieservice.presentation.dto.request.movie.UpdateDetailRequest;
+import com.example.movieservice.presentation.dto.request.movie.UpdateVisibilityRequest;
+import com.example.movieservice.presentation.dto.response.movie.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;

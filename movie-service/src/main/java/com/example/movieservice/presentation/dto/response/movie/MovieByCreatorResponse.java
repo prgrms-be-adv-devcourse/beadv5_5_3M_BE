@@ -1,4 +1,4 @@
-package com.example.movieservice.presentation.dto.response;
+package com.example.movieservice.presentation.dto.response.movie;
 
 import java.util.List;
 

@@ -7,15 +7,14 @@ import com.example.movieservice.domain.repository.CategoryRepository;
 import com.example.movieservice.domain.repository.MovieRepository;
 import com.example.movieservice.global.exception.ErrorStatus;
 import com.example.movieservice.global.exception.GeneralException;
-import com.example.movieservice.presentation.dto.request.RegisterMovieRequest;
-import com.example.movieservice.presentation.dto.request.UpdateDetailRequest;
-import com.example.movieservice.presentation.dto.request.UpdateVisibilityRequest;
-import com.example.movieservice.presentation.dto.response.*;
+import com.example.movieservice.presentation.dto.request.movie.RegisterMovieRequest;
+import com.example.movieservice.presentation.dto.request.movie.UpdateDetailRequest;
+import com.example.movieservice.presentation.dto.request.movie.UpdateVisibilityRequest;
+import com.example.movieservice.presentation.dto.response.movie.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
