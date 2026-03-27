@@ -30,7 +30,8 @@ public class Schedule {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private ScheduleStatus status;
+    @Builder.Default
+    private ScheduleStatus status = ScheduleStatus.NOT_CONFIRMED;
 
     @Column(name = "total_seats")
     @Builder.Default
@@ -44,6 +45,7 @@ public class Schedule {
     private Movie movie;
 
     public enum ScheduleStatus {
+        NOT_CONFIRMED,
         SCHEDULED,   // 상영 예정
         WAITING,     // 상영 대기
         ON_AIR,      // 상영중
@@ -54,6 +56,8 @@ public class Schedule {
     public void confirm() {
         this.isConfirmed = true;
     }
+
+    public void scheduled() { this.status = ScheduleStatus.SCHEDULED; }
 
     public void waiting(){
         this.status = ScheduleStatus.WAITING;
