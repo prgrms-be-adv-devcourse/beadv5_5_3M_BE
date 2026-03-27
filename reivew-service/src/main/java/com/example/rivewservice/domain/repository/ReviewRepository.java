@@ -14,4 +14,6 @@ public interface ReviewRepository {
     boolean existsByUserUserIdAndScheduleId(UUID userId, Long scheduleId);
 
     boolean existsByUserUserIdAndMovieId(UUID userId, Long movieId);
+
+    boolean existsByTicketId(Long ticketId);
 }

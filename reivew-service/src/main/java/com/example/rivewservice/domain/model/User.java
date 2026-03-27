@@ -38,11 +38,15 @@ public class User {
     @Column(name = "profile_url", columnDefinition = "TEXT")
     private String profileUrl;
 
+    @Column(name = "flag")
+    private Boolean flag;
+
     public static User create(UUID userId, String nickname, String profileUrl) {
         User user = new User();
         user.userId = userId;
         user.nickname = nickname;
         user.profileUrl = profileUrl;
+        user.flag = false;
         return user;
     }
 
@@ -54,5 +58,6 @@ public class User {
     public void delete() {
         this.nickname = "삭제된 유저";
         this.profileUrl = null;
+        this.flag = true;
     }
 }

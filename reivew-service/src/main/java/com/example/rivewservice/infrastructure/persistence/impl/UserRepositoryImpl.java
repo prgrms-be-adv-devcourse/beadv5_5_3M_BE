@@ -28,4 +28,9 @@ public class UserRepositoryImpl implements UserRepository {
     public boolean existsById(UUID userId) {
         return userJpaRepository.existsById(userId);
     }
+
+    @Override
+    public boolean getFlagByUserId(UUID userId) {
+        return userJpaRepository.getFlagByUserId(userId);
+    }
 }

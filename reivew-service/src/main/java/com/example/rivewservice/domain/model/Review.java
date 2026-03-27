@@ -65,13 +65,15 @@ public class Review {
     @Column(name = "ticket_id")
     private Long ticketId;
 
-    public Review(User user, Long movieId, Long scheduleId, Long ticketId) {
-        this.user = user;
-        this.movieId = movieId;
-        this.flag = true;
-        this.status = ReviewStatus.AUTHORIZED;
-        this.scheduleId = scheduleId;
-        this.ticketId = ticketId;
+    public static Review authorization(User user, Long movieId, Long scheduleId, Long ticketId) {
+        Review review = new Review();
+        review.user = user;
+        review.movieId = movieId;
+        review.flag = true;
+        review.status = ReviewStatus.AUTHORIZED;
+        review.scheduleId = scheduleId;
+        review.ticketId = ticketId;
+        return  review;
     }
 
     public void write(String comment, Integer rating) {

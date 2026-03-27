@@ -8,4 +8,5 @@ import java.util.UUID;
 public interface ReviewJpaRepository extends JpaRepository<Review, Long> {
     boolean existsByUserUserIdAndScheduleId(UUID userId, Long scheduleId);
     boolean existsByUserUserIdAndMovieId(UUID userId, Long movieId);
+    boolean existsByTicketId(Long ticketId);
 }
