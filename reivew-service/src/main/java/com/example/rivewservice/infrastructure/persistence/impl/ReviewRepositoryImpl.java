@@ -4,6 +4,8 @@ import com.example.rivewservice.domain.model.Review;
 import com.example.rivewservice.domain.repository.ReviewRepository;
 import com.example.rivewservice.infrastructure.persistence.ReviewJpaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -22,6 +24,26 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     @Override
     public Optional<Review> findById(Long reviewId) {
         return reviewJpaRepository.findById(reviewId);
+    }
+
+    @Override
+    public Optional<Review> findFirstByUserUserIdAndMovieIdAndFlag(UUID userId, Long movieId, Boolean flag) {
+        return reviewJpaRepository.findFirstByUserUserIdAndMovieIdAndFlag(userId, movieId, flag);
+    }
+
+    @Override
+    public boolean existsByUserUserIdAndMovieIdAndFlag(UUID userId, Long movieId, Boolean flag) {
+        return reviewJpaRepository.existsByUserUserIdAndMovieIdAndFlag(userId, movieId, flag);
+    }
+
+    @Override
+    public Page<Review> findAllByMovieIdAndFlagFalse(Long movieId, Pageable pageable) {
+        return reviewJpaRepository.findAllByMovieIdAndFlagFalse(movieId, pageable);
+    }
+
+    @Override
+    public Page<Review> findAllByUserIdAndFlagFalse(UUID userId, Pageable pageable) {
+        return reviewJpaRepository.findAllByUserUserIdAndFlagFalse(userId, pageable);
     }
 
     @Override
