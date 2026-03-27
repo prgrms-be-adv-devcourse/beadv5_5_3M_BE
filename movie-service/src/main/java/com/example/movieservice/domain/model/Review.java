@@ -45,7 +45,6 @@ public class Review {
 
     public enum ReviewStatus {
         CREATE,  // 작성
-        UPDATE,  // 수정
-        DELETE   // 삭제
+        UPDATE  // 수정
     }
 }
