@@ -4,6 +4,7 @@ import com.example.ticketservice.application.dto.request.DeductCookieRequest;
 import com.example.ticketservice.application.dto.request.TicketCreateRequest;
 import com.example.ticketservice.application.dto.response.TicketResponse;
 import com.example.ticketservice.application.port.out.CachePort;
+import com.example.ticketservice.application.port.out.EventPublisherPort;
 
 import com.example.ticketservice.application.port.out.EventPublisherPort;
 import com.example.ticketservice.application.port.out.UserPort;
