@@ -1,10 +1,13 @@
 package com.example.userservice.application;
 
+import com.example.userservice.application.dto.req.UserCookieDeductionRequestDto;
 import com.example.userservice.domain.model.Permission;
 import com.example.userservice.domain.model.User;
 import com.example.userservice.domain.repository.PermissionRepository;
 import com.example.userservice.domain.repository.UserRepository;
 
+import com.example.userservice.event.UserCreatedEvent;
+import com.example.userservice.event.UserUpdatedEvent;
 import com.example.userservice.exception.DuplicateEmailException;
 import com.example.userservice.exception.DuplicateNicknameException;
 import com.example.userservice.exception.InvalidEmailOrPasswordException;
@@ -21,16 +24,19 @@ import com.example.userservice.presentation.dto.res.UserInfoResponse;
 import com.example.userservice.util.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserService implements UserUseCase {
 
     private final UserRepository userRepository;
@@ -38,6 +44,7 @@ public class UserService implements UserUseCase {
     private final JwtProvider jwtProvider;
     private final StorageService storageService;
     private final RedisTemplate<String, String> redisTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Override
     public boolean checkAuthorization(AuthorizationRequest request, String userId) {
@@ -64,12 +71,16 @@ public class UserService implements UserUseCase {
     }
 
     @Override
+    @Transactional
     public UUID join(JoinRequest request) {
         checkEmailDuplicate(request.email());
         checkNicknameDuplicate(request.nickname());
 
         User user = User.create(request.email(), request.password(), request.nickname());
         userRepository.save(user);
+
+        UserCreatedEvent userCreatedEvent = UserCreatedEvent.from(user);
+        kafkaTemplate.send("user.created", toJsonString(userCreatedEvent));
 
         return user.getUserId();
     }
@@ -147,9 +158,28 @@ public class UserService implements UserUseCase {
             redisTemplate.opsForValue().set("profile:image:" + userId, profileUrl);
         }
         user.updateProfile(nickname, phone, profileUrl);
+
+        UserUpdatedEvent userUpdatedEvent = UserUpdatedEvent.from(user);
+        kafkaTemplate.send("user.updated", toJsonString(userUpdatedEvent));
+    }
+
+    @Override
+    public void deductCookie(UserCookieDeductionRequestDto requestDto) {
+
     }
 
     private UUID toUUID(String userId) {
         return UUID.fromString(userId);
+    }
+
+    private String toJsonString(Object object) {
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        try {
+            return objectMapper.writeValueAsString(object);
+        } catch (Exception e) {
+            throw new RuntimeException("Json 직렬화 실패");
+        }
+
     }
 }
