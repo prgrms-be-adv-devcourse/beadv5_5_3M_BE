@@ -149,4 +149,15 @@ public class MovieController {
         // todo: 나중에 이미지도 추가
         return ApiResponse.onSuccess(movieUseCase.getMovieListForCreator(creatorId));
     }
+
+    @Operation(summary = "편성 가능한 영화 목록 조회 (크리에이터)", description = "크리에이터가 일정 편성 시 선택할 수 있는 공개된 영화 목록을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/creator/schedulable")
+    public ApiResponse<List<MovieForScheduleResponse>> getPublicMovieListForSchedule(
+            @RequestHeader("X-Creator-Id") UUID creatorId
+    ){
+        return ApiResponse.onSuccess(movieUseCase.getPublicMovieListForSchedule(creatorId));
+    }
 }

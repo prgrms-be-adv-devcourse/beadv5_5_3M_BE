@@ -1,9 +1,8 @@
 package com.example.movieservice.presentation.dto.response;
 
-public record MovieForCreatorResponse(
+public record MovieForScheduleResponse(
         Long movieId,
         String title,
-        String visibility
-        // 나중에 이미지도 추가
+        Integer runningTime
 ) {
 }
