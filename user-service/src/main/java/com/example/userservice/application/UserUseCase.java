@@ -1,5 +1,6 @@
 package com.example.userservice.application;
 
+import com.example.userservice.application.dto.req.UserCookieDeductionRequestDto;
 import com.example.userservice.presentation.dto.req.AuthorizationRequest;
 import com.example.userservice.presentation.dto.req.JoinRequest;
 import com.example.userservice.presentation.dto.req.LoginRequest;
@@ -18,4 +19,7 @@ public interface UserUseCase {
     TokenResponse refresh(String refreshToken);
     UserInfoResponse me(String userId);
     void updateProfile(String userId, String nickname, String phone, MultipartFile profileImage);
+
+    void deductCookie(UserCookieDeductionRequestDto requestDto);
+
 }
