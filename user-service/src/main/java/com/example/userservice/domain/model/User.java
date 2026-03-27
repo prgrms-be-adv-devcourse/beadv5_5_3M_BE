@@ -1,5 +1,6 @@
 package com.example.userservice.domain.model;
 
+import com.example.userservice.exception.InsufficientCookieException;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AccessLevel;
@@ -71,6 +72,14 @@ public class User {
         if (nickname != null && !nickname.isEmpty()) this.nickname = nickname;
         if (phone != null) this.phone = phone;
         if (profileUrl != null) this.profileUrl = profileUrl;
+    }
+
+    public void deductCookie(Integer amount) {
+        if (this.balance - amount < 0) {
+            throw new InsufficientCookieException();
+        }
+
+        this.balance -= amount;
     }
 
     @PrePersist

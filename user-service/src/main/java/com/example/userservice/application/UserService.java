@@ -1,8 +1,9 @@
 package com.example.userservice.application;
 
-import com.example.userservice.application.dto.req.UserCookieDeductionRequestDto;
+import com.example.userservice.domain.model.CookieLog;
 import com.example.userservice.domain.model.Permission;
 import com.example.userservice.domain.model.User;
+import com.example.userservice.domain.repository.CookieLogRepository;
 import com.example.userservice.domain.repository.PermissionRepository;
 import com.example.userservice.domain.repository.UserRepository;
 
@@ -16,8 +17,10 @@ import com.example.userservice.exception.InvalidRefreshTokenException;
 import java.util.concurrent.TimeUnit;
 
 import com.example.userservice.presentation.dto.req.AuthorizationRequest;
+import com.example.userservice.presentation.dto.req.DeductCookieRequest;
 import com.example.userservice.presentation.dto.req.JoinRequest;
 import com.example.userservice.presentation.dto.req.LoginRequest;
+import com.example.userservice.presentation.dto.res.DeductCookieResponse;
 import com.example.userservice.presentation.dto.res.TokenResponse;
 import com.example.userservice.presentation.dto.res.UserInfoResponse;
 
@@ -45,6 +48,7 @@ public class UserService implements UserUseCase {
     private final StorageService storageService;
     private final RedisTemplate<String, String> redisTemplate;
     private final KafkaTemplate<String, String> kafkaTemplate;
+    private final CookieLogRepository cookieLogRepository;
 
     @Override
     public boolean checkAuthorization(AuthorizationRequest request, String userId) {
@@ -164,8 +168,15 @@ public class UserService implements UserUseCase {
     }
 
     @Override
-    public void deductCookie(UserCookieDeductionRequestDto requestDto) {
+    @Transactional
+    public DeductCookieResponse deductCookie(DeductCookieRequest request) {
+        User user = userRepository.findById(request.userId());
+        user.deductCookie(request.amount());
 
+        CookieLog cookieLog = CookieLog.create(request.userId(), request.amount(), request.ticketId());
+
+        cookieLogRepository.save(cookieLog);
+        return new DeductCookieResponse(request.userId(), request.ticketId(), request.amount(), true);
     }
 
     private UUID toUUID(String userId) {

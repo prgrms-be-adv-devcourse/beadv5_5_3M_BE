@@ -35,6 +35,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(InsufficientCookieException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientCookie(InsufficientCookieException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI());
+    }
+
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, String path) {
         ErrorResponse response = new ErrorResponse(
                 LocalDateTime.now(),
