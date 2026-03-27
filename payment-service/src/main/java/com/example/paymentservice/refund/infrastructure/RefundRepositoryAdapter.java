@@ -26,6 +26,11 @@ public class RefundRepositoryAdapter implements RefundRepository {
     }
 
     @Override
+    public Optional<Refund> findByIdForUpdate(Long id) {
+        return jpaRepository.findByIdForUpdate(id);
+    }
+
+    @Override
     public List<Refund> findByUserId(UUID userId) {
         return jpaRepository.findByUserId(userId);
     }

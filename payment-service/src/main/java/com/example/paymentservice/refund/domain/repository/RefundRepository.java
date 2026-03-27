@@ -12,6 +12,8 @@ public interface RefundRepository {
 
     Optional<Refund> findById(Long id);
 
+    Optional<Refund> findByIdForUpdate(Long id);
+
     List<Refund> findByUserId(UUID userId);
 
     List<Refund> findByPaymentId(Long paymentId);
