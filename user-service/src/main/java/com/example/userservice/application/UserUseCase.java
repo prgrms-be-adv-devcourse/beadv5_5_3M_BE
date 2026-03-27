@@ -1,9 +1,10 @@
 package com.example.userservice.application;
 
-import com.example.userservice.application.dto.req.UserCookieDeductionRequestDto;
 import com.example.userservice.presentation.dto.req.AuthorizationRequest;
+import com.example.userservice.presentation.dto.req.DeductCookieRequest;
 import com.example.userservice.presentation.dto.req.JoinRequest;
 import com.example.userservice.presentation.dto.req.LoginRequest;
+import com.example.userservice.presentation.dto.res.DeductCookieResponse;
 import com.example.userservice.presentation.dto.res.TokenResponse;
 import com.example.userservice.presentation.dto.res.UserInfoResponse;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,6 +21,5 @@ public interface UserUseCase {
     UserInfoResponse me(String userId);
     void updateProfile(String userId, String nickname, String phone, MultipartFile profileImage);
 
-    void deductCookie(UserCookieDeductionRequestDto requestDto);
-
+    DeductCookieResponse deductCookie(DeductCookieRequest request);
 }
