@@ -35,3 +35,20 @@ out/
 
 ### VS Code ###
 .vscode/
+
+CLAUDE.md
+.claudeignore
+**/application-dev.yaml
+
+# Querydsl
+/src/main/generated
+
+# Python / Scripts (혹시 모를 상황 대비)
+__pycache__/
+*.py[cod]
+
+# 캐시 및 임시 파일
+.cache/
+
+# 테스트 페이지
+**/static/test-*.html

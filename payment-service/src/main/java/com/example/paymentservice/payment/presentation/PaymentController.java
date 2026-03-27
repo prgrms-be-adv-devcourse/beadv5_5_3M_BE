@@ -17,7 +17,7 @@ import java.util.UUID;
 
 @Tag(name = "Payment", description = "결제 API")
 @RestController
-@RequestMapping("/api/payments")
+@RequestMapping("/api/v1/payments")
 @RequiredArgsConstructor
 public class PaymentController {
 
