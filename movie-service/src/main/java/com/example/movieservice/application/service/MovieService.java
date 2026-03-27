@@ -143,7 +143,7 @@ public class MovieService implements MovieUseCase {
         List<Movie> movies = movieRepository.findMoviesByCreatorId(creatorId);
         return movies.stream()
                 .map(movie -> {
-                    return new MovieForCreatorResponse(movie.getMovieId(), movie.getTitle(), MovieForCreatorResponse.Visibility.valueOf(movie.getVisibility().name()));
+                    return new MovieForCreatorResponse(movie.getMovieId(), movie.getTitle(), movie.getVisibility().name());
                 })
                 .toList();
     }
