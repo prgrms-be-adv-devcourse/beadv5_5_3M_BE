@@ -1,8 +1,8 @@
 package com.example.movieservice.application.usecase;
 
-import com.example.movieservice.presentation.dto.request.RegisterCategoryRequest;
-import com.example.movieservice.presentation.dto.response.CategoryResponse;
-import com.example.movieservice.presentation.dto.response.RegisterCategoryResponse;
+import com.example.movieservice.presentation.dto.request.category.RegisterCategoryRequest;
+import com.example.movieservice.presentation.dto.response.category.CategoryResponse;
+import com.example.movieservice.presentation.dto.response.category.RegisterCategoryResponse;
 
 import java.util.List;
 

@@ -1,8 +1,6 @@
-package com.example.movieservice.presentation.dto.request;
+package com.example.movieservice.presentation.dto.request.schedule;
 
 import jakarta.validation.constraints.NotNull;
-
-import java.time.LocalDateTime;
 
 public record UpdateConfirmRequest(
         @NotNull Long scheduleId

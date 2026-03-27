@@ -1,9 +1,9 @@
 package com.example.movieservice.application.usecase;
 
-import com.example.movieservice.presentation.dto.request.RegisterMovieRequest;
-import com.example.movieservice.presentation.dto.request.UpdateDetailRequest;
-import com.example.movieservice.presentation.dto.request.UpdateVisibilityRequest;
-import com.example.movieservice.presentation.dto.response.*;
+import com.example.movieservice.presentation.dto.request.movie.RegisterMovieRequest;
+import com.example.movieservice.presentation.dto.request.movie.UpdateDetailRequest;
+import com.example.movieservice.presentation.dto.request.movie.UpdateVisibilityRequest;
+import com.example.movieservice.presentation.dto.response.movie.*;
 
 import java.util.List;
 import java.util.UUID;
