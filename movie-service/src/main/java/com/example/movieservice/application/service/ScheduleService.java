@@ -10,6 +10,7 @@ import com.example.movieservice.global.exception.GeneralException;
 import com.example.movieservice.presentation.dto.request.RegisterScheduleRequest;
 import com.example.movieservice.presentation.dto.request.UpdateConfirmRequest;
 import com.example.movieservice.presentation.dto.response.DraftScheduleResponse;
+import com.example.movieservice.presentation.dto.response.ScheduleForCreatorResponse;
 import com.example.movieservice.presentation.dto.response.ScheduleForUserResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -139,6 +140,17 @@ public class ScheduleService implements ScheduleUseCase {
 
         return schedules.stream()
                 .map(schedule -> new ScheduleForUserResponse(schedule.getScheduleId(), schedule.getStartTime(), schedule.getRemainingSeats(), schedule.getStatus().name()))
+                .toList();
+    }
+
+    @Override
+    public List<ScheduleForCreatorResponse> getByCreatorAndDate(UUID creatorId, LocalDate date) {
+        // 해당 크리에이터가 만든 모든 영화의 스케줄 중에서 해당 날짜의 확정이 된 것들만 반환 (startTime이 date인?)
+        List<Schedule> schedules = scheduleRepository.findAllByCreatorIdAndDate(creatorId, date);
+
+        return schedules.stream()
+                .filter(schedule -> schedule.getIsConfirmed())
+                .map(schedule -> new ScheduleForCreatorResponse(schedule.getScheduleId(), schedule.getMovie().getTitle(), schedule.getStartTime(), schedule.getEndTime(), schedule.getTotalSeats(), schedule.getRemainingSeats()))
                 .toList();
     }
 }
