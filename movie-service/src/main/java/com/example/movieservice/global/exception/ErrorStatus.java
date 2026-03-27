@@ -24,7 +24,13 @@ public enum ErrorStatus implements BaseErrorCode {
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CATEGORY_NOT_FOUND", "카테고리를 찾을 수 없습니다"),
 
     // Schedule
-    SCHEDULE_NO_REMAINING_SEATS(HttpStatus.BAD_REQUEST, "SCHEDULE_NO_REMAINING_SEATS", "남은 좌석이 없습니다");
+    SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SCHEDULE_NOT_FOUND", "스케줄을 찾을 수 없습니다"),
+    SCHEDULE_INVALID_CREATOR(HttpStatus.FORBIDDEN, "SCHEDULE_INVALID_CREATOR", "해당 스케줄에 대한 권한이 없습니다"),
+    SCHEDULE_NO_REMAINING_SEATS(HttpStatus.BAD_REQUEST, "SCHEDULE_NO_REMAINING_SEATS", "남은 좌석이 없습니다"),
+    REQUEST_TIME_CONFLICT(HttpStatus.CONFLICT, "REQUEST_TIME_CONFLICT", "요청한 스케줄들의 일정이 겹칩니다"),
+    SCHEDULE_TIME_CONFLICT(HttpStatus.CONFLICT, "SCHEDULE_TIME_CONFLICT", "해당 시간에 이미 편성된 일정이 있습니다"),
+    INVALID_SCHEDULE_TIME(HttpStatus.BAD_REQUEST, "INVALID_SCHEDULE_TIME", "상영 시간은 정각이어야 합니다")
+    ;
 
     private final HttpStatus httpStatus;
     private final String code;
