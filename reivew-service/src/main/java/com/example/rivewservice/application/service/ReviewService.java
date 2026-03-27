@@ -59,6 +59,8 @@ public class ReviewService implements ReviewUseCase {
                 saved.getReviewId().toString(),
                 new ReviewWrittenMessage(
                         saved.getReviewId(),
+                        userId,
+                        user.getNickname(),
                         saved.getRating(),
                         saved.getComment(),
                         saved.getMovieId()
