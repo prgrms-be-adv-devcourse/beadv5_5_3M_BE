@@ -55,16 +55,16 @@ public class Refund {
     }
 
     public void markSuccess() {
-        validateNotProcessed();
+        validatePending();
         this.status = RefundStatus.SUCCESS;
     }
 
     public void markFailed() {
-        validateNotProcessed();
+        validatePending();
         this.status = RefundStatus.FAILED;
     }
 
-    private void validateNotProcessed() {
+    public void validatePending() {
         if (this.status != RefundStatus.PENDING) {
             throw new BusinessException(ErrorCode.REFUND_ALREADY_PROCESSED);
         }

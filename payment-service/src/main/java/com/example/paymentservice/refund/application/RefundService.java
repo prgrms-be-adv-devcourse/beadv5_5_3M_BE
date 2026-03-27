@@ -67,10 +67,14 @@ public class RefundService {
 
     @Transactional
     public RefundInfo approveRefund(Long refundId) {
-        Refund refund = refundRepository.findById(refundId)
+        // 1. 비관적 락으로 조회 (동시 승인 방지)
+        Refund refund = refundRepository.findByIdForUpdate(refundId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.REFUND_NOT_FOUND));
 
-        // 1. 결제 조회 후 paymentKey로 PG 취소 요청
+        // 2. PG 호출 전에 상태 검증 (이미 처리된 환불 재승인 방지)
+        refund.validatePending();
+
+        // 3. 결제 조회 후 paymentKey로 PG 취소 요청
         Payment payment = paymentRepository.findById(refund.getPaymentId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
@@ -80,7 +84,7 @@ public class RefundService {
             throw new BusinessException(ErrorCode.PG_REFUND_FAILED);
         }
 
-        // 2. 환불 상태 변경
+        // 4. 환불 상태 변경
         refund.markSuccess();
         refundRepository.save(refund);
 
