@@ -16,4 +16,7 @@ public interface ScheduleJpaRepository extends JpaRepository<Schedule, Long> {
 
     @Query("SELECT s FROM Schedule s WHERE s.movie.creatorId = :creatorId AND CAST(s.startTime AS date) = :date")
     List<Schedule> findAllByCreatorIdAndDate(@Param("creatorId") UUID creatorId, @Param("date") LocalDate date);
+
+    @Query("SELECT s FROM Schedule s WHERE s.movie.movieId = :movieId AND s.isConfirmed = true AND s.endTime > :now")
+    List<Schedule> findUpcomingByMovieId(@Param("movieId") Long movieId, @Param("now") LocalDateTime now);
 }

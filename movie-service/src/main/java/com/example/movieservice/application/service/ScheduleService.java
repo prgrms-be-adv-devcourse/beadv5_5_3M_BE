@@ -10,15 +10,20 @@ import com.example.movieservice.global.exception.GeneralException;
 import com.example.movieservice.presentation.dto.request.RegisterScheduleRequest;
 import com.example.movieservice.presentation.dto.request.UpdateConfirmRequest;
 import com.example.movieservice.presentation.dto.response.DraftScheduleResponse;
+import com.example.movieservice.presentation.dto.response.ScheduleForUserResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -82,27 +87,58 @@ public class ScheduleService implements ScheduleUseCase {
 
           4단계: 모두 통과하면 confirm 처리
         * */
+        List<Schedule> schedules = new ArrayList<>(requests.stream()
+                .map(request -> scheduleRepository.findById(request.scheduleId())
+                        .orElseThrow(() -> new GeneralException(ErrorStatus.SCHEDULE_NOT_FOUND)))
+                .toList());
 
-        requests.sort(Comparator.comparing(UpdateConfirmRequest::startTime));
+        schedules.sort(Comparator.comparing(Schedule::getStartTime));
 
-        for (int i = 0; i < requests.size() - 1; i++) {
-            if (requests.get(i).endTime().isAfter(requests.get(i + 1).startTime())) {
+        for (int i = 0; i < schedules.size() - 1; i++) {
+            if (schedules.get(i).getEndTime().isAfter(schedules.get(i + 1).getStartTime())) {
                 throw new GeneralException(ErrorStatus.REQUEST_TIME_CONFLICT);
             }
         }
 
-        requests.forEach(
-                request -> {
-                    Schedule schedule = scheduleRepository.findById(request.scheduleId()).orElseThrow(()->new GeneralException(ErrorStatus.SCHEDULE_NOT_FOUND));
+        schedules.forEach(
+                schedule -> {
                     if(!schedule.getMovie().getCreatorId().equals(creatorId)){
                         throw new GeneralException(ErrorStatus.SCHEDULE_INVALID_CREATOR);
                     }
-                    if(scheduleRepository.existsOverlapping(creatorId, request.startTime(), request.endTime())){
+                    if(scheduleRepository.existsOverlapping(creatorId, schedule.getStartTime(), schedule.getEndTime())){
                         throw new GeneralException(ErrorStatus.SCHEDULE_TIME_CONFLICT);
                     }
                     schedule.confirm();
                     schedule.scheduled();
                 }
         );
+    }
+
+    @Override
+    @Transactional
+    public void delete(UUID creatorId, Long scheduleId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId).orElseThrow(()->new GeneralException(ErrorStatus.SCHEDULE_NOT_FOUND));
+        if(!schedule.getMovie().getCreatorId().equals(creatorId)){
+            throw new GeneralException(ErrorStatus.SCHEDULE_INVALID_CREATOR);
+        }
+        if(schedule.getIsConfirmed()){
+            throw new GeneralException(ErrorStatus.SCHEDULE_ALREADY_CONFIRMED);
+        }
+        scheduleRepository.delete(schedule);
+    }
+
+    @Override
+    public List<ScheduleForUserResponse> getSpecificMovieSchedule(Long movieId) {
+        log.info("[getSpecificMovieSchedule] movieId={}", movieId);
+        movieRepository.findByMovieId(movieId).orElseThrow(()->new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
+
+        // 오늘 날짜 기준 앞으로의 일정을 나타내기 (현 시각 기준 상영 중이여도 보이게)
+        // 확정된 일정만
+        List<Schedule> schedules = scheduleRepository.findUpcomingByMovieId(movieId, LocalDateTime.now());
+        log.info("[getSpecificMovieSchedule] 조회된 스케줄 수={}", schedules.size());
+
+        return schedules.stream()
+                .map(schedule -> new ScheduleForUserResponse(schedule.getScheduleId(), schedule.getStartTime(), schedule.getRemainingSeats(), schedule.getStatus().name()))
+                .toList();
     }
 }
