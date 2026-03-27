@@ -3,4 +3,3 @@ spring:
     name: review-service
   profiles:
     active: dev
-

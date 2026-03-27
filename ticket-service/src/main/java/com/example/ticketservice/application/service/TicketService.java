@@ -4,6 +4,7 @@ import com.example.ticketservice.application.dto.request.DeductCookieRequest;
 import com.example.ticketservice.application.dto.request.TicketCreateRequest;
 import com.example.ticketservice.application.dto.response.TicketResponse;
 import com.example.ticketservice.application.port.out.CachePort;
+import com.example.ticketservice.application.port.out.EventPublisherPort;
 import com.example.ticketservice.application.port.out.UserPort;
 import com.example.ticketservice.application.port.out.UserPort;
 import com.example.ticketservice.application.port.out.EventPublisherPort;
@@ -39,6 +40,7 @@ public class TicketService implements TicketUseCase {
     private final TicketRepository ticketRepository;
     private final ScheduleRepository scheduleRepository;
     private final CachePort cachePort;
+    private final EventPublisherPort eventPublisherPort;
     private final UserPort userPort;
     private final EventPublisherPort eventPublisherPort;
 
