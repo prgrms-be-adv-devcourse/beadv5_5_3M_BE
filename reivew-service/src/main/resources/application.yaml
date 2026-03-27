@@ -1,5 +1,5 @@
 spring:
   application:
-    name: ticket-service
+    name: review-service
   profiles:
     active: dev
