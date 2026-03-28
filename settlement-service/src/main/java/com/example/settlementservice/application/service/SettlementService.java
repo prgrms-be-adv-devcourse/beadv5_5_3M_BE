@@ -12,19 +12,16 @@ import com.example.settlementservice.domain.wallet.Wallet;
 import com.example.settlementservice.presentation.web.dto.PostSettlementRequest;
 import com.example.settlementservice.presentation.web.dto.SettlementResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.UUID;
 
 @Service
-@Transactional
 @RequiredArgsConstructor
 public class SettlementService implements
         RequestSettlementUseCase,
@@ -34,47 +31,23 @@ public class SettlementService implements
     private final WalletRepository walletRepository;
     private final SettlementRepository settlementRepository;
     private final SettlementLogRepository settlementLogRepository;
-    private final CreatorPayoutQueryPort creatorPayoutQueryPort;
+    private final SettlementRequestExecutor settlementRequestExecutor;
 
     @Override
     public SettlementResponse requestSettlement(UUID creatorId, String idempotencyKey, PostSettlementRequest request) {
-        if (settlementRepository.existsByIdempotencyKey(idempotencyKey)) {
-            throw new DuplicateIdempotencyKeyException(idempotencyKey);
+        try {
+            return settlementRequestExecutor.execute(creatorId, idempotencyKey, request);
+        } catch (DataIntegrityViolationException e) {
+            // TX 외부에서 catch → rollback-only 오염 없음
+            // race condition: 동시 INSERT로 UNIQUE 충돌 시 이미 저장된 Settlement 반환
+            return settlementRepository.findByIdempotencyKey(idempotencyKey)
+                    .map(SettlementResponse::from)
+                    .orElseThrow(() -> e);
         }
-
-        Wallet wallet = walletRepository.findByCreatorId(creatorId)
-                .orElseThrow(() -> new WalletNotFoundException(creatorId));
-
-        // Creator 서비스에서 계좌 정보 스냅샷 조회 (REST)
-        CreatorPayoutSnapshot snapshot = creatorPayoutQueryPort.getPayoutSnapshot(creatorId);
-
-        Money requestAmount = Money.of(request.requestAmount());
-        OffsetDateTime deadline = nextMondayNineAmKst();
-
-        // 1. 정산 엔티티 생성 (Wallet은 이미 net 잔액 — 수수료는 적립 시 차감됨)
-        Settlement settlement = Settlement.request(
-                wallet,
-                requestAmount,
-                snapshot.bankName(),
-                snapshot.accountNumber(),
-                snapshot.accountHolder(),
-                idempotencyKey,
-                deadline
-        );
-        settlementRepository.save(settlement);
-
-        // 2. 지갑에서 사전 차감 (정산 신청 시 바로 잠금)
-        wallet.subtractBalance(requestAmount);
-        walletRepository.save(wallet);
-
-        // 3. 차감 내역 로그 기록
-        SettlementLog debitLog = SettlementLog.debitSettlementRequest(wallet, settlement, requestAmount);
-        settlementLogRepository.save(debitLog);
-
-        return SettlementResponse.from(settlement);
     }
 
     @Override
+    @Transactional
     public SettlementResponse cancelSettlement(Long settlementId, UUID creatorId) {
         Settlement settlement = settlementRepository.findById(settlementId)
                 .orElseThrow(() -> new SettlementNotFoundException(settlementId));
@@ -119,13 +92,5 @@ public class SettlementService implements
         return settlementRepository.findByCreatorId(creatorId).stream()
                 .map(SettlementResponse::from)
                 .toList();
-    }
-
-    private OffsetDateTime nextMondayNineAmKst() {
-        ZoneId kst = ZoneId.of("Asia/Seoul");
-        return OffsetDateTime.now(kst)
-                .with(TemporalAdjusters.next(DayOfWeek.MONDAY))
-                .withHour(9).withMinute(0).withSecond(0).withNano(0)
-                .withOffsetSameInstant(ZoneOffset.UTC);
     }
 }
