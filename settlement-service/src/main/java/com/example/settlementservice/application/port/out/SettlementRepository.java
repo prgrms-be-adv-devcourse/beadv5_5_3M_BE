@@ -11,6 +11,6 @@ public interface SettlementRepository {
     Optional<Settlement> findById(Long id);
     List<Settlement> findByCreatorId(UUID creatorId);
     List<Settlement> findByStatus(SettlementStatus status);
-    boolean existsByIdempotencyKey(String idempotencyKey);
+    Optional<Settlement> findByIdempotencyKey(String idempotencyKey);
     Settlement save(Settlement settlement);
 }

@@ -32,8 +32,8 @@ public class SettlementJpaRepository implements SettlementRepository {
     }
 
     @Override
-    public boolean existsByIdempotencyKey(String idempotencyKey) {
-        return delegate.existsByIdempotencyKey(idempotencyKey);
+    public Optional<Settlement> findByIdempotencyKey(String idempotencyKey) {
+        return delegate.findByIdempotencyKey(idempotencyKey);
     }
 
     @Override
