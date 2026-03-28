@@ -79,14 +79,15 @@ public class Settlement {
             String payoutAccountNumber,
             String payoutAccountHolder,
             String idempotencyKey,
-            OffsetDateTime deadline
+            OffsetDateTime deadline,
+            Long balanceSnapshot
     ) {
         Settlement s = new Settlement();
         s.wallet = wallet;
         s.creatorId = wallet.getCreatorId();
         s.idempotencyKey = idempotencyKey;
         s.requestAmount = requestAmount.value();
-        s.balanceSnapshot = wallet.getBalance();  // 신청 시점 잔액 스냅샷
+        s.balanceSnapshot = balanceSnapshot;  // 신청 시점 잔액 스냅샷
         s.status = SettlementStatus.REQUESTED;
         s.requestedAt = OffsetDateTime.now(ZoneOffset.UTC);
         s.settlementDeadline = deadline;
