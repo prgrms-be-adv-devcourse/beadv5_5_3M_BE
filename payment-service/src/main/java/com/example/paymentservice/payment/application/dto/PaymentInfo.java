@@ -15,6 +15,7 @@ public record PaymentInfo(
         @Schema(description = "결제 상태") PaymentStatus status,
         @Schema(description = "사용자 ID") UUID userId,
         @Schema(description = "토스 결제 키") String paymentKey,
+        @Schema(description = "주문 ID") String orderId,
         @Schema(description = "결제 생성 시각") LocalDateTime createdAt
 ) {
 
@@ -26,6 +27,7 @@ public record PaymentInfo(
                 payment.getStatus(),
                 payment.getUserId(),
                 payment.getPaymentKey(),
+                payment.getOrderId(),
                 payment.getCreatedAt()
         );
     }

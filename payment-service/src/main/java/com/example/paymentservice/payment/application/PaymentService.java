@@ -45,10 +45,13 @@ public class PaymentService {
         try {
             PaymentGatewayResponse pgResponse = paymentGateway.confirmPayment(
                     command.paymentKey(), command.orderId(), payment.getAmount());
-            payment.markSuccess(pgResponse.paymentKey());
+            payment.markSuccess(pgResponse.paymentKey(), command.orderId());
         } catch (Exception e) {
             payment.markFailed();
             paymentRepository.save(payment);
+            eventPublisher.publishEvent(
+                    PaymentFailedEvent.of(payment.getId(), payment.getUserId())
+            );
             throw new BusinessException(ErrorCode.PG_CONFIRM_FAILED);
         }
         paymentRepository.save(payment);
