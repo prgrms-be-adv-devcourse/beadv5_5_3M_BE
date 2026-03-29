@@ -18,4 +18,8 @@ public interface MovieRepository {
     List<Movie> findMoviesByCreatorId(UUID creatorId);
 
     List<Long> findAllMovieIds();
+
+    List<Movie> findAllPublic();
+
+    List<Movie> findAllByCategoryId(Long categoryId);
 }

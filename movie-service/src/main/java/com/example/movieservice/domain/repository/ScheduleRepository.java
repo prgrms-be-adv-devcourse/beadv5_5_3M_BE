@@ -1,5 +1,6 @@
 package com.example.movieservice.domain.repository;
 
+import com.example.movieservice.domain.model.Movie;
 import com.example.movieservice.domain.model.Schedule;
 import com.example.movieservice.domain.model.Schedule.ScheduleStatus;
 
@@ -29,4 +30,8 @@ public interface ScheduleRepository {
     List<Schedule> findToOnAir(LocalDateTime now);
 
     List<Schedule> findOnAirToCompleted(LocalDateTime tenMinutesAgo);
+
+    List<Movie> findOnAirMovies();
+
+    List<Schedule> findScheduledMovies();
 }

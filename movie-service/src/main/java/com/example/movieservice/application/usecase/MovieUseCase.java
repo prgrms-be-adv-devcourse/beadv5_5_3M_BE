@@ -26,4 +26,12 @@ public interface MovieUseCase {
     List<MovieForCreatorResponse> getMovieListForCreator(UUID creatorId);
 
     List<MovieForScheduleResponse> getPublicMovieListForSchedule(UUID creatorId);
+
+    List<MovieCardResponse> getOnAirMovieList();
+
+    List<ScheduledMovieResponse> getScheduledMovieList();
+
+    List<MovieCardResponse> getPublicMovieList();
+
+    List<MovieCardResponse> getMovieListByGenre(Long categoryId);
 }
