@@ -11,4 +11,5 @@ public interface ReviewRepository {
     void save(Review review);
     void delete(Review review);
     List<Review> findTop5ByMovieId(Long movieId);
+    List<MovieRatingStats> findAllRatingStats();
 }

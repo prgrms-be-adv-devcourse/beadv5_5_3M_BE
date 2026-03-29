@@ -108,4 +108,10 @@ public class Movie {
         this.averageRating = reviewCount == 1 ? 0 : (averageRating * reviewCount - rating) / (reviewCount - 1);
         this.reviewCount--;
     }
+
+    // 배치 보정 시
+    public void recalculateRating(int reviewCount, float averageRating) {
+        this.reviewCount = reviewCount;
+        this.averageRating = averageRating;
+    }
 }
