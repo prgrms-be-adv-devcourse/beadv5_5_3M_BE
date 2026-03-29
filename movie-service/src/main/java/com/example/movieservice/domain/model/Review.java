@@ -51,5 +51,6 @@ public class Review {
     public void update(Integer rating, String comment) {
         this.rating = rating;
         this.comment = comment;
+        this.updatedAt = LocalDateTime.now();
     }
 }
