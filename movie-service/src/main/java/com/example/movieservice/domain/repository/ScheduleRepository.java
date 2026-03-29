@@ -1,7 +1,7 @@
 package com.example.movieservice.domain.repository;
 
 import com.example.movieservice.domain.model.Schedule;
-import jakarta.validation.constraints.NotNull;
+import com.example.movieservice.domain.model.Schedule.ScheduleStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,4 +23,10 @@ public interface ScheduleRepository {
     List<Schedule> findUpcomingByMovieId(Long movieId, LocalDateTime now);
 
     boolean existsConfirmedScheduleByMovieId(Long movieId);
+
+    List<Schedule> findScheduledToWaiting(LocalDateTime now, LocalDateTime tenMinutesLater);
+
+    List<Schedule> findToOnAir(LocalDateTime now);
+
+    List<Schedule> findOnAirToCompleted(LocalDateTime tenMinutesAgo);
 }

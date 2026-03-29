@@ -1,6 +1,7 @@
 package com.example.movieservice.infrastructure.persistence;
 
 import com.example.movieservice.domain.model.Schedule;
+import com.example.movieservice.domain.model.Schedule.ScheduleStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -21,4 +22,17 @@ public interface ScheduleJpaRepository extends JpaRepository<Schedule, Long> {
     List<Schedule> findUpcomingByMovieId(@Param("movieId") Long movieId, @Param("now") LocalDateTime now);
 
     boolean existsByMovieMovieIdAndIsConfirmedTrue(Long movieId);
+
+    @Query("SELECT s FROM Schedule s WHERE s.status = :status AND s.startTime > :now AND s.startTime <= :tenMinutesLater")
+    List<Schedule> findScheduledToWaiting(@Param("status") ScheduleStatus status,
+                                          @Param("now") LocalDateTime now,
+                                          @Param("tenMinutesLater") LocalDateTime tenMinutesLater);
+
+    @Query("SELECT s FROM Schedule s WHERE s.status IN :statuses AND s.startTime <= :now")
+    List<Schedule> findToOnAir(@Param("statuses") List<ScheduleStatus> statuses,
+                               @Param("now") LocalDateTime now);
+
+    @Query("SELECT s FROM Schedule s WHERE s.status = :status AND s.endTime <= :tenMinutesAgo")
+    List<Schedule> findOnAirToCompleted(@Param("status") ScheduleStatus status,
+                                        @Param("tenMinutesAgo") LocalDateTime tenMinutesAgo);
 }
