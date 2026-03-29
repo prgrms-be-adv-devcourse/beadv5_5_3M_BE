@@ -5,6 +5,7 @@ import com.example.movieservice.domain.model.Category;
 import com.example.movieservice.domain.model.Movie;
 import com.example.movieservice.domain.repository.CategoryRepository;
 import com.example.movieservice.domain.repository.MovieRepository;
+import com.example.movieservice.domain.repository.ScheduleRepository;
 import com.example.movieservice.global.exception.ErrorStatus;
 import com.example.movieservice.global.exception.GeneralException;
 import com.example.movieservice.presentation.dto.request.movie.RegisterMovieRequest;
@@ -25,6 +26,7 @@ public class MovieService implements MovieUseCase {
 
     private final MovieRepository movieRepository;
     private final CategoryRepository categoryRepository;
+    private final ScheduleRepository scheduleRepository;
 
     @Override
     @Transactional
@@ -72,6 +74,11 @@ public class MovieService implements MovieUseCase {
         Movie movie = movieRepository.findByMovieId(movieId).orElseThrow(()->new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
         if(!movie.getCreatorId().equals(creatorId)){
             throw new GeneralException(ErrorStatus.MOVIE_INVALID_CREATOR);
+        }
+
+        // 편성이 확정된 게 있다면 수정 불가
+        if(scheduleRepository.existsConfirmedScheduleByMovieId(movieId)){
+            throw new GeneralException(ErrorStatus.MOVIE_ALREADY_SCHEDULED);
         }
         movie.updateDetail(request.title(), request.description(), request.additionalCookie());
 
