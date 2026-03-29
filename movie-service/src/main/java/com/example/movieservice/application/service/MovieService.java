@@ -101,6 +101,10 @@ public class MovieService implements MovieUseCase {
         if(!movie.getCreatorId().equals(creatorId)){
             throw new GeneralException(ErrorStatus.MOVIE_INVALID_CREATOR);
         }
+        // 편성이 확정된 게 있다면 삭제 불가
+        if(scheduleRepository.existsConfirmedScheduleByMovieId(movieId)){
+            throw new GeneralException(ErrorStatus.MOVIE_ALREADY_SCHEDULED);
+        }
         movie.getCategories().clear();
         movieRepository.delete(movie);
     }
