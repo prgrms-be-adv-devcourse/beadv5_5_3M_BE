@@ -52,5 +52,6 @@ public class Review {
         this.rating = rating;
         this.comment = comment;
         this.updatedAt = LocalDateTime.now();
+        this.status = ReviewStatus.UPDATE;
     }
 }
