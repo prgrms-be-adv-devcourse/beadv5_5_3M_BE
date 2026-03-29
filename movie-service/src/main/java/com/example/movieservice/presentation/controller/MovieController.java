@@ -116,12 +116,10 @@ public class MovieController {
     })
     @GetMapping("/{movieId}/detail")
     public ApiResponse<DetailForUserResponse> detailForUser(
-            @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long movieId
     ){
-        // todo: 이미지, 리뷰들, 상영 일정을 반환해야 함
-        // todo: 지금은 uerId 사용 안하는데 나중에 사용할까?
-        return ApiResponse.onSuccess(movieUseCase.getDetailForUser(userId, movieId));
+        // todo: 이미지 반환해야 함
+        return ApiResponse.onSuccess(movieUseCase.getDetailForUser(movieId));
     }
 
     @Operation(summary = "크리에이터 영화 목록 조회 (사용자)", description = "특정 크리에이터의 공개된 영화 목록을 조회합니다.")

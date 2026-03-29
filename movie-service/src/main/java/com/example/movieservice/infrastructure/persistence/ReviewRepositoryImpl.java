@@ -15,6 +15,11 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     private final ReviewJpaRepository reviewJpaRepository;
 
     @Override
+    public boolean existsById(Long reviewId) {
+        return reviewJpaRepository.existsById(reviewId);
+    }
+
+    @Override
     public Optional<Review> findById(Long reviewId) {
         return reviewJpaRepository.findById(reviewId);
     }

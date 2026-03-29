@@ -129,7 +129,7 @@ public class MovieService implements MovieUseCase {
     }
 
     @Override
-    public DetailForUserResponse getDetailForUser(UUID userId, Long movieId) {
+    public DetailForUserResponse getDetailForUser(Long movieId) {
         Movie movie = movieRepository.findByMovieId(movieId).orElseThrow(()->new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
         if(movie.getVisibility() == Movie.Visibility.PRIVATE){
             throw new GeneralException(ErrorStatus.MOVIE_NOT_PUBLIC);

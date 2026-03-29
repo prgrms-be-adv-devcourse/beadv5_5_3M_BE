@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ReviewRepository {
+    boolean existsById(Long reviewId);
     Optional<Review> findById(Long reviewId);
     void save(Review review);
     void delete(Review review);
