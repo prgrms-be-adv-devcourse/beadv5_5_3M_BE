@@ -27,7 +27,3 @@ logging:
   level:
     root: INFO
     com.example: DEBUG
-
-springdoc:
-  api-docs:
-    enabled: true
