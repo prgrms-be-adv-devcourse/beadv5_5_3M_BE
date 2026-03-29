@@ -19,4 +19,6 @@ public interface ScheduleJpaRepository extends JpaRepository<Schedule, Long> {
 
     @Query("SELECT s FROM Schedule s WHERE s.movie.movieId = :movieId AND s.isConfirmed = true AND s.endTime > :now")
     List<Schedule> findUpcomingByMovieId(@Param("movieId") Long movieId, @Param("now") LocalDateTime now);
+
+    boolean existsByMovieMovieIdAndIsConfirmedTrue(Long movieId);
 }

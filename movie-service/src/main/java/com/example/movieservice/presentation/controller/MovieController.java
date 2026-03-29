@@ -74,7 +74,6 @@ public class MovieController {
             @PathVariable Long movieId,
             @Valid @RequestBody UpdateDetailRequest request){
         // todo : 포스터 이미지 수정도 로직에 추가해야 함
-        // todo : 편성이 확정된 게 있으면 수정 불가
         movieUseCase.updateDetail(creatorId, movieId, request);
         return ApiResponse.onSuccess();
     }

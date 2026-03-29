@@ -21,4 +21,6 @@ public interface ScheduleRepository {
     void delete(Schedule schedule);
 
     List<Schedule> findUpcomingByMovieId(Long movieId, LocalDateTime now);
+
+    boolean existsConfirmedScheduleByMovieId(Long movieId);
 }

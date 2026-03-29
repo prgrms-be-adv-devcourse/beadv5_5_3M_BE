@@ -45,4 +45,9 @@ public class ScheduleRepositoryImpl implements ScheduleRepository {
     public List<Schedule> findUpcomingByMovieId(Long movieId, LocalDateTime now) {
         return scheduleJpaRepository.findUpcomingByMovieId(movieId, now);
     }
+
+    @Override
+    public boolean existsConfirmedScheduleByMovieId(Long movieId) {
+        return scheduleJpaRepository.existsByMovieMovieIdAndIsConfirmedTrue(movieId);
+    }
 }

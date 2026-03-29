@@ -19,6 +19,7 @@ public enum ErrorStatus implements BaseErrorCode {
     MOVIE_NOT_FOUND(HttpStatus.NOT_FOUND, "MOVIE_NOT_FOUND", "영화를 찾을 수 없습니다"),
     MOVIE_INVALID_CREATOR(HttpStatus.FORBIDDEN, "MOVIE_INVALID_CREATOR", "해당 영화에 대한 권한이 없습니다"),
     MOVIE_NOT_PUBLIC(HttpStatus.NOT_FOUND, "MOVIE_NOT_PUBLIC", "비공개 영화입니다"),
+    MOVIE_ALREADY_SCHEDULED(HttpStatus.BAD_REQUEST, "MOVIE_ALREADY_SCHEDULED", "이미 확정된 스케줄이 존재합니다"),
 
     // Category
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CATEGORY_NOT_FOUND", "카테고리를 찾을 수 없습니다"),
