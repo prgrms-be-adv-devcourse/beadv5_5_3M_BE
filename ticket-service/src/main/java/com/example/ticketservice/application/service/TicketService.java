@@ -40,6 +40,7 @@ public class TicketService implements TicketUseCase {
     private final TicketRepository ticketRepository;
     private final ScheduleRepository scheduleRepository;
     private final CachePort cachePort;
+    private final UserPort userPort;
     private final EventPublisherPort eventPublisherPort;
     private final UserPort userPort;
     private final EventPublisherPort eventPublisherPort;
