@@ -1,6 +1,7 @@
 package com.example.movieservice.infrastructure.persistence;
 
 import com.example.movieservice.domain.model.Review;
+import com.example.movieservice.domain.repository.MovieRatingStats;
 import com.example.movieservice.domain.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -37,5 +38,10 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     @Override
     public List<Review> findTop5ByMovieId(Long movieId) {
         return reviewJpaRepository.findTop5ByMovieIdOrderByUpdatedAtDesc(movieId);
+    }
+
+    @Override
+    public List<MovieRatingStats> findAllRatingStats() {
+        return reviewJpaRepository.findRatingStatsByMovieId();
     }
 }
