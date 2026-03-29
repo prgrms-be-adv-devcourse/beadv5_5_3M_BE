@@ -90,7 +90,6 @@ public class MovieController {
             @RequestHeader("X-Creator-Id") UUID creatorId,
             @PathVariable Long movieId){
         // todo : 나중에 s3에 올라간 자원을 지우는 로직이 들어가야 함
-        // todo : 편성이 확정된 게 있으면 삭제 불가
         movieUseCase.delete(creatorId, movieId);
         return ApiResponse.onSuccess();
     }
