@@ -5,6 +5,7 @@ import com.example.movieservice.domain.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -26,5 +27,10 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     @Override
     public void delete(Review review) {
         reviewJpaRepository.delete(review);
+    }
+
+    @Override
+    public List<Review> findTop5ByMovieId(Long movieId) {
+        return reviewJpaRepository.findTop5ByMovieIdOrderByUpdatedAtDesc(movieId);
     }
 }
