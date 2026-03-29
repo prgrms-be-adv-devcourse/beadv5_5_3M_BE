@@ -27,4 +27,9 @@ public class CategoryRepositoryImpl implements CategoryRepository {
     public Category save(Category category) {
         return categoryJpaRepository.save(category);
     }
+
+    @Override
+    public boolean existsById(Long categoryId) {
+        return categoryJpaRepository.existsById(categoryId);
+    }
 }

@@ -1,5 +1,6 @@
 package com.example.movieservice.infrastructure.persistence;
 
+import com.example.movieservice.domain.model.Movie;
 import com.example.movieservice.domain.model.Schedule;
 import com.example.movieservice.domain.model.Schedule.ScheduleStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -35,4 +36,12 @@ public interface ScheduleJpaRepository extends JpaRepository<Schedule, Long> {
     @Query("SELECT s FROM Schedule s WHERE s.status = :status AND s.endTime <= :tenMinutesAgo")
     List<Schedule> findOnAirToCompleted(@Param("status") ScheduleStatus status,
                                         @Param("tenMinutesAgo") LocalDateTime tenMinutesAgo);
+
+    @Query("SELECT DISTINCT s.movie FROM Schedule s LEFT JOIN FETCH s.movie.categories WHERE s.status = 'ON_AIR'")
+    List<Movie> findOnAirMovies();
+
+    @Query("SELECT s FROM Schedule s JOIN FETCH s.movie m LEFT JOIN FETCH m.categories " +
+            "WHERE s.status = 'SCHEDULED' " +
+            "AND s.startTime = (SELECT MIN(s2.startTime) FROM Schedule s2 WHERE s2.movie = s.movie AND s2.status = 'SCHEDULED')")
+    List<Schedule> findScheduleMovies();
 }

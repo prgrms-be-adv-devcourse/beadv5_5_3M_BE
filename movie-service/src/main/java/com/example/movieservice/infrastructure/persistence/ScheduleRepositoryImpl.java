@@ -1,5 +1,6 @@
 package com.example.movieservice.infrastructure.persistence;
 
+import com.example.movieservice.domain.model.Movie;
 import com.example.movieservice.domain.model.Schedule;
 import com.example.movieservice.domain.model.Schedule.ScheduleStatus;
 import com.example.movieservice.domain.repository.ScheduleRepository;
@@ -66,4 +67,15 @@ public class ScheduleRepositoryImpl implements ScheduleRepository {
     public List<Schedule> findOnAirToCompleted(LocalDateTime tenMinutesAgo) {
         return scheduleJpaRepository.findOnAirToCompleted(ScheduleStatus.ON_AIR, tenMinutesAgo);
     }
+
+    @Override
+    public List<Movie> findOnAirMovies() {
+        return scheduleJpaRepository.findOnAirMovies();
+    }
+
+    @Override
+    public List<Schedule> findScheduledMovies() {
+        return scheduleJpaRepository.findScheduleMovies();
+    }
+
 }

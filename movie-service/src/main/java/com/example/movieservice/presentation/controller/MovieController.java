@@ -156,4 +156,45 @@ public class MovieController {
     ){
         return ApiResponse.onSuccess(movieUseCase.getPublicMovieListForSchedule(creatorId));
     }
+
+    @Operation(summary = "현재 상영 중인 영화 목록 조회", description = "현재 ON_AIR 상태인 스케줄의 영화 목록을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/on-air")
+    public ApiResponse<List<MovieCardResponse>> getOnAirMovieList(){
+        return ApiResponse.onSuccess(movieUseCase.getOnAirMovieList());
+    }
+
+    @Operation(summary = "상영 예정 영화 목록 조회", description = "SCHEDULED 상태인 스케줄 중 영화별 가장 빠른 상영 일정을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/scheduled")
+    public ApiResponse<List<ScheduledMovieResponse>> getScheduledMovieList(){
+        // todo : 나중에 page를 추가해서 특정 개수만 반환하는 등의 작업 필요
+        return ApiResponse.onSuccess(movieUseCase.getScheduledMovieList());
+    }
+
+    @Operation(summary = "전체 공개 영화 목록 조회", description = "공개(PUBLIC) 상태인 전체 영화 목록을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/public")
+    public ApiResponse<List<MovieCardResponse>> getPublicMovieList(){
+        return ApiResponse.onSuccess(movieUseCase.getPublicMovieList());
+    }
+
+    @Operation(summary = "장르별 영화 목록 조회", description = "특정 카테고리(장르)에 속한 공개 영화 목록을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "카테고리를 찾을 수 없음")
+    })
+    @GetMapping("/genre/{categoryId}")
+    public ApiResponse<List<MovieCardResponse>> getMovieListByGenre(
+            @Parameter(description = "카테고리 ID", required = true)
+            @PathVariable Long categoryId) {
+        return ApiResponse.onSuccess(movieUseCase.getMovieListByGenre(categoryId));
+    }
+
 }

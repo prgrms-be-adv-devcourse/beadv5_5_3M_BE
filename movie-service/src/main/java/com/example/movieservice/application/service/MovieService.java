@@ -197,4 +197,54 @@ public class MovieService implements MovieUseCase {
                 }).toList();
     }
 
+    @Override
+    public List<MovieCardResponse> getOnAirMovieList() {
+        List<Movie> movies = scheduleRepository.findOnAirMovies();
+
+        return movies.stream()
+                .map(movie -> {
+                    List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
+                    return new MovieCardResponse(movie.getMovieId(), movie.getCreatorId(), movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds);
+                })
+                .toList();
+    }
+
+    @Override
+    public List<ScheduledMovieResponse> getScheduledMovieList() {
+        List<Schedule> schedules = scheduleRepository.findScheduledMovies();
+
+        return schedules.stream()
+                .map(schedule -> {
+                    Movie movie = schedule.getMovie();
+                    List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
+                    return new ScheduledMovieResponse(movie.getMovieId(), movie.getCreatorId(), movie.getTitle(), schedule.getStartTime(), categoryIds);
+                })
+                .toList();
+    }
+
+    @Override
+    public List<MovieCardResponse> getPublicMovieList() {
+        List<Movie> movies = movieRepository.findAllPublic();
+        return movies.stream()
+                .map(movie -> {
+                    List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
+                    return new MovieCardResponse(movie.getMovieId(), movie.getCreatorId(), movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds);
+                })
+                .toList();
+    }
+
+    @Override
+    public List<MovieCardResponse> getMovieListByGenre(Long categoryId) {
+        if(!categoryRepository.existsById(categoryId)){
+            throw new GeneralException(ErrorStatus.CATEGORY_NOT_FOUND);
+        }
+        List<Movie> movies = movieRepository.findAllByCategoryId(categoryId);
+        return movies.stream()
+                .map(movie -> {
+                    List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
+                    return new MovieCardResponse(movie.getMovieId(), movie.getCreatorId(), movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds);
+                })
+                .toList();
+    }
+
 }
