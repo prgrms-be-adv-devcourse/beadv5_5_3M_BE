@@ -1,8 +1,10 @@
 package com.example.ticketservice.application.service;
 
+import com.example.ticketservice.application.dto.request.DeductCookieRequest;
 import com.example.ticketservice.application.dto.request.TicketCreateRequest;
 import com.example.ticketservice.application.dto.response.TicketResponse;
 import com.example.ticketservice.application.port.out.CachePort;
+import com.example.ticketservice.application.port.out.UserPort;
 import com.example.ticketservice.application.usecase.TicketUseCase;
 import com.example.ticketservice.common.model.PageResult;
 import com.example.ticketservice.domain.model.Schedule;
@@ -29,6 +31,7 @@ public class TicketService implements TicketUseCase {
     private final TicketRepository ticketRepository;
     private final ScheduleRepository scheduleRepository;
     private final CachePort cachePort;
+    private final UserPort userPort;
 
     @Transactional
     @Override
@@ -47,6 +50,8 @@ public class TicketService implements TicketUseCase {
 
         schedule.decreaseSeats();
         scheduleRepository.save(schedule);
+
+        userPort.deductTicketFee(new DeductCookieRequest(ticket.getId(), schedule.getCookie(), userId));
 
         ReviewAuthorizationCache cache = ReviewAuthorizationCache.from(
                 ticket.getId(), schedule.getMovieId(), schedule.getId(), userId);
