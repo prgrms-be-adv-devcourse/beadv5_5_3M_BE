@@ -22,4 +22,5 @@ public interface UserUseCase {
     void updateProfile(String userId, String nickname, String phone, MultipartFile profileImage);
 
     DeductCookieResponse deductCookie(DeductCookieRequest request);
+    void logout(String userId);
 }

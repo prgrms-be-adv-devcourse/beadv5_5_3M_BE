@@ -183,6 +183,11 @@ public class UserService implements UserUseCase {
         return UUID.fromString(userId);
     }
 
+    @Override
+    public void logout(String userId) {
+        redisTemplate.delete("refresh:token:" + userId);
+    }
+
     private String toJsonString(Object object) {
         ObjectMapper objectMapper = new ObjectMapper();
 
