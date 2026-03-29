@@ -36,6 +36,7 @@ public class ReviewService implements ReviewUseCase {
                 .rating(msg.rating())
                 .comment(msg.content())
                 .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .movieId(msg.movieId())
                 .status(Review.ReviewStatus.CREATE)
                 .build();
