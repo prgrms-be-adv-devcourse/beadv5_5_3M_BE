@@ -23,4 +23,8 @@ public interface ScheduleUseCase {
     List<ScheduleForUserResponse> getSpecificMovieSchedule(Long movieId);
 
     List<ScheduleForCreatorResponse> getByCreatorAndDate(UUID creatorId, LocalDate date);
+
+    void decreaseSeat(Long scheduleId);
+
+    void increaseSeat(Long scheduleId);
 }
