@@ -19,7 +19,7 @@ public interface MovieUseCase {
 
     DetailForCreatorResponse getDetailForCreator(UUID creatorId, Long movieId);
 
-    DetailForUserResponse getDetailForUser(UUID userId, Long movieId);
+    DetailForUserResponse getDetailForUser(Long movieId);
 
     List<MovieByCreatorResponse> getMovieListByCreator(UUID creatorId);
 
