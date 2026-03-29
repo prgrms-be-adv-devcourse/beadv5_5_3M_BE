@@ -23,13 +23,14 @@ public class SecurityConfig {
 
     private final static String[] PERMITALL_ANTPATTERNS = {
             "/", "/csrf",
-            "/api/users/login", "/api/users/email/check", "/api/users/nickname/check", "/api/user/join",
-            "/api/users/refresh",
+            "/api/users/login", "/api/users/email/check", "/api/users/nickname/check", "/api/users/refresh",
+            "/api/creators/login", "/api/creators/email/check", "/api/creators/nickname/check", "/api/creators/refresh",
             "/?*-service/actuator/?*", "/actuator/?*",
             "/actuator/gateway/**",
             "/v3/api-docs/**", "/?*-service/v3/api-docs", "/swagger*/**", "/webjars/**"
     };
     private final static String USER_SIGNUP_ANTPATTERNS = "/api/users/join";
+    private final static String CREATOR_SIGNUP_ANTPATTERNS = "/api/creators/join";
 
     @Bean
     public SecurityWebFilterChain configure(ServerHttpSecurity http, ReactiveAuthorizationManager<AuthorizationContext> check) throws Exception {
@@ -41,6 +42,7 @@ public class SecurityConfig {
                 .authorizeExchange(auth -> auth
                         .pathMatchers(PERMITALL_ANTPATTERNS).permitAll()
                         .pathMatchers(HttpMethod.POST, USER_SIGNUP_ANTPATTERNS).permitAll()
+                        .pathMatchers(HttpMethod.POST, CREATOR_SIGNUP_ANTPATTERNS).permitAll()
                         .anyExchange().access(check)
                 )
                 .addFilterAt(authenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION);
