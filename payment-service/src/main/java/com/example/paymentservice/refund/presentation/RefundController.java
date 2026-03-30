@@ -16,7 +16,7 @@ import java.util.UUID;
 
 @Tag(name = "Refund", description = "환불 API")
 @RestController
-@RequestMapping("/api/v1/refunds")
+@RequestMapping("/api/payments/refund")
 @RequiredArgsConstructor
 public class RefundController {
 
