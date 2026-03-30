@@ -12,6 +12,7 @@ import com.example.paymentservice.payment.client.PaymentGateway.PaymentGatewayRe
 import com.example.paymentservice.payment.domain.model.Payment;
 import com.example.paymentservice.payment.domain.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -47,6 +49,7 @@ public class PaymentService {
                     command.paymentKey(), command.orderId(), payment.getAmount());
             payment.markSuccess(pgResponse.paymentKey(), command.orderId());
         } catch (Exception e) {
+            log.error("[Payment] PG 결제 확인 실패: paymentId={}, reason={}", payment.getId(), e.getMessage(), e);
             payment.markFailed();
             paymentRepository.save(payment);
             eventPublisher.publishEvent(

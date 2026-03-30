@@ -9,7 +9,7 @@ public record RefundApprovedEvent(
         UUID userId,
         int amount,
         int cookieAmount,
-        LocalDateTime occurredAt
+        LocalDateTime createdAt
 ) {
     public static RefundApprovedEvent of(Long refundId, Long paymentId, UUID userId,
                                           int amount, int cookieAmount) {

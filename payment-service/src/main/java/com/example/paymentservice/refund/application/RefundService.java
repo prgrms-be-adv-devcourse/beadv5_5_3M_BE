@@ -13,6 +13,7 @@ import com.example.paymentservice.refund.domain.RefundStatus;
 import com.example.paymentservice.refund.domain.model.Refund;
 import com.example.paymentservice.refund.domain.repository.RefundRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,10 +22,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class RefundService {
+
+    private static final int REFUND_AVAILABLE_DAYS = 7;
 
     private final RefundRepository refundRepository;
     private final PaymentRepository paymentRepository;
@@ -39,8 +43,8 @@ public class RefundService {
             throw new BusinessException(ErrorCode.PAYMENT_ALREADY_PROCESSED);
         }
 
-        // 구매 후 7일 이내만 환불 가능
-        if (payment.getCreatedAt().plusDays(7).isBefore(LocalDateTime.now())) {
+        // 구매 후 N일 이내만 환불 가능
+        if (payment.getCreatedAt().plusDays(REFUND_AVAILABLE_DAYS).isBefore(LocalDateTime.now())) {
             throw new BusinessException(ErrorCode.REFUND_PERIOD_EXPIRED);
         }
 
@@ -81,6 +85,7 @@ public class RefundService {
         try {
             refundGateway.cancelPayment(payment.getPaymentKey(), refund.getAmount(), "환불 확인");
         } catch (Exception e) {
+            log.error("PG 환불 실패 - refundId: {}, paymentKey: {}, message: {}", refundId, payment.getPaymentKey(), e.getMessage());
             throw new BusinessException(ErrorCode.PG_REFUND_FAILED);
         }
 

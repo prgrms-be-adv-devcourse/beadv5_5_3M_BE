@@ -8,7 +8,7 @@ public record PaymentCompletedEvent(
         UUID userId,
         int amount,
         int cookieAmount,
-        LocalDateTime occurredAt
+        LocalDateTime createdAt
 ) {
     public static PaymentCompletedEvent of(Long paymentId, UUID userId, int amount, int cookieAmount) {
         return new PaymentCompletedEvent(paymentId, userId, amount, cookieAmount, LocalDateTime.now());
