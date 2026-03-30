@@ -22,4 +22,6 @@ public interface MovieRepository {
     List<Movie> findAllPublic();
 
     List<Movie> findAllByCategoryId(Long categoryId);
+
+    List<Movie> searchByTitle(String title);
 }

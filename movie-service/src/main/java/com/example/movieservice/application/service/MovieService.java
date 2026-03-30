@@ -276,6 +276,24 @@ public class MovieService implements MovieUseCase {
                 .toList();
     }
 
+    @Override
+    public List<MovieCardResponse> searchMoviesByTitle(String title) {
+        List<Movie> movies = movieRepository.searchByTitle(title);
+        Map<UUID, String> nicknameMap = buildNicknameMap(movies.stream().map(Movie::getCreatorId).toList());
+
+        return movies.stream()
+                .map(movie -> {
+                    List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
+                    return new MovieCardResponse(movie.getMovieId(),
+                            movie.getCreatorId(),
+                            nicknameMap.getOrDefault(movie.getCreatorId(), "알 수 없음"),
+                            movie.getTitle(),
+                            Math.round(movie.getAverageRating() * 10) / 10.0f,
+                            categoryIds);
+                })
+                .toList();
+    }
+
     private Map<UUID, String> buildNicknameMap(List<UUID> creatorIds) {
         return creatorRepository.findAllByCreatorIdIn(creatorIds.stream().distinct().toList())
                 .stream()
