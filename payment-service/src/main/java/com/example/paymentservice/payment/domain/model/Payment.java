@@ -40,8 +40,11 @@ public class Payment {
     @Column(name = "payment_key")
     private String paymentKey;
 
+    @Column(name = "order_id", unique = true)
+    private String orderId;
+
     public static Payment create(UUID userId, int amount, int cookieAmount) {
-        if (amount <= 0) {
+        if (amount <= 0 || cookieAmount <= 0) {
             throw new BusinessException(ErrorCode.PAYMENT_AMOUNT_INVALID);
         }
         Payment payment = new Payment();
@@ -58,8 +61,9 @@ public class Payment {
         this.status = PaymentStatus.IN_PROGRESS;
     }
 
-    public void markSuccess(String paymentKey) {
+    public void markSuccess(String paymentKey, String orderId) {
         this.paymentKey = paymentKey;
+        this.orderId = orderId;
         this.status = PaymentStatus.SUCCESS;
     }
 

@@ -6,7 +6,7 @@ import java.util.UUID;
 public record PaymentFailedEvent(
         Long paymentId,
         UUID userId,
-        LocalDateTime occurredAt
+        LocalDateTime createdAt
 ) {
     public static PaymentFailedEvent of(Long paymentId, UUID userId) {
         return new PaymentFailedEvent(paymentId, userId, LocalDateTime.now());
