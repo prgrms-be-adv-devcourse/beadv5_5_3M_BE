@@ -197,4 +197,15 @@ public class MovieController {
         return ApiResponse.onSuccess(movieUseCase.getMovieListByGenre(categoryId));
     }
 
+    @Operation(summary = "영화 제목 검색", description = "제목에 검색어가 포함된 공개 영화 목록을 조회합니다. 검색어가 없으면 전체 공개 영화를 반환합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/search")
+    public ApiResponse<List<MovieCardResponse>> searchMoviesByTitle(
+            @Parameter(description = "검색할 제목 키워드 (미입력 시 전체 반환)")
+            @RequestParam(required = false, defaultValue = "") String title) {
+        return ApiResponse.onSuccess(movieUseCase.searchMoviesByTitle(title));
+    }
+
 }
