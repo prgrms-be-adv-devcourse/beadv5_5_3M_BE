@@ -1,0 +1,27 @@
+version: 1
+scope: service
+service: payment-service
+
+rules:
+  - id: PAY-001
+    severity: CRITICAL
+    title: 결제 생성 멱등성 키 누락
+    description: >
+      Payment 생성 시 orderId 또는 idempotencyKey에 DB UNIQUE 제약이 없는 경우.
+      네트워크 재시도로 동일 결제가 중복 생성될 수 있음 (이중 청구).
+      동일 orderId 재요청 시 기존 결제 정보를 반환해야 함.
+
+  - id: PAY-002
+    severity: CRITICAL
+    title: 환불 금액 계산 정수 나눗셈 오류
+    description: >
+      환불 KRW 계산 시 int 타입 나눗셈으로 소수점 버림이 발생하는 경우.
+      예: cookieAmount * totalAmount / totalCookies 에서 int 오버플로우 또는 정밀도 손실.
+      금액 계산에는 반드시 BigDecimal을 사용하거나 (long)으로 캐스팅 후 연산해야 함.
+
+  - id: PAY-003
+    severity: CRITICAL
+    title: 환불 중복 요청 Race Condition
+    description: >
+      환불 총액 합산 체크와 새 환불 INSERT 사이에 동시 요청이 들어오면 초과 환불 발생.
+      환불 요청에 비관적 락 또는 DB UNIQUE 제약(paymentId + 타임스탬프)으로 방어해야 함.
