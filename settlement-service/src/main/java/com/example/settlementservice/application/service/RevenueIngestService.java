@@ -48,7 +48,10 @@ public class RevenueIngestService implements IngestRevenueUseCase {
             return;
         }
 
-        Wallet wallet = walletCreationService.findOrCreate(creatorId);
+        // findOrCreate(REQUIRES_NEW)로 DB에 존재 보장 후 outer TX에서 managed entity로 재조회
+        walletCreationService.findOrCreate(creatorId);
+        Wallet wallet = walletRepository.findByCreatorId(creatorId)
+                .orElseThrow(() -> new IllegalStateException("Wallet not found after creation: " + creatorId));
 
         Money gross = toGross(cookieAmount);
         FeePolicy feePolicy = new FeePolicy(feeRate);
@@ -95,9 +98,17 @@ public class RevenueIngestService implements IngestRevenueUseCase {
                 .stream()
                 .collect(Collectors.toMap(Wallet::getCreatorId, w -> w));
 
-        // 없는 Wallet은 생성 (race condition 안전: WalletCreationService가 REQUIRES_NEW로 처리)
-        for (UUID creatorId : creatorIds) {
-            walletMap.computeIfAbsent(creatorId, walletCreationService::findOrCreate);
+        // 없는 Wallet만 추려서 생성 후 batch 재조회
+        // findOrCreate(REQUIRES_NEW)가 반환하는 엔티티는 outer TX에서 detached 상태.
+        // merge()에 의존하지 않고, 신규 wallet들을 생성한 뒤 outer TX에서 IN 쿼리 한 번으로 batch 로딩.
+        Set<UUID> missingIds = creatorIds.stream()
+                .filter(id -> !walletMap.containsKey(id))
+                .collect(Collectors.toSet());
+
+        if (!missingIds.isEmpty()) {
+            missingIds.forEach(walletCreationService::findOrCreate); // REQUIRES_NEW: DB에 존재 보장
+            walletRepository.findAllByCreatorIdIn(missingIds)        // outer TX에서 managed entity batch 조회
+                    .forEach(w -> walletMap.put(w.getCreatorId(), w));
         }
 
         // 3. 각 커맨드 처리 — 인메모리에서 잔액 누적 + 로그 생성
