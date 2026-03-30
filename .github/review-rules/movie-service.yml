@@ -1,0 +1,11 @@
+version: 1
+scope: service
+service: movie-service
+
+rules:
+  - id: MOV-001
+    severity: CRITICAL
+    title: 좌석 수 동시성 보호 누락
+    description: >
+      Schedule.decreaseSeats() / increaseSeats() 호출 시 락(@Lock 또는 @Version)이 없는 경우.
+      동시에 여러 Kafka 이벤트가 처리되면 좌석 수가 잘못 계산되어 초과 예약 허용.
