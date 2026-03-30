@@ -62,12 +62,15 @@ public class MovieController {
     @Operation(summary = "영화 상세 정보 수정", description = "크리에이터가 본인 영화의 제목, 설명, 카테고리, 추가 쿠키를 수정합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "수정 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "유효성 검사 실패 또는 이미 확정된 스케줄이 존재하여 수정 불가"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "해당 영화에 대한 권한 없음"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "영화 또는 카테고리를 찾을 수 없음")
     })
     @PatchMapping("/creator/{movieId}/detail")
     public ResponseEntity<Void> updateDetail(
+            @Parameter(description = "크리에이터 ID (Gateway에서 전달)", required = true)
             @RequestHeader("X-Creator-Id") UUID creatorId,
+            @Parameter(description = "수정할 영화 ID", required = true)
             @PathVariable Long movieId,
             @Valid @RequestBody UpdateDetailRequest request){
         // todo : 포스터 이미지 수정도 로직에 추가해야 함
@@ -78,12 +81,15 @@ public class MovieController {
     @Operation(summary = "영화 삭제", description = "크리에이터가 본인 영화를 삭제합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "삭제 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "이미 확정된 스케줄이 존재하여 삭제 불가"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "해당 영화에 대한 권한 없음"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "영화를 찾을 수 없음")
     })
     @DeleteMapping("/creator/{movieId}")
     public ResponseEntity<Void> delete(
+            @Parameter(description = "크리에이터 ID (Gateway에서 전달)", required = true)
             @RequestHeader("X-Creator-Id") UUID creatorId,
+            @Parameter(description = "삭제할 영화 ID", required = true)
             @PathVariable Long movieId){
         // todo : 나중에 s3에 올라간 자원을 지우는 로직이 들어가야 함
         movieUseCase.delete(creatorId, movieId);
@@ -98,7 +104,9 @@ public class MovieController {
     })
     @GetMapping("/creator/{movieId}/detail")
     public ResponseEntity<DetailForCreatorResponse> detailForCreator(
+            @Parameter(description = "크리에이터 ID (Gateway에서 전달)", required = true)
             @RequestHeader("X-Creator-Id") UUID creatorId,
+            @Parameter(description = "조회할 영화 ID", required = true)
             @PathVariable Long movieId
     ){
         // todo: 이미지도 반환해야 함
@@ -112,6 +120,7 @@ public class MovieController {
     })
     @GetMapping("/{movieId}/detail")
     public ResponseEntity<DetailForUserResponse> detailForUser(
+            @Parameter(description = "조회할 영화 ID", required = true)
             @PathVariable Long movieId
     ){
         // todo: 이미지 반환해야 함
@@ -124,6 +133,7 @@ public class MovieController {
     })
     @GetMapping("/list")
     public ResponseEntity<List<MovieByCreatorResponse>> getMovieListByCreator(
+            @Parameter(description = "조회할 크리에이터 ID", required = true)
             @RequestParam("creatorId") UUID creatorId
     ){
         // todo: 나중에 이미지도 추가
@@ -136,6 +146,7 @@ public class MovieController {
     })
     @GetMapping("/creator/list")
     public ResponseEntity<List<MovieForCreatorResponse>> getMovieListForCreator(
+            @Parameter(description = "크리에이터 ID (Gateway에서 전달)", required = true)
             @RequestHeader("X-Creator-Id") UUID creatorId
     ){
         // todo: 나중에 이미지도 추가
@@ -148,6 +159,7 @@ public class MovieController {
     })
     @GetMapping("/creator/schedulable")
     public ResponseEntity<List<MovieForScheduleResponse>> getPublicMovieListForSchedule(
+            @Parameter(description = "크리에이터 ID (Gateway에서 전달)", required = true)
             @RequestHeader("X-Creator-Id") UUID creatorId
     ){
         return ResponseEntity.ok(movieUseCase.getPublicMovieListForSchedule(creatorId));
