@@ -35,6 +35,7 @@ public class SettlementBatchService {
         Settlement settlement = settlementRepository.findById(settlementId)
                 .orElseThrow(() -> new SettlementNotFoundException(settlementId));
         settlement.confirm(OffsetDateTime.now(ZoneOffset.UTC));
+        settlementRepository.save(settlement);
         log.info("Settlement confirmed: {}", settlementId);
     }
 
@@ -61,6 +62,7 @@ public class SettlementBatchService {
         Settlement settlement = settlementRepository.findById(settlementId)
                 .orElseThrow(() -> new SettlementNotFoundException(settlementId));
         settlement.complete(OffsetDateTime.now(ZoneOffset.UTC));
+        settlementRepository.save(settlement);
         log.info("Settlement completed: {}", settlementId);
     }
 
@@ -80,6 +82,7 @@ public class SettlementBatchService {
         settlementLogRepository.save(refundLog);
 
         settlement.fail("Payout failed", OffsetDateTime.now(ZoneOffset.UTC));
+        settlementRepository.save(settlement);
         log.warn("Settlement failed and refunded: {}", settlementId);
     }
 }
