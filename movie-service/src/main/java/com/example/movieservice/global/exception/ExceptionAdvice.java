@@ -1,6 +1,6 @@
 package com.example.movieservice.global.exception;
 
-import com.example.movieservice.global.response.ApiResponse;
+import com.example.movieservice.global.response.ErrorResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -10,25 +10,25 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ExceptionAdvice {
 
     @ExceptionHandler(GeneralException.class)
-    public ResponseEntity<ApiResponse<Void>> handleGeneralException(GeneralException e) {
+    public ResponseEntity<ErrorResponse> handleGeneralException(GeneralException e) {
         var reason = e.getErrorReasonHttpStatus();
         return ResponseEntity
                 .status(reason.httpStatus())
-                .body(new ApiResponse<>(false, reason.code(), reason.message(), null));
+                .body(new ErrorResponse(reason.code(), reason.message()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException e) {
+    public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
         return ResponseEntity
                 .badRequest()
-                .body(new ApiResponse<>(false, "COMMON400", message, null));
+                .body(new ErrorResponse("COMMON400", message));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
+    public ResponseEntity<ErrorResponse> handleException(Exception e) {
         return ResponseEntity
                 .internalServerError()
-                .body(new ApiResponse<>(false, "COMMON500", "서버 에러가 발생했습니다", null));
+                .body(new ErrorResponse("COMMON500", "서버 에러가 발생했습니다"));
     }
 }
