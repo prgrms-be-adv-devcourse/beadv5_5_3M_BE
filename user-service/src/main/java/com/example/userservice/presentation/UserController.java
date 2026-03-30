@@ -62,6 +62,12 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestHeader("X-User-Id") String userId) {
+        userUseCase.logout(userId);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/me")
     public ResponseEntity<UserInfoResponse> me(@RequestHeader("X-User-Id") String userId) {
         return ResponseEntity.ok(userUseCase.me(userId));
