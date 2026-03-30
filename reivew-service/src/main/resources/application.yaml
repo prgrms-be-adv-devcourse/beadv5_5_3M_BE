@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: review-service
+  profiles:
+    active: dev
