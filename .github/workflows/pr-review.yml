@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      GEMINI_MODEL: ${{ github.base_ref == 'main' && 'gemini-1.5-pro' || 'gemini-1.5-flash' }}
+      GEMINI_MODEL: gemini-2.0-flash-lite
       MAX_OUTPUT_TOKENS: 4096
       MAX_INPUT_TOKENS_PER_PR: 100000
     steps:
