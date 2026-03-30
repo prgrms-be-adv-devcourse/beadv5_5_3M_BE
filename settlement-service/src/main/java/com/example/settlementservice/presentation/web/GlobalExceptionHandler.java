@@ -2,6 +2,7 @@ package com.example.settlementservice.presentation.web;
 
 import com.example.settlementservice.application.exception.*;
 import com.example.settlementservice.domain.settlement.InvalidSettlementStateException;
+import com.example.settlementservice.domain.wallet.InsufficientBalanceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -42,6 +43,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.CONFLICT)
     public ErrorResponse handleInvalidSettlementState(InvalidSettlementStateException ex) {
         return new ErrorResponse("INVALID_SETTLEMENT_STATE", ex.getMessage());
+    }
+
+    @ExceptionHandler(InsufficientBalanceException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInsufficientBalance(InsufficientBalanceException ex) {
+        return new ErrorResponse("INSUFFICIENT_BALANCE", ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

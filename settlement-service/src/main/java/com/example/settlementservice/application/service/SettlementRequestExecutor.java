@@ -1,5 +1,6 @@
 package com.example.settlementservice.application.service;
 
+import com.example.settlementservice.application.exception.DuplicateIdempotencyKeyException;
 import com.example.settlementservice.application.exception.WalletNotFoundException;
 import com.example.settlementservice.application.port.out.*;
 import com.example.settlementservice.domain.common.Money;
@@ -38,8 +39,12 @@ public class SettlementRequestExecutor {
                maxAttempts = 3, backoff = @Backoff(delay = 100, multiplier = 2))
     public SettlementResponse execute(UUID creatorId, String idempotencyKey, PostSettlementRequest request) {
         // 1. 멱등성: 이미 성공한 요청이면 기존 응답 반환 (일반 재시도 경로)
+        //    동일 key + 다른 requestAmount → 잘못된 재사용이므로 409 반환
         Optional<Settlement> existing = settlementRepository.findByIdempotencyKey(idempotencyKey);
         if (existing.isPresent()) {
+            if (!existing.get().hasSameRequestAmount(request.requestAmount())) {
+                throw new DuplicateIdempotencyKeyException(idempotencyKey);
+            }
             return SettlementResponse.from(existing.get());
         }
 
