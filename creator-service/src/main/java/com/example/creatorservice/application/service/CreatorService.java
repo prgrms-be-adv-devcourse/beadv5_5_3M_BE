@@ -3,9 +3,11 @@ package com.example.creatorservice.application.service;
 import com.example.creatorservice.application.exception.DuplicateEmailException;
 import com.example.creatorservice.application.exception.DuplicateNicknameException;
 import com.example.creatorservice.application.exception.InvalidEmailOrPasswordException;
+import com.example.creatorservice.application.exception.InvalidRefreshTokenException;
 import com.example.creatorservice.application.usecase.CreatorUseCase;
 import com.example.creatorservice.domain.repository.CreatorRepository;
 import com.example.creatorservice.domain.model.Creator;
+import com.example.creatorservice.presentation.dto.req.AuthorizationRequest;
 import com.example.creatorservice.event.CreatorCreatedEvent;
 import com.example.creatorservice.presentation.dto.req.JoinRequest;
 import com.example.creatorservice.presentation.dto.req.LoginRequest;
@@ -84,6 +86,37 @@ public class CreatorService implements CreatorUseCase {
         return new TokenResponse(accessToken, rawRefreshToken);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean checkAuthorization(AuthorizationRequest request, String creatorId) {
+        creatorRepository.findById(UUID.fromString(creatorId));
+        return true;
+    }
+
+    @Override
+    public TokenResponse refresh(String refreshToken) {
+        UUID creatorId;
+        try {
+            creatorId = jwtProvider.getUserIdFromToken(refreshToken);
+        } catch (Exception e) {
+            throw new InvalidRefreshTokenException();
+        }
+
+        String stored = redisTemplate.opsForValue().get("refresh:token:" + creatorId);
+        if (stored == null || !stored.equals(refreshToken)) {
+            throw new InvalidRefreshTokenException();
+        }
+
+        String accessToken = jwtProvider.generateAccessToken(creatorId);
+        String newRefreshToken = jwtProvider.generateRefreshToken(creatorId);
+        redisTemplate.opsForValue().set(
+                "refresh:token:" + creatorId,
+                newRefreshToken,
+                jwtProvider.getRefreshTokenExpirySeconds(),
+                TimeUnit.SECONDS
+        );
+
+        return new TokenResponse(accessToken, newRefreshToken);
     private String toJsonString(Object object) {
         ObjectMapper objectMapper = new ObjectMapper();
 
