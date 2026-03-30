@@ -1,0 +1,19 @@
+version: 1
+scope: service
+service: settlement-service
+
+rules:
+  - id: SET-001
+    severity: CRITICAL
+    title: 원장 복식부기 미준수
+    description: >
+      SettlementLog 생성 시 DEBIT/CREDIT 쌍이 맞지 않는 경우.
+      모든 금액 변동은 차변(DEBIT)과 대변(CREDIT) 쌍으로 기록해야 감사 추적이 가능함.
+      단방향 원장 항목은 잔액 불일치의 원인이 됨.
+
+  - id: SET-002
+    severity: CRITICAL
+    title: Wallet 잔액 음수 허용
+    description: >
+      Wallet 잔액 차감 시 0 미만이 되는 것을 막는 검증 로직이 없는 경우.
+      음수 잔액은 데이터 오염이며 정산 계산에 심각한 오류를 유발함.
