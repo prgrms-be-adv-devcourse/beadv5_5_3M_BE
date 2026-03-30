@@ -94,10 +94,11 @@ while [[ $attempt -le $MAX_RETRIES ]]; do
       exit 1
     fi
 
-    # 토큰 사용량 로깅
+    # 토큰 사용량 및 종료 이유 로깅
     INPUT_TOKENS=$(jq -r '.usageMetadata.promptTokenCount // 0' /tmp/gemini_raw_response.json)
     OUTPUT_TOKENS=$(jq -r '.usageMetadata.candidatesTokenCount // 0' /tmp/gemini_raw_response.json)
-    echo "::notice::토큰 사용량 — 입력: ${INPUT_TOKENS}, 출력: ${OUTPUT_TOKENS}" >&2
+    FINISH_REASON=$(jq -r '.candidates[0].finishReason // "unknown"' /tmp/gemini_raw_response.json)
+    echo "::notice::토큰 사용량 — 입력: ${INPUT_TOKENS}, 출력: ${OUTPUT_TOKENS}, 종료 이유: ${FINISH_REASON}" >&2
 
     # GitHub Actions step summary에 토큰 사용량 기록
     if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
