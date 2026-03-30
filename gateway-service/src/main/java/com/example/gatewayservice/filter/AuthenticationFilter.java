@@ -41,7 +41,9 @@ public class AuthenticationFilter implements WebFilter {
 
             ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                     .headers(h -> h.remove("X-User-Id"))
+                    .headers(h -> h.remove("X-Creator-Id"))
                     .header("X-User-Id", userId)
+                    .header("X-Creator-Id", userId)
                     .build();
 
             UsernamePasswordAuthenticationToken authentication =
