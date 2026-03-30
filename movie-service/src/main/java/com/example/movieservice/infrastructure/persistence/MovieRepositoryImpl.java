@@ -53,4 +53,9 @@ public class MovieRepositoryImpl implements MovieRepository {
     public List<Movie> findAllByCategoryId(Long categoryId) {
         return movieJpaRepository.findAllByCategoryId(categoryId);
     }
+
+    @Override
+    public List<Movie> searchByTitle(String title) {
+        return movieJpaRepository.searchByTitle(title);
+    }
 }

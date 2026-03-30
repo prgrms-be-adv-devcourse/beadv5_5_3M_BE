@@ -34,4 +34,6 @@ public interface MovieUseCase {
     List<MovieCardResponse> getPublicMovieList();
 
     List<MovieCardResponse> getMovieListByGenre(Long categoryId);
+
+    List<MovieCardResponse> searchMoviesByTitle(String title);
 }
