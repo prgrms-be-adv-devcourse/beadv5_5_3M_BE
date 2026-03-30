@@ -96,8 +96,8 @@ jobs:
           SERVICES='${{ needs.detect-changes.outputs.services }}'
           echo "리뷰 대상 서비스: $SERVICES"
 
-          # PR diff 전체 가져오기
-          gh pr diff ${{ github.event.pull_request.number }} > /tmp/full_pr.diff
+          # PR diff 전체 가져오기 (API 300파일 제한 우회 — 로컬 git 사용)
+          git diff "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" > /tmp/full_pr.diff
 
           # 토큰 예산 (바이트 / 4 ≈ 토큰 추정)
           MAX_TOKENS=${{ env.MAX_INPUT_TOKENS_PER_PR }}
