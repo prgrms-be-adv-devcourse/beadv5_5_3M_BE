@@ -117,6 +117,7 @@ public class CreatorService implements CreatorUseCase {
         );
 
         return new TokenResponse(accessToken, newRefreshToken);
+    }
     private String toJsonString(Object object) {
         ObjectMapper objectMapper = new ObjectMapper();
 

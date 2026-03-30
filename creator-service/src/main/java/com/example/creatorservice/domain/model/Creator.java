@@ -1,6 +1,7 @@
 package com.example.creatorservice.domain.model;
 
 import com.example.creatorservice.presentation.dto.req.JoinRequest;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -13,6 +14,7 @@ import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.UUID;
 
+@Schema(description = "크리에이터 엔티티")
 @Entity
 @Table(
         name = "creators",
@@ -25,36 +27,47 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Creator {
 
+    @Schema(description = "크리에이터 고유 ID", example = "550e8400-e29b-41d4-a716-446655440000")
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(columnDefinition = "uuid")
     private UUID id;
 
+    @Schema(description = "이메일 주소 (고유)", example = "creator@example.com")
     @Column(name = "email", nullable = false, updatable = false)
     private String email;
 
+    @Schema(description = "암호화된 비밀번호", accessMode = Schema.AccessMode.WRITE_ONLY)
     private String password;
 
+    @Schema(description = "비밀번호 솔트 키", accessMode = Schema.AccessMode.WRITE_ONLY)
     @Column(length = 20)
     private String saltKey;
 
+    @Schema(description = "전화번호", example = "010-1234-5678")
     @Column(name = "phone_number")
     private String phoneNumber;
 
+    @Schema(description = "닉네임 (고유)", example = "멋진크리에이터")
     private String nickname;
 
+    @Schema(description = "은행명", example = "국민은행")
     @Column(name = "bank_name")
     private String bankName;
 
+    @Schema(description = "계좌번호", example = "123-456-789012")
     @Column(name = "account_number")
     private String accountNumber;
 
+    @Schema(description = "예금주명", example = "홍길동")
     @Column(name = "account_holder")
     private String accountHolder;
 
+    @Schema(description = "생성일시")
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "timestamp with time zone")
     private OffsetDateTime createdAt;
 
+    @Schema(description = "수정일시")
     @Column(name = "updated_at", nullable = false, columnDefinition = "timestamp with time zone")
     private OffsetDateTime updatedAt;
 
