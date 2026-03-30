@@ -43,9 +43,7 @@ public class Wallet {
 
     public void subtractBalance(Money amount) {
         if (this.balance < amount.value()) {
-            throw new IllegalStateException(
-                    "Insufficient balance for creator " + creatorId + ": " + this.balance + " < " + amount.value()
-            );
+            throw new InsufficientBalanceException(creatorId, this.balance, amount.value());
         }
         this.balance -= amount.value();
     }

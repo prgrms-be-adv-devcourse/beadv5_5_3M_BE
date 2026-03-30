@@ -122,6 +122,10 @@ public class Settlement {
         this.failedAt = now;
     }
 
+    public boolean hasSameRequestAmount(long requestAmount) {
+        return this.requestAmount == requestAmount;
+    }
+
     public void cancel(OffsetDateTime now) {
         if (status != SettlementStatus.REQUESTED) {
             throw new InvalidSettlementStateException(id, status, SettlementStatus.REQUESTED);
