@@ -1,6 +1,7 @@
 package com.example.userservice.domain.model;
 
 import com.example.userservice.exception.InsufficientCookieException;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AccessLevel;
@@ -13,41 +14,54 @@ import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.UUID;
 
+@Schema(description = "유저 엔티티")
 @Entity
 @Getter
 @Table(name = "users")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
 
+    @Schema(description = "유저 고유 ID", example = "550e8400-e29b-41d4-a716-446655440000")
     @Id
     private UUID userId;
 
+    @Schema(description = "이메일 주소 (고유)", example = "user@example.com")
     @NotEmpty
     @Column(unique = true)
     private String email;
 
+    @Schema(description = "암호화된 비밀번호", accessMode = Schema.AccessMode.WRITE_ONLY)
     @NotEmpty
     private String password;
 
+    @Schema(description = "닉네임 (고유)", example = "멋진유저")
     @NotEmpty
     @Column(unique = true, length = 50)
     private String nickname;
 
+    @Schema(description = "프로필 이미지 URL", example = "https://storage.example.com/profiles/uuid.jpg")
     private String profileUrl;
 
+    @Schema(description = "전화번호", example = "010-1234-5678")
     @Column(length = 20)
     private String phone;
 
+    @Schema(description = "비밀번호 솔트 키", accessMode = Schema.AccessMode.WRITE_ONLY)
     @Column(length = 20)
     private String saltKey;
 
+    @Schema(description = "유저 역할", example = "USER")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
 
+    @Schema(description = "쿠키 잔액", example = "10")
     private Integer balance;
 
+    @Schema(description = "생성일시")
     private LocalDateTime createAt;
+
+    @Schema(description = "수정일시")
     private LocalDateTime updateAt;
 
     public static User create(String email, String rawPassword, String nickname) {

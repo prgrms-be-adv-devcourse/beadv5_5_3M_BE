@@ -1,5 +1,6 @@
 package com.example.userservice.domain.model;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
 
@@ -8,20 +9,26 @@ import java.util.UUID;
 
 import static lombok.AccessLevel.PROTECTED;
 
+@Schema(description = "쿠키 거래 로그 엔티티")
 @Entity
 @NoArgsConstructor(access = PROTECTED)
 public class CookieLog {
 
+    @Schema(description = "로그 ID")
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Schema(description = "유저 ID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID userId;
 
+    @Schema(description = "쿠키 변동량 (양수: 충전, 음수: 차감)", example = "-5")
     private Integer amount;
 
+    @Schema(description = "관련 티켓 ID", example = "1")
     private Long ticketId;
 
+    @Schema(description = "생성일시")
     private LocalDateTime createAt;
 
     public CookieLog(UUID userId, Integer amount, Long ticketId) {
