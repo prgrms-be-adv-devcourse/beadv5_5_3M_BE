@@ -1,6 +1,4 @@
-package com.example.movieservice.presentation.dto.response;
-
-import jakarta.validation.constraints.NotNull;
+package com.example.movieservice.presentation.dto.response.schedule;
 
 import java.time.LocalDateTime;
 

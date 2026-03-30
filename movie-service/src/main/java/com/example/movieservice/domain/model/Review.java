@@ -16,7 +16,7 @@ public class Review {
 
     @Id
     @Column(name = "review_id")
-    private String reviewId;   // 외부 서비스 ID 그대로 사용
+    private Long reviewId;   // 외부 서비스 ID 그대로 사용
 
     @Column(name = "user_id")
     private UUID userId;
@@ -46,5 +46,12 @@ public class Review {
     public enum ReviewStatus {
         CREATE,  // 작성
         UPDATE  // 수정
+    }
+
+    public void update(Integer rating, String comment) {
+        this.rating = rating;
+        this.comment = comment;
+        this.updatedAt = LocalDateTime.now();
+        this.status = ReviewStatus.UPDATE;
     }
 }

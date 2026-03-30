@@ -1,9 +1,9 @@
 package com.example.movieservice.application.usecase;
 
-import com.example.movieservice.presentation.dto.request.RegisterMovieRequest;
-import com.example.movieservice.presentation.dto.request.UpdateDetailRequest;
-import com.example.movieservice.presentation.dto.request.UpdateVisibilityRequest;
-import com.example.movieservice.presentation.dto.response.*;
+import com.example.movieservice.presentation.dto.request.movie.RegisterMovieRequest;
+import com.example.movieservice.presentation.dto.request.movie.UpdateDetailRequest;
+import com.example.movieservice.presentation.dto.request.movie.UpdateVisibilityRequest;
+import com.example.movieservice.presentation.dto.response.movie.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -19,11 +19,19 @@ public interface MovieUseCase {
 
     DetailForCreatorResponse getDetailForCreator(UUID creatorId, Long movieId);
 
-    DetailForUserResponse getDetailForUser(UUID userId, Long movieId);
+    DetailForUserResponse getDetailForUser(Long movieId);
 
     List<MovieByCreatorResponse> getMovieListByCreator(UUID creatorId);
 
     List<MovieForCreatorResponse> getMovieListForCreator(UUID creatorId);
 
     List<MovieForScheduleResponse> getPublicMovieListForSchedule(UUID creatorId);
+
+    List<MovieCardResponse> getOnAirMovieList();
+
+    List<ScheduledMovieResponse> getScheduledMovieList();
+
+    List<MovieCardResponse> getPublicMovieList();
+
+    List<MovieCardResponse> getMovieListByGenre(Long categoryId);
 }

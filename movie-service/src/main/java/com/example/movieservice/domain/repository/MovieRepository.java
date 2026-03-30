@@ -16,4 +16,10 @@ public interface MovieRepository {
     void delete(Movie movie);
 
     List<Movie> findMoviesByCreatorId(UUID creatorId);
+
+    List<Long> findAllMovieIds();
+
+    List<Movie> findAllPublic();
+
+    List<Movie> findAllByCategoryId(Long categoryId);
 }

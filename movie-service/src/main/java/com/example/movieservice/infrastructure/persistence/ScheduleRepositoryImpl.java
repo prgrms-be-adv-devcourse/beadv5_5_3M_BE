@@ -1,6 +1,8 @@
 package com.example.movieservice.infrastructure.persistence;
 
+import com.example.movieservice.domain.model.Movie;
 import com.example.movieservice.domain.model.Schedule;
+import com.example.movieservice.domain.model.Schedule.ScheduleStatus;
 import com.example.movieservice.domain.repository.ScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -45,4 +47,35 @@ public class ScheduleRepositoryImpl implements ScheduleRepository {
     public List<Schedule> findUpcomingByMovieId(Long movieId, LocalDateTime now) {
         return scheduleJpaRepository.findUpcomingByMovieId(movieId, now);
     }
+
+    @Override
+    public boolean existsConfirmedScheduleByMovieId(Long movieId) {
+        return scheduleJpaRepository.existsByMovieMovieIdAndIsConfirmedTrue(movieId);
+    }
+
+    @Override
+    public List<Schedule> findScheduledToWaiting(LocalDateTime now, LocalDateTime tenMinutesLater) {
+        return scheduleJpaRepository.findScheduledToWaiting(ScheduleStatus.SCHEDULED, now, tenMinutesLater);
+    }
+
+    @Override
+    public List<Schedule> findToOnAir(LocalDateTime now) {
+        return scheduleJpaRepository.findToOnAir(List.of(ScheduleStatus.SCHEDULED, ScheduleStatus.WAITING), now);
+    }
+
+    @Override
+    public List<Schedule> findOnAirToCompleted(LocalDateTime tenMinutesAgo) {
+        return scheduleJpaRepository.findOnAirToCompleted(ScheduleStatus.ON_AIR, tenMinutesAgo);
+    }
+
+    @Override
+    public List<Movie> findOnAirMovies() {
+        return scheduleJpaRepository.findOnAirMovies();
+    }
+
+    @Override
+    public List<Schedule> findScheduledMovies() {
+        return scheduleJpaRepository.findScheduleMovies();
+    }
+
 }

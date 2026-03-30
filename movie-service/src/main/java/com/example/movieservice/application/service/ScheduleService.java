@@ -1,5 +1,6 @@
 package com.example.movieservice.application.service;
 
+import com.example.movieservice.application.event.EventPublisher;
 import com.example.movieservice.application.usecase.ScheduleUseCase;
 import com.example.movieservice.domain.model.Movie;
 import com.example.movieservice.domain.model.Schedule;
@@ -7,11 +8,12 @@ import com.example.movieservice.domain.repository.MovieRepository;
 import com.example.movieservice.domain.repository.ScheduleRepository;
 import com.example.movieservice.global.exception.ErrorStatus;
 import com.example.movieservice.global.exception.GeneralException;
-import com.example.movieservice.presentation.dto.request.RegisterScheduleRequest;
-import com.example.movieservice.presentation.dto.request.UpdateConfirmRequest;
-import com.example.movieservice.presentation.dto.response.DraftScheduleResponse;
-import com.example.movieservice.presentation.dto.response.ScheduleForCreatorResponse;
-import com.example.movieservice.presentation.dto.response.ScheduleForUserResponse;
+import com.example.movieservice.infrastructure.kafka.dto.publish.ScheduleConfirmedMessage;
+import com.example.movieservice.presentation.dto.request.schedule.RegisterScheduleRequest;
+import com.example.movieservice.presentation.dto.request.schedule.UpdateConfirmRequest;
+import com.example.movieservice.presentation.dto.response.schedule.DraftScheduleResponse;
+import com.example.movieservice.presentation.dto.response.schedule.ScheduleForCreatorResponse;
+import com.example.movieservice.presentation.dto.response.schedule.ScheduleForUserResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,7 @@ public class ScheduleService implements ScheduleUseCase {
 
     private final ScheduleRepository scheduleRepository;
     private final MovieRepository movieRepository;
+    private final EventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -87,6 +90,8 @@ public class ScheduleService implements ScheduleUseCase {
           existsOverlapping으로 DB 조회. 단, 현재 확정하려는 것들끼리는 제외하고 조회해야 합니다.
 
           4단계: 모두 통과하면 confirm 처리
+
+          5단계: 모두 통과하면 그 때 이벤트 발송
         * */
         List<Schedule> schedules = new ArrayList<>(requests.stream()
                 .map(request -> scheduleRepository.findById(request.scheduleId())
@@ -103,7 +108,8 @@ public class ScheduleService implements ScheduleUseCase {
 
         schedules.forEach(
                 schedule -> {
-                    if(!schedule.getMovie().getCreatorId().equals(creatorId)){
+                    Movie movie = schedule.getMovie();
+                    if(!movie.getCreatorId().equals(creatorId)){
                         throw new GeneralException(ErrorStatus.SCHEDULE_INVALID_CREATOR);
                     }
                     if(scheduleRepository.existsOverlapping(creatorId, schedule.getStartTime(), schedule.getEndTime())){
@@ -111,6 +117,27 @@ public class ScheduleService implements ScheduleUseCase {
                     }
                     schedule.confirm();
                     schedule.scheduled();
+                }
+        );
+
+        schedules.forEach(
+                schedule -> {
+                    Movie movie = schedule.getMovie();
+                    eventPublisher.publish(
+                            "movie.schedule.confirmed",
+                            schedule.getScheduleId().toString(),
+                            new ScheduleConfirmedMessage(
+                                    schedule.getScheduleId(),
+                                    schedule.getStartTime(),
+                                    schedule.getEndTime(),
+                                    movie.getTitle(),
+                                    movie.getBaseCookie() + movie.getAdditionalCookie(),
+                                    movie.getCreatorId(),
+                                    movie.getMovieId(),
+                                    movie.getImageUrl(),
+                                    schedule.getRemainingSeats()
+                            )
+                    );
                 }
         );
     }
@@ -141,6 +168,22 @@ public class ScheduleService implements ScheduleUseCase {
         return schedules.stream()
                 .map(schedule -> new ScheduleForUserResponse(schedule.getScheduleId(), schedule.getStartTime(), schedule.getRemainingSeats(), schedule.getStatus().name()))
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public void decreaseSeat(Long scheduleId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.SCHEDULE_NOT_FOUND));
+        schedule.decreaseRemainingSeats();
+    }
+
+    @Override
+    @Transactional
+    public void increaseSeat(Long scheduleId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.SCHEDULE_NOT_FOUND));
+        schedule.increaseRemainingSeats();
     }
 
     @Override

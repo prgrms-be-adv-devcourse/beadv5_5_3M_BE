@@ -2,10 +2,10 @@ package com.example.movieservice.presentation.controller;
 
 import com.example.movieservice.application.usecase.MovieUseCase;
 import com.example.movieservice.global.response.ApiResponse;
-import com.example.movieservice.presentation.dto.request.RegisterMovieRequest;
-import com.example.movieservice.presentation.dto.request.UpdateDetailRequest;
-import com.example.movieservice.presentation.dto.request.UpdateVisibilityRequest;
-import com.example.movieservice.presentation.dto.response.*;
+import com.example.movieservice.presentation.dto.request.movie.RegisterMovieRequest;
+import com.example.movieservice.presentation.dto.request.movie.UpdateDetailRequest;
+import com.example.movieservice.presentation.dto.request.movie.UpdateVisibilityRequest;
+import com.example.movieservice.presentation.dto.response.movie.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -74,7 +74,6 @@ public class MovieController {
             @PathVariable Long movieId,
             @Valid @RequestBody UpdateDetailRequest request){
         // todo : 포스터 이미지 수정도 로직에 추가해야 함
-        // todo : 편성이 확정된 게 있으면 수정 불가
         movieUseCase.updateDetail(creatorId, movieId, request);
         return ApiResponse.onSuccess();
     }
@@ -91,7 +90,6 @@ public class MovieController {
             @RequestHeader("X-Creator-Id") UUID creatorId,
             @PathVariable Long movieId){
         // todo : 나중에 s3에 올라간 자원을 지우는 로직이 들어가야 함
-        // todo : 편성이 확정된 게 있으면 삭제 불가
         movieUseCase.delete(creatorId, movieId);
         return ApiResponse.onSuccess();
     }
@@ -118,12 +116,10 @@ public class MovieController {
     })
     @GetMapping("/{movieId}/detail")
     public ApiResponse<DetailForUserResponse> detailForUser(
-            @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long movieId
     ){
-        // todo: 이미지, 리뷰들, 상영 일정을 반환해야 함
-        // todo: 지금은 uerId 사용 안하는데 나중에 사용할까?
-        return ApiResponse.onSuccess(movieUseCase.getDetailForUser(userId, movieId));
+        // todo: 이미지 반환해야 함
+        return ApiResponse.onSuccess(movieUseCase.getDetailForUser(movieId));
     }
 
     @Operation(summary = "크리에이터 영화 목록 조회 (사용자)", description = "특정 크리에이터의 공개된 영화 목록을 조회합니다.")
@@ -160,4 +156,45 @@ public class MovieController {
     ){
         return ApiResponse.onSuccess(movieUseCase.getPublicMovieListForSchedule(creatorId));
     }
+
+    @Operation(summary = "현재 상영 중인 영화 목록 조회", description = "현재 ON_AIR 상태인 스케줄의 영화 목록을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/on-air")
+    public ApiResponse<List<MovieCardResponse>> getOnAirMovieList(){
+        return ApiResponse.onSuccess(movieUseCase.getOnAirMovieList());
+    }
+
+    @Operation(summary = "상영 예정 영화 목록 조회", description = "SCHEDULED 상태인 스케줄 중 영화별 가장 빠른 상영 일정을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/scheduled")
+    public ApiResponse<List<ScheduledMovieResponse>> getScheduledMovieList(){
+        // todo : 나중에 page를 추가해서 특정 개수만 반환하는 등의 작업 필요
+        return ApiResponse.onSuccess(movieUseCase.getScheduledMovieList());
+    }
+
+    @Operation(summary = "전체 공개 영화 목록 조회", description = "공개(PUBLIC) 상태인 전체 영화 목록을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/public")
+    public ApiResponse<List<MovieCardResponse>> getPublicMovieList(){
+        return ApiResponse.onSuccess(movieUseCase.getPublicMovieList());
+    }
+
+    @Operation(summary = "장르별 영화 목록 조회", description = "특정 카테고리(장르)에 속한 공개 영화 목록을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "카테고리를 찾을 수 없음")
+    })
+    @GetMapping("/genre/{categoryId}")
+    public ApiResponse<List<MovieCardResponse>> getMovieListByGenre(
+            @Parameter(description = "카테고리 ID", required = true)
+            @PathVariable Long categoryId) {
+        return ApiResponse.onSuccess(movieUseCase.getMovieListByGenre(categoryId));
+    }
+
 }

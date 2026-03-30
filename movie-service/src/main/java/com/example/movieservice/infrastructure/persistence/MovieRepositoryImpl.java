@@ -38,4 +38,19 @@ public class MovieRepositoryImpl implements MovieRepository {
     public List<Movie> findMoviesByCreatorId(UUID creatorId){
         return movieJpaRepository.findAllByCreatorId(creatorId);
     }
+
+    @Override
+    public List<Long> findAllMovieIds() {
+        return movieJpaRepository.findAllMovieIds();
+    }
+
+    @Override
+    public List<Movie> findAllPublic() {
+        return movieJpaRepository.findAllByVisibilityPublic();
+    }
+
+    @Override
+    public List<Movie> findAllByCategoryId(Long categoryId) {
+        return movieJpaRepository.findAllByCategoryId(categoryId);
+    }
 }

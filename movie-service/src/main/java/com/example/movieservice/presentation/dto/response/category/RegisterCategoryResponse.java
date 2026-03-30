@@ -1,4 +1,4 @@
-package com.example.movieservice.presentation.dto.response;
+package com.example.movieservice.presentation.dto.response.category;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

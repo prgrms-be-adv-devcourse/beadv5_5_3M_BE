@@ -86,13 +86,32 @@ public class Movie {
         this.categories.add(category);
     }
 
-    public void removeCategory(Category category){
-        this.categories.remove(category);
-    }
-
     public void updateDetail(String title, String description, Integer additionalCookie){
         this.title = title;
         this.description = description;
         this.additionalCookie = additionalCookie;
+    }
+
+    // review.written 수신 시
+    public void applyReviewCreated(Integer rating) {
+        this.averageRating = (averageRating * reviewCount + rating) / (reviewCount + 1);
+        this.reviewCount++;
+    }
+
+    // review.updated 수신 시
+    public void applyReviewUpdated(Integer oldRating, Integer newRating) {
+        this.averageRating = (averageRating * reviewCount - oldRating + newRating) / reviewCount;
+    }
+
+    // review.deleted 수신 시
+    public void applyReviewDeleted(Integer rating) {
+        this.averageRating = reviewCount == 1 ? 0 : (averageRating * reviewCount - rating) / (reviewCount - 1);
+        this.reviewCount--;
+    }
+
+    // 배치 보정 시
+    public void recalculateRating(int reviewCount, float averageRating) {
+        this.reviewCount = reviewCount;
+        this.averageRating = averageRating;
     }
 }

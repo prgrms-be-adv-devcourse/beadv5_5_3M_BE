@@ -3,19 +3,25 @@ package com.example.movieservice.application.service;
 import com.example.movieservice.application.usecase.MovieUseCase;
 import com.example.movieservice.domain.model.Category;
 import com.example.movieservice.domain.model.Movie;
+import com.example.movieservice.domain.model.Review;
+import com.example.movieservice.domain.model.Schedule;
 import com.example.movieservice.domain.repository.CategoryRepository;
 import com.example.movieservice.domain.repository.MovieRepository;
+import com.example.movieservice.domain.repository.ReviewRepository;
+import com.example.movieservice.domain.repository.ScheduleRepository;
 import com.example.movieservice.global.exception.ErrorStatus;
 import com.example.movieservice.global.exception.GeneralException;
-import com.example.movieservice.presentation.dto.request.RegisterMovieRequest;
-import com.example.movieservice.presentation.dto.request.UpdateDetailRequest;
-import com.example.movieservice.presentation.dto.request.UpdateVisibilityRequest;
-import com.example.movieservice.presentation.dto.response.*;
+import com.example.movieservice.presentation.dto.request.movie.RegisterMovieRequest;
+import com.example.movieservice.presentation.dto.request.movie.UpdateDetailRequest;
+import com.example.movieservice.presentation.dto.request.movie.UpdateVisibilityRequest;
+import com.example.movieservice.presentation.dto.response.movie.*;
+import com.example.movieservice.presentation.dto.response.review.ReviewSummaryResponse;
+import com.example.movieservice.presentation.dto.response.schedule.ScheduleForUserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,6 +32,8 @@ public class MovieService implements MovieUseCase {
 
     private final MovieRepository movieRepository;
     private final CategoryRepository categoryRepository;
+    private final ScheduleRepository scheduleRepository;
+    private final ReviewRepository reviewRepository;
 
     @Override
     @Transactional
@@ -74,6 +82,11 @@ public class MovieService implements MovieUseCase {
         if(!movie.getCreatorId().equals(creatorId)){
             throw new GeneralException(ErrorStatus.MOVIE_INVALID_CREATOR);
         }
+
+        // 편성이 확정된 게 있다면 수정 불가
+        if(scheduleRepository.existsConfirmedScheduleByMovieId(movieId)){
+            throw new GeneralException(ErrorStatus.MOVIE_ALREADY_SCHEDULED);
+        }
         movie.updateDetail(request.title(), request.description(), request.additionalCookie());
 
         movie.getCategories().clear();
@@ -95,6 +108,10 @@ public class MovieService implements MovieUseCase {
         if(!movie.getCreatorId().equals(creatorId)){
             throw new GeneralException(ErrorStatus.MOVIE_INVALID_CREATOR);
         }
+        // 편성이 확정된 게 있다면 삭제 불가
+        if(scheduleRepository.existsConfirmedScheduleByMovieId(movieId)){
+            throw new GeneralException(ErrorStatus.MOVIE_ALREADY_SCHEDULED);
+        }
         movie.getCategories().clear();
         movieRepository.delete(movie);
     }
@@ -112,15 +129,37 @@ public class MovieService implements MovieUseCase {
     }
 
     @Override
-    public DetailForUserResponse getDetailForUser(UUID userId, Long movieId) {
+    public DetailForUserResponse getDetailForUser(Long movieId) {
         Movie movie = movieRepository.findByMovieId(movieId).orElseThrow(()->new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
         if(movie.getVisibility() == Movie.Visibility.PRIVATE){
             throw new GeneralException(ErrorStatus.MOVIE_NOT_PUBLIC);
         }
+
         List<Long> categoryIds = movie.getCategories().stream()
                 .map(Category::getCategoryId)
                 .toList();
-        return new DetailForUserResponse(movie.getCreatorId(), movie.getTitle(), movie.getDescription(), categoryIds, movie.getRunningTime(), Math.round(movie.getAverageRating() * 10) / 10.0f  , movie.getBaseCookie()+movie.getAdditionalCookie());
+
+        List<ScheduleForUserResponse> schedules = scheduleRepository.findUpcomingByMovieId(movieId, LocalDateTime.now())
+                .stream()
+                .map(s -> new ScheduleForUserResponse(s.getScheduleId(), s.getStartTime(), s.getRemainingSeats(), s.getStatus().name()))
+                .toList();
+
+        List<ReviewSummaryResponse> reviews = reviewRepository.findTop5ByMovieId(movieId)
+                .stream()
+                .map(r -> new ReviewSummaryResponse(r.getReviewId(), r.getNickname(), r.getRating(), r.getComment(), r.getUpdatedAt(), r.getStatus().name()))
+                .toList();
+
+        return new DetailForUserResponse(
+                movie.getCreatorId(),
+                movie.getTitle(),
+                movie.getDescription(),
+                categoryIds,
+                movie.getRunningTime(),
+                Math.round(movie.getAverageRating() * 10) / 10.0f,
+                movie.getBaseCookie() + movie.getAdditionalCookie(),
+                schedules,
+                reviews
+        );
     }
 
     @Override
@@ -156,6 +195,56 @@ public class MovieService implements MovieUseCase {
                 .map(movie -> {
                     return new MovieForScheduleResponse(movie.getMovieId(), movie.getTitle(), movie.getRunningTime());
                 }).toList();
+    }
+
+    @Override
+    public List<MovieCardResponse> getOnAirMovieList() {
+        List<Movie> movies = scheduleRepository.findOnAirMovies();
+
+        return movies.stream()
+                .map(movie -> {
+                    List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
+                    return new MovieCardResponse(movie.getMovieId(), movie.getCreatorId(), movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds);
+                })
+                .toList();
+    }
+
+    @Override
+    public List<ScheduledMovieResponse> getScheduledMovieList() {
+        List<Schedule> schedules = scheduleRepository.findScheduledMovies();
+
+        return schedules.stream()
+                .map(schedule -> {
+                    Movie movie = schedule.getMovie();
+                    List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
+                    return new ScheduledMovieResponse(movie.getMovieId(), movie.getCreatorId(), movie.getTitle(), schedule.getStartTime(), categoryIds);
+                })
+                .toList();
+    }
+
+    @Override
+    public List<MovieCardResponse> getPublicMovieList() {
+        List<Movie> movies = movieRepository.findAllPublic();
+        return movies.stream()
+                .map(movie -> {
+                    List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
+                    return new MovieCardResponse(movie.getMovieId(), movie.getCreatorId(), movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds);
+                })
+                .toList();
+    }
+
+    @Override
+    public List<MovieCardResponse> getMovieListByGenre(Long categoryId) {
+        if(!categoryRepository.existsById(categoryId)){
+            throw new GeneralException(ErrorStatus.CATEGORY_NOT_FOUND);
+        }
+        List<Movie> movies = movieRepository.findAllByCategoryId(categoryId);
+        return movies.stream()
+                .map(movie -> {
+                    List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
+                    return new MovieCardResponse(movie.getMovieId(), movie.getCreatorId(), movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds);
+                })
+                .toList();
     }
 
 }

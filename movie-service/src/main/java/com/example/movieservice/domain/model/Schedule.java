@@ -75,4 +75,8 @@ public class Schedule {
         if (remainingSeats <= 0) throw new GeneralException(ErrorStatus.SCHEDULE_NO_REMAINING_SEATS);
         this.remainingSeats--;
     }
+
+    public void increaseRemainingSeats() {
+        this.remainingSeats++;
+    }
 }
