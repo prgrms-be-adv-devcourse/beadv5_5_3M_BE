@@ -6,15 +6,18 @@ import com.example.creatorservice.application.exception.InvalidEmailOrPasswordEx
 import com.example.creatorservice.application.usecase.CreatorUseCase;
 import com.example.creatorservice.domain.repository.CreatorRepository;
 import com.example.creatorservice.domain.model.Creator;
+import com.example.creatorservice.event.CreatorCreatedEvent;
 import com.example.creatorservice.presentation.dto.req.JoinRequest;
 import com.example.creatorservice.presentation.dto.req.LoginRequest;
 import com.example.creatorservice.presentation.dto.res.TokenResponse;
 import com.example.creatorservice.util.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -27,6 +30,7 @@ public class CreatorService implements CreatorUseCase {
     private final CreatorRepository creatorRepository;
     private final RedisTemplate<String, String> redisTemplate;
     private final JwtProvider jwtProvider;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Override
     public UUID join(JoinRequest request) {
@@ -40,6 +44,8 @@ public class CreatorService implements CreatorUseCase {
 
         Creator creator = Creator.create(request);
         creatorRepository.save(creator);
+
+        kafkaTemplate.send("creator.created", toJsonString(CreatorCreatedEvent.from(creator)));
         return creator.getId();
     }
 
@@ -76,6 +82,17 @@ public class CreatorService implements CreatorUseCase {
         );
 
         return new TokenResponse(accessToken, rawRefreshToken);
+    }
+
+    private String toJsonString(Object object) {
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        try {
+            return objectMapper.writeValueAsString(object);
+        } catch (Exception e) {
+            throw new RuntimeException("Json 직렬화 실패");
+        }
+
     }
 
 }
