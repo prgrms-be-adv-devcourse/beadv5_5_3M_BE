@@ -76,6 +76,8 @@ public class Creator {
         creator.accountNumber = request.accountNumber();
         creator.bankName = request.bankName();
         creator.email = request.email();
+        creator.nickname = request.nickname();
+        creator.phoneNumber = request.phoneNumber();
         creator.saltKey = generateSalt();
         creator.password = new BCryptPasswordEncoder().encode(request.password() + creator.saltKey);
         return creator;

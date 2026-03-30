@@ -1,6 +1,7 @@
 package com.example.creatorservice.presentation;
 
 import com.example.creatorservice.application.usecase.CreatorUseCase;
+import com.example.creatorservice.presentation.dto.req.AuthorizationRequest;
 import com.example.creatorservice.presentation.dto.req.JoinRequest;
 import com.example.creatorservice.presentation.dto.req.LoginRequest;
 import com.example.creatorservice.presentation.dto.res.TokenResponse;
@@ -41,6 +42,17 @@ public class CreatorController {
         TokenResponse response = creatorUseCase.login(request);
 
         return ResponseEntity.ok().body(response);
+    }
+
+    @GetMapping("/authorization/check")
+    public ResponseEntity<Boolean> check(@ModelAttribute AuthorizationRequest request,
+                                         @RequestHeader("X-Creator-Id") String creatorId) {
+        return ResponseEntity.ok(creatorUseCase.checkAuthorization(request, creatorId));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenResponse> refresh(@RequestBody String refreshToken) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(creatorUseCase.refresh(refreshToken));
     }
 
 
