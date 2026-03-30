@@ -1,6 +1,8 @@
 package com.example.settlementservice.application.service;
 
+import com.example.settlementservice.application.exception.CreatorNotFoundException;
 import com.example.settlementservice.application.port.in.IngestRevenueUseCase;
+import com.example.settlementservice.application.port.out.CreatorPayoutQueryPort;
 import com.example.settlementservice.application.port.out.SettlementLogRepository;
 import com.example.settlementservice.application.port.out.WalletRepository;
 import com.example.settlementservice.domain.common.FeePolicy;
@@ -30,6 +32,7 @@ public class RevenueIngestService implements IngestRevenueUseCase {
     private final WalletRepository walletRepository;
     private final SettlementLogRepository settlementLogRepository;
     private final WalletCreationService walletCreationService;
+    private final CreatorPayoutQueryPort creatorPayoutQueryPort;
 
     @Value("${settlement.cookie-to-krw-rate}")
     private BigDecimal cookieToKrwRate;
@@ -46,6 +49,10 @@ public class RevenueIngestService implements IngestRevenueUseCase {
         if (settlementLogRepository.existsBySourceEventId(sourceEventId)) {
             log.info("Duplicate revenue event ignored: ticketId={}", ticketId);
             return;
+        }
+
+        if (!creatorPayoutQueryPort.existsCreator(creatorId)) {
+            throw new CreatorNotFoundException(creatorId);
         }
 
         // findOrCreate(REQUIRES_NEW)로 DB에 존재 보장 후 outer TX에서 managed entity로 재조회
@@ -106,6 +113,11 @@ public class RevenueIngestService implements IngestRevenueUseCase {
                 .collect(Collectors.toSet());
 
         if (!missingIds.isEmpty()) {
+            missingIds.forEach(id -> {
+                if (!creatorPayoutQueryPort.existsCreator(id)) {
+                    throw new CreatorNotFoundException(id);
+                }
+            });
             missingIds.forEach(walletCreationService::findOrCreate); // REQUIRES_NEW: DB에 존재 보장
             walletRepository.findAllByCreatorIdIn(missingIds)        // outer TX에서 managed entity batch 조회
                     .forEach(w -> walletMap.put(w.getCreatorId(), w));
