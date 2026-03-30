@@ -1,14 +1,8 @@
 package com.example.movieservice.application.service;
 
 import com.example.movieservice.application.usecase.MovieUseCase;
-import com.example.movieservice.domain.model.Category;
-import com.example.movieservice.domain.model.Movie;
-import com.example.movieservice.domain.model.Review;
-import com.example.movieservice.domain.model.Schedule;
-import com.example.movieservice.domain.repository.CategoryRepository;
-import com.example.movieservice.domain.repository.MovieRepository;
-import com.example.movieservice.domain.repository.ReviewRepository;
-import com.example.movieservice.domain.repository.ScheduleRepository;
+import com.example.movieservice.domain.model.*;
+import com.example.movieservice.domain.repository.*;
 import com.example.movieservice.global.exception.ErrorStatus;
 import com.example.movieservice.global.exception.GeneralException;
 import com.example.movieservice.presentation.dto.request.movie.RegisterMovieRequest;
@@ -23,7 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +31,7 @@ public class MovieService implements MovieUseCase {
     private final CategoryRepository categoryRepository;
     private final ScheduleRepository scheduleRepository;
     private final ReviewRepository reviewRepository;
+    private final CreatorRepository creatorRepository;
 
     @Override
     @Transactional
@@ -149,8 +147,13 @@ public class MovieService implements MovieUseCase {
                 .map(r -> new ReviewSummaryResponse(r.getReviewId(), r.getNickname(), r.getRating(), r.getComment(), r.getUpdatedAt(), r.getStatus().name()))
                 .toList();
 
+        String nickname = creatorRepository.findById(movie.getCreatorId())
+                .map(Creator::getNickname)
+                .orElse("알 수 없음");
+
         return new DetailForUserResponse(
                 movie.getCreatorId(),
+                nickname,
                 movie.getTitle(),
                 movie.getDescription(),
                 categoryIds,
@@ -200,11 +203,17 @@ public class MovieService implements MovieUseCase {
     @Override
     public List<MovieCardResponse> getOnAirMovieList() {
         List<Movie> movies = scheduleRepository.findOnAirMovies();
+        Map<UUID, String> nicknameMap = buildNicknameMap(movies.stream().map(Movie::getCreatorId).toList());
 
         return movies.stream()
                 .map(movie -> {
                     List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
-                    return new MovieCardResponse(movie.getMovieId(), movie.getCreatorId(), movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds);
+                    return new MovieCardResponse(movie.getMovieId(),
+                            movie.getCreatorId(),
+                            nicknameMap.getOrDefault(movie.getCreatorId(), "알 수 없음"),
+                            movie.getTitle(),
+                            Math.round(movie.getAverageRating() * 10) / 10.0f,
+                            categoryIds);
                 })
                 .toList();
     }
@@ -212,12 +221,18 @@ public class MovieService implements MovieUseCase {
     @Override
     public List<ScheduledMovieResponse> getScheduledMovieList() {
         List<Schedule> schedules = scheduleRepository.findScheduledMovies();
+        Map<UUID, String> nicknameMap = buildNicknameMap(schedules.stream().map(s -> s.getMovie().getCreatorId()).toList());
 
         return schedules.stream()
                 .map(schedule -> {
                     Movie movie = schedule.getMovie();
                     List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
-                    return new ScheduledMovieResponse(movie.getMovieId(), movie.getCreatorId(), movie.getTitle(), schedule.getStartTime(), categoryIds);
+                    return new ScheduledMovieResponse(movie.getMovieId(),
+                            movie.getCreatorId(),
+                            nicknameMap.getOrDefault(movie.getCreatorId(), "알 수 없음"),
+                            movie.getTitle(),
+                            schedule.getStartTime(),
+                            categoryIds);
                 })
                 .toList();
     }
@@ -225,10 +240,17 @@ public class MovieService implements MovieUseCase {
     @Override
     public List<MovieCardResponse> getPublicMovieList() {
         List<Movie> movies = movieRepository.findAllPublic();
+        Map<UUID, String> nicknameMap = buildNicknameMap(movies.stream().map(Movie::getCreatorId).toList());
+
         return movies.stream()
                 .map(movie -> {
                     List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
-                    return new MovieCardResponse(movie.getMovieId(), movie.getCreatorId(), movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds);
+                    return new MovieCardResponse(movie.getMovieId(),
+                            movie.getCreatorId(),
+                            nicknameMap.getOrDefault(movie.getCreatorId(), "알 수 없음"),
+                            movie.getTitle(),
+                            Math.round(movie.getAverageRating() * 10) / 10.0f,
+                            categoryIds);
                 })
                 .toList();
     }
@@ -239,12 +261,25 @@ public class MovieService implements MovieUseCase {
             throw new GeneralException(ErrorStatus.CATEGORY_NOT_FOUND);
         }
         List<Movie> movies = movieRepository.findAllByCategoryId(categoryId);
+        Map<UUID, String> nicknameMap = buildNicknameMap(movies.stream().map(Movie::getCreatorId).toList());
+
         return movies.stream()
                 .map(movie -> {
                     List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
-                    return new MovieCardResponse(movie.getMovieId(), movie.getCreatorId(), movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds);
+                    return new MovieCardResponse(movie.getMovieId(),
+                            movie.getCreatorId(),
+                            nicknameMap.getOrDefault(movie.getCreatorId(), "알 수 없음"),
+                            movie.getTitle(),
+                            Math.round(movie.getAverageRating() * 10) / 10.0f,
+                            categoryIds);
                 })
                 .toList();
+    }
+
+    private Map<UUID, String> buildNicknameMap(List<UUID> creatorIds) {
+        return creatorRepository.findAllByCreatorIdIn(creatorIds.stream().distinct().toList())
+                .stream()
+                .collect(Collectors.toMap(Creator::getCreatorId, Creator::getNickname));
     }
 
 }

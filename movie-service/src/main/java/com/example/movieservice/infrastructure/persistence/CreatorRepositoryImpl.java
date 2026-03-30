@@ -5,6 +5,7 @@ import com.example.movieservice.domain.repository.CreatorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,5 +28,10 @@ public class CreatorRepositoryImpl implements CreatorRepository {
     @Override
     public Optional<Creator> findById(UUID creatorId) {
         return creatorJpaRepository.findById(creatorId);
+    }
+
+    @Override
+    public List<Creator> findAllByCreatorIdIn(List<UUID> creatorIds) {
+        return creatorJpaRepository.findAllByCreatorIdIn(creatorIds);
     }
 }
