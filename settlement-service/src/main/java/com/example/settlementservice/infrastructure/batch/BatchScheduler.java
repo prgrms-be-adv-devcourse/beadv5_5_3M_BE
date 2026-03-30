@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
-import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -13,16 +13,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class BatchScheduler {
 
-    private final JobLauncher jobLauncher;
+    private final JobOperator jobOperator;
     private final Job settlementConfirmJob;
     private final Job settlementPayoutJob;
 
     public BatchScheduler(
-            JobLauncher jobLauncher,
+            JobOperator jobOperator,
             @Qualifier("settlementConfirmJob") Job settlementConfirmJob,
             @Qualifier("settlementPayoutJob") Job settlementPayoutJob
     ) {
-        this.jobLauncher = jobLauncher;
+        this.jobOperator = jobOperator;
         this.settlementConfirmJob = settlementConfirmJob;
         this.settlementPayoutJob = settlementPayoutJob;
     }
@@ -42,7 +42,7 @@ public class BatchScheduler {
             JobParameters params = new JobParametersBuilder()
                     .addLong("runAt", System.currentTimeMillis())
                     .toJobParameters();
-            jobLauncher.run(job, params);
+            jobOperator.start(job, params);
             log.info("Batch job started: {}", jobName);
         } catch (Exception e) {
             log.error("Failed to launch batch job: {}", jobName, e);
