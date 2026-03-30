@@ -7,6 +7,7 @@ import java.util.UUID;
 public record ScheduledMovieResponse(
         Long movieId,
         UUID creatorId,
+        String nickname, // 크리에이터 이름
         String title,
         LocalDateTime startTime,
         List<Long> categoryIds

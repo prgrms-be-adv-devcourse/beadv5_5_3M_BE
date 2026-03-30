@@ -32,7 +32,7 @@ public class MovieController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "영화 등록 한도 초과 또는 유효성 검사 실패"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "카테고리를 찾을 수 없음")
     })
-    @PostMapping("/register")
+    @PostMapping("/creator/register")
     public ApiResponse<RegisterMovieResponse> register(
             @Parameter(description = "크리에이터 ID (Gateway에서 전달)", required = true)
             @RequestHeader("X-Creator-Id") UUID creatorId,
@@ -50,7 +50,7 @@ public class MovieController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "영화를 찾을 수 없음")
     })
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PatchMapping("/{movieId}/visibility")
+    @PatchMapping("/creator/{movieId}/visibility")
     public ApiResponse<Void> updateVisibility(
             @Parameter(description = "크리에이터 ID (Gateway에서 전달)", required = true)
             @RequestHeader("X-Creator-Id") UUID creatorId,
@@ -68,7 +68,7 @@ public class MovieController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "영화 또는 카테고리를 찾을 수 없음")
     })
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PatchMapping("/{movieId}/detail")
+    @PatchMapping("/creator/{movieId}/detail")
     public ApiResponse<Void> updateDetail(
             @RequestHeader("X-Creator-Id") UUID creatorId,
             @PathVariable Long movieId,
@@ -85,7 +85,7 @@ public class MovieController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "영화를 찾을 수 없음")
     })
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @DeleteMapping("/{movieId}")
+    @DeleteMapping("/creator/{movieId}")
     public ApiResponse<Void> delete(
             @RequestHeader("X-Creator-Id") UUID creatorId,
             @PathVariable Long movieId){
@@ -100,7 +100,7 @@ public class MovieController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "해당 영화에 대한 권한 없음"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "영화를 찾을 수 없음")
     })
-    @GetMapping("/{movieId}/detail/creator")
+    @GetMapping("/creator/{movieId}/detail")
     public ApiResponse<DetailForCreatorResponse> detailForCreator(
             @RequestHeader("X-Creator-Id") UUID creatorId,
             @PathVariable Long movieId

@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public record DetailForUserResponse(
         UUID creatorId,
+        String nickname, // 크리에이터 이름
         String title,
         String description,
         List<Long> categoryIds,
