@@ -10,8 +10,9 @@ import org.springframework.stereotype.Component;
 public class StubPayoutAdapter implements PayoutPort {
 
     @Override
-    public boolean payout(Settlement settlement) {
-        log.info("[STUB] Payout executed - settlementId={}, requestAmount={}, account={}",
+    public boolean payout(Settlement settlement, String idempotencyKey) {
+        log.info("[STUB] Payout executed - idempotencyKey={}, settlementId={}, requestAmount={}, account={}",
+                idempotencyKey,
                 settlement.getId(),
                 settlement.getRequestAmount(),
                 settlement.getPayoutAccountNumber()
