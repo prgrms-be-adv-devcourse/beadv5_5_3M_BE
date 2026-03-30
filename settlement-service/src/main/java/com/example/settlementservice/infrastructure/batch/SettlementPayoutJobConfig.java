@@ -40,10 +40,18 @@ public class SettlementPayoutJobConfig {
     @Bean
     public Step payoutStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
         return new StepBuilder("payoutStep", jobRepository)
-                .<Long, Long>chunk(10)
+                .<Long, PayoutResult>chunk(10)
                 .reader(payoutItemReader())
                 .processor(payoutItemProcessor())
-                .writer(chunk -> log.info("Processed payout for {} settlements: {}", chunk.size(), chunk.getItems()))
+                .writer(chunk -> {
+                    for (PayoutResult result : chunk.getItems()) {
+                        if (result.success()) {
+                            settlementBatchService.completeOne(result.settlementId());
+                        } else {
+                            settlementBatchService.failOne(result.settlementId());
+                        }
+                    }
+                })
                 .transactionManager(transactionManager)
                 .faultTolerant()
                 .skip(InvalidSettlementStateException.class)  // 상태 불일치 건 (이미 완료/실패)
@@ -72,14 +80,11 @@ public class SettlementPayoutJobConfig {
         };
     }
 
-    private ItemProcessor<Long, Long> payoutItemProcessor() {
-        return id -> {
-            settlementBatchService.completeOne(id);
-            return id;
-        };
+    private ItemProcessor<Long, PayoutResult> payoutItemProcessor() {
+        return id -> settlementBatchService.tryPayout(id);
     }
 
-    private SkipListener<Long, Long> payoutSkipListener() {
+    private SkipListener<Long, PayoutResult> payoutSkipListener() {
         return new SkipListener<>() {
             @Override
             public void onSkipInRead(Throwable t) {
