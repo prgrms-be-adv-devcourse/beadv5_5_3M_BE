@@ -7,7 +7,9 @@ import com.example.movieservice.presentation.dto.response.schedule.DraftSchedule
 import com.example.movieservice.presentation.dto.response.schedule.ScheduleForCreatorResponse;
 import com.example.movieservice.presentation.dto.response.schedule.ScheduleForUserResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,6 +20,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Schedule", description = "상영 일정 관련 API")
 @RestController
 @RequestMapping("/api/movies/schedules")
 @RequiredArgsConstructor
@@ -30,10 +33,11 @@ public class ScheduleController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "등록 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "시작 시간이 정각이 아님"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "해당 영화에 대한 권한 없음"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "비공개 영화입니다"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "영화를 찾을 수 없음 또는 비공개 영화"),
     })
     @PostMapping("/creator/register")
     public ResponseEntity<Void> register(
+            @Parameter(description = "크리에이터 ID (Gateway에서 전달)", required = true)
             @RequestHeader("X-Creator-Id") UUID creatorId,
             @Valid @RequestBody RegisterScheduleRequest request
     ){
@@ -47,7 +51,9 @@ public class ScheduleController {
     })
     @GetMapping("/creator/draft")
     public ResponseEntity<List<DraftScheduleResponse>> getDraftSchedule(
+            @Parameter(description = "크리에이터 ID (Gateway에서 전달)", required = true)
             @RequestHeader("X-Creator-Id") UUID creatorId,
+            @Parameter(description = "조회할 날짜 (yyyy-MM-dd)", required = true, example = "2026-04-01")
             @RequestParam LocalDate date
     ){
         return ResponseEntity.ok(scheduleUseCase.getDraftSchedule(creatorId, date));
@@ -58,10 +64,12 @@ public class ScheduleController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "확정 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "해당 스케줄에 대한 권한 없음"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "스케줄을 찾을 수 없음"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "일정이 겹침")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "요청한 일정들끼리 시간이 겹침"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이미 확정된 다른 일정과 시간이 겹침")
     })
     @PatchMapping("/creator/confirm")
     public ResponseEntity<Void> confirmSchedule(
+            @Parameter(description = "크리에이터 ID (Gateway에서 전달)", required = true)
             @RequestHeader("X-Creator-Id") UUID creatorId,
             @Valid @RequestBody List<UpdateConfirmRequest> requests
     ){
@@ -69,9 +77,18 @@ public class ScheduleController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "미확정 상영 일정 삭제 (크리에이터)", description = "크리에이터가 확정되지 않은 상영 일정을 삭제합니다. 이미 확정된 일정은 삭제할 수 없습니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "삭제 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "이미 확정된 스케줄은 삭제할 수 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "해당 스케줄에 대한 권한 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "스케줄을 찾을 수 없음")
+    })
     @DeleteMapping("/creator/{scheduleId}")
     public ResponseEntity<Void> deleteDraftSchedule(
+            @Parameter(description = "크리에이터 ID (Gateway에서 전달)", required = true)
             @RequestHeader("X-Creator-Id") UUID creatorId,
+            @Parameter(description = "삭제할 스케줄 ID", required = true)
             @PathVariable Long scheduleId
     ){
         scheduleUseCase.delete(creatorId, scheduleId);
@@ -83,8 +100,9 @@ public class ScheduleController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "영화를 찾을 수 없음")
     })
-    @GetMapping("")
+    @GetMapping
     public ResponseEntity<List<ScheduleForUserResponse>> getSpecificMovie(
+            @Parameter(description = "조회할 영화 ID", required = true)
             @RequestParam Long movieId
     ){
         return ResponseEntity.ok(scheduleUseCase.getSpecificMovieSchedule(movieId));
@@ -96,7 +114,9 @@ public class ScheduleController {
     })
     @GetMapping("/creator")
     public ResponseEntity<List<ScheduleForCreatorResponse>> getByCreatorAndDate(
+            @Parameter(description = "크리에이터 ID (Gateway에서 전달)", required = true)
             @RequestHeader("X-Creator-Id") UUID creatorId,
+            @Parameter(description = "조회할 날짜 (yyyy-MM-dd)", required = true, example = "2026-04-01")
             @RequestParam LocalDate date
     ){
         return ResponseEntity.ok(scheduleUseCase.getByCreatorAndDate(creatorId, date));
