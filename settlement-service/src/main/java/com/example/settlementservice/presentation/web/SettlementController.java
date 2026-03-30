@@ -7,7 +7,7 @@ import com.example.settlementservice.presentation.web.dto.PostSettlementRequest;
 import com.example.settlementservice.presentation.web.dto.SettlementResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,31 +23,31 @@ public class SettlementController {
     private final GetSettlementUseCase getSettlementUseCase;
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public SettlementResponse requestSettlement(
+    public ResponseEntity<SettlementResponse> requestSettlement(
             @RequestHeader("X-Creator-Id") UUID creatorId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @RequestBody @Valid PostSettlementRequest request) {
-        return requestSettlementUseCase.requestSettlement(creatorId, idempotencyKey, request);
+        return ResponseEntity.status(201)
+                .body(requestSettlementUseCase.requestSettlement(creatorId, idempotencyKey, request));
     }
 
     @PostMapping("/{id}/cancel")
-    public SettlementResponse cancelSettlement(
+    public ResponseEntity<SettlementResponse> cancelSettlement(
             @PathVariable Long id,
             @RequestHeader("X-Creator-Id") UUID creatorId) {
-        return cancelSettlementUseCase.cancelSettlement(id, creatorId);
+        return ResponseEntity.ok(cancelSettlementUseCase.cancelSettlement(id, creatorId));
     }
 
     @GetMapping("/{id}")
-    public SettlementResponse getSettlement(
+    public ResponseEntity<SettlementResponse> getSettlement(
             @PathVariable Long id,
             @RequestHeader("X-Creator-Id") UUID creatorId) {
-        return getSettlementUseCase.getSettlement(id, creatorId);
+        return ResponseEntity.ok(getSettlementUseCase.getSettlement(id, creatorId));
     }
 
     @GetMapping
-    public List<SettlementResponse> getSettlements(
+    public ResponseEntity<List<SettlementResponse>> getSettlements(
             @RequestHeader("X-Creator-Id") UUID creatorId) {
-        return getSettlementUseCase.getSettlementsByCreatorId(creatorId);
+        return ResponseEntity.ok(getSettlementUseCase.getSettlementsByCreatorId(creatorId));
     }
 }
