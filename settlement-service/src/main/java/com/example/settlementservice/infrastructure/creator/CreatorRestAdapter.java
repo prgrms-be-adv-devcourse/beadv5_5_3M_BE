@@ -36,4 +36,17 @@ public class CreatorRestAdapter implements CreatorPayoutQueryPort {
             throw new CreatorPayoutAccountNotFoundException(creatorId);
         }
     }
+
+    @Override
+    public boolean existsCreator(UUID creatorId) {
+        try {
+            creatorRestClient.get()
+                    .uri("/internal/creators/{creatorId}/exists", creatorId)
+                    .retrieve()
+                    .toBodilessEntity();
+            return true;
+        } catch (HttpClientErrorException.NotFound e) {
+            return false;
+        }
+    }
 }
