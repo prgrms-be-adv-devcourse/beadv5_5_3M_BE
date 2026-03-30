@@ -6,6 +6,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.server.RequestPath;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.access.AuthorizationServiceException;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.AuthorizationResult;
 import org.springframework.security.authorization.ReactiveAuthorizationManager;
@@ -35,6 +36,12 @@ public class ReactiveAuthorization implements ReactiveAuthorizationManager<Autho
         log.info("baseUrl={}", baseUrl);
 
         String userId = request.getHeaders().getFirst("X-User-Id");
+        log.info("userId = {}", userId);
+
+        if (userId == null) {
+            log.warn("X-User-Id 헤더 없음 - 인증되지 않은 요청");
+            return Mono.error(new AuthenticationCredentialsNotFoundException("인증 정보가 없습니다."));
+        }
 
         boolean granted = false;
         try {
