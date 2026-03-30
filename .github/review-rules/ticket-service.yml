@@ -1,0 +1,13 @@
+version: 1
+scope: service
+service: ticket-service
+
+rules:
+  - id: TKT-001
+    severity: CRITICAL
+    title: 티켓 조회 시 비관적 락 누락
+    description: >
+      AVAILABLE 티켓을 조회하는 쿼리(findFirstAvailableBySchedule 등)에
+      @Lock(LockModeType.PESSIMISTIC_WRITE)가 없는 경우.
+      동시 요청 시 동일 티켓을 두 사용자가 예약하여 초과 예약 발생.
+      상태 전이(AVAILABLE→RESERVED)를 수반하는 모든 조회는 SELECT FOR UPDATE 필요.

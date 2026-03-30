@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "required": ["service", "summary", "findings", "praise"],
+  "properties": {
+    "service": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "category", "file", "line_range", "title", "description", "suggestion"],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["CRITICAL"]
+          },
+          "category": {
+            "type": "string",
+            "enum": ["concurrency", "security", "integrity", "reliability", "layer-violation"]
+          },
+          "file": { "type": "string" },
+          "line_range": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "suggestion": { "type": "string" }
+        }
+      }
+    },
+    "praise": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
