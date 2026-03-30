@@ -1,0 +1,14 @@
+version: 1
+scope: service
+service: reivew-service
+
+# 참고: 디렉토리명 reivew-service, 패키지명 rivewservice (오타 그대로 유지)
+
+rules:
+  - id: RVW-001
+    severity: CRITICAL
+    title: 리뷰 슬롯 flag 직접 변경
+    description: >
+      Review 엔티티의 flag 필드를 도메인 메서드(write, delete) 외부에서 직접 변경하는 경우.
+      flag 관리 규칙: AUTHORIZED 생성=true, write()=false, delete()=true.
+      직접 변경 시 리뷰 이력 오염 및 중복 리뷰 방지 로직 우회 위험.
