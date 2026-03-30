@@ -1,0 +1,18 @@
+version: 1
+scope: service
+service: creator-service
+
+rules:
+  - id: CRT-001
+    severity: CRITICAL
+    title: JWT 시크릿 하드코딩
+    description: >
+      JwtProvider에 사용되는 JWT 시크릿이 소스코드나 application.yaml에 직접 포함된 경우.
+      creator-service는 user-service와 독립적인 JWT를 발급하므로 별도 시크릿 관리 필요.
+
+  - id: CRT-002
+    severity: CRITICAL
+    title: 크리에이터 패스워드 평문 저장
+    description: >
+      Creator 엔티티의 password 필드가 BCrypt 등 해시 없이 평문으로 저장되는 경우.
+      PasswordEncoder를 반드시 사용해야 하며, 평문 패스워드는 DB 유출 시 즉각적인 계정 탈취로 이어짐.

@@ -1,0 +1,12 @@
+version: 1
+scope: tech
+language: java
+
+rules:
+  - id: TXN-001
+    severity: CRITICAL
+    title: 트랜잭션 내 외부 Kafka/HTTP 호출 + 롤백 불가
+    description: >
+      @Transactional 메서드 안에서 Kafka 발행 또는 외부 HTTP 호출을 하는데,
+      해당 호출이 실패할 경우 DB는 롤백되지만 외부 호출은 취소할 수 없는 패턴.
+      특히 신규 상태 변경 이후 기존 보상 로직(cancel 등)이 새 상태까지 커버하지 않는 경우 위험.
