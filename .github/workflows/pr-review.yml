@@ -1,4 +1,4 @@
-name: PR Review (Gemini AI + Build Test)
+name: PR Review (Gemini AI)
 
 on:
   pull_request:
@@ -46,51 +46,7 @@ jobs:
           fi
 
   # ─────────────────────────────────────────────
-  # Job 2: 서비스별 빌드 (matrix, 병렬)
-  # ─────────────────────────────────────────────
-  build-test:
-    name: Build / ${{ matrix.service }}
-    needs: detect-changes
-    if: needs.detect-changes.outputs.has_changes == 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ matrix.service }}-gradle-${{ hashFiles(format('{0}/build.gradle', matrix.service), format('{0}/build.gradle.kts', matrix.service), format('{0}/gradle/wrapper/gradle-wrapper.properties', matrix.service)) }}
-          restore-keys: |
-            ${{ matrix.service }}-gradle-
-
-      - name: Build
-        working-directory: ${{ matrix.service }}
-        run: ./gradlew build -x test --no-daemon
-
-      - name: Upload build report on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-report-${{ matrix.service }}
-          path: ${{ matrix.service }}/build/reports/
-          retention-days: 3
-
-  # ─────────────────────────────────────────────
-  # Job 3: Gemini AI 코드 리뷰 (build-test와 병렬)
+  # Job 2: Gemini AI 코드 리뷰
   # ─────────────────────────────────────────────
   gemini-review:
     name: Gemini Code Review
