@@ -59,7 +59,7 @@ public class UserPaymentConsumer {
     public void paymentRefundConsumer(String message) {
         PaymentRefundRequest paymentConfirmRequest = PaymentRefundRequest.fromJson(message);
         User user = userRepository.findById(paymentConfirmRequest.userId());
-        user.addCookie(paymentConfirmRequest.amount());
+        user.deductCookie(paymentConfirmRequest.amount());
         CookieLog cookieLog = CookieLog.create(
                 user.getUserId(),
                 -paymentConfirmRequest.amount(),

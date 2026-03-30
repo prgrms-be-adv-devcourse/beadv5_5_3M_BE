@@ -82,6 +82,10 @@ public class User {
         this.balance -= amount;
     }
 
+    public void addCookie(Integer amount) {
+        this.balance += amount;
+    }
+
     @PrePersist
     public void onCreate() {
         if (createAt == null) {
