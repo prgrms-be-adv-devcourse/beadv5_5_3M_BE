@@ -130,4 +130,15 @@ public class CreatorService implements CreatorUseCase {
 
     }
 
+    private String toJsonString(Object object) {
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        try {
+            return objectMapper.writeValueAsString(object);
+        } catch (Exception e) {
+            throw new RuntimeException("Json 직렬화 실패");
+        }
+
+    }
+
 }
