@@ -97,7 +97,7 @@ public class CreatorService implements CreatorUseCase {
     public TokenResponse refresh(String refreshToken) {
         UUID creatorId;
         try {
-            creatorId = jwtProvider.getUserIdFromToken(refreshToken);
+            creatorId = jwtProvider.getUserIdFromToken(refreshToken.trim());
         } catch (Exception e) {
             throw new InvalidRefreshTokenException();
         }
