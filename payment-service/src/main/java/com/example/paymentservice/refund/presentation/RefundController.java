@@ -24,9 +24,11 @@ public class RefundController {
 
     @Operation(summary = "환불 요청", description = "결제 건에 대한 환불을 요청한다. (결제 후 7일 이내만 가능)")
     @PostMapping
-    public ResponseEntity<RefundInfo> requestRefund(@RequestBody @Valid RefundRequest request) {
+    public ResponseEntity<RefundInfo> requestRefund(
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestBody @Valid RefundRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(refundService.requestRefund(request.toCommand()));
+                .body(refundService.requestRefund(request.toCommand(userId)));
     }
 
     @Operation(summary = "환불 승인", description = "관리자가 환불 요청을 승인한다.")
@@ -48,8 +50,8 @@ public class RefundController {
     }
 
     @Operation(summary = "사용자별 환불 목록 조회", description = "사용자 ID로 환불 내역을 조회한다.")
-    @GetMapping("/users/{userId}")
-    public ResponseEntity<List<RefundInfo>> getRefundsByUser(@PathVariable UUID userId) {
+    @GetMapping("/users")
+    public ResponseEntity<List<RefundInfo>> getRefundsByUser(@RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(refundService.getRefundsByUser(userId));
     }
 }

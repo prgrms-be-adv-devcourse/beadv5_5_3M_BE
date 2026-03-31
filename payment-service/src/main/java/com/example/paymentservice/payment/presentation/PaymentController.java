@@ -25,9 +25,11 @@ public class PaymentController {
 
     @Operation(summary = "결제 생성", description = "Toss 결제를 위한 결제 건을 생성한다.")
     @PostMapping
-    public ResponseEntity<PaymentInfo> createPayment(@RequestBody @Valid PaymentRequest request) {
+    public ResponseEntity<PaymentInfo> createPayment(
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestBody @Valid PaymentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(paymentService.createPayment(request.toCommand()));
+                .body(paymentService.createPayment(request.toCommand(userId)));
     }
 
     @Operation(summary = "결제 승인", description = "Toss 결제 완료 후 paymentKey/orderId를 전달받아 결제를 승인한다.")
@@ -49,8 +51,8 @@ public class PaymentController {
     }
 
     @Operation(summary = "사용자별 결제 목록 조회", description = "사용자 ID로 결제 내역을 조회한다.")
-    @GetMapping("/users/{userId}")
-    public ResponseEntity<List<PaymentInfo>> getPaymentsByUser(@PathVariable UUID userId) {
+    @GetMapping("/users")
+    public ResponseEntity<List<PaymentInfo>> getPaymentsByUser(@RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(paymentService.getPaymentsByUser(userId));
     }
 }
