@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .httpBasic(httpBasic -> httpBasic.authenticationEntryPoint(new HttpStatusServerEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeExchange(auth -> auth
                         .pathMatchers(PERMITALL_ANTPATTERNS).permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/movies/categories").permitAll()
                         .pathMatchers(HttpMethod.POST, USER_SIGNUP_ANTPATTERNS).permitAll()
                         .pathMatchers(HttpMethod.POST, CREATOR_SIGNUP_ANTPATTERNS).permitAll()
                         .anyExchange().access(check)
