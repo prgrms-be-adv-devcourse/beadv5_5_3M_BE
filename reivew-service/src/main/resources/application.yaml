@@ -1,6 +1,5 @@
 spring:
   application:
-    name: settlement-service
-
+    name: review-service
   profiles:
     active: dev
