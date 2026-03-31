@@ -10,10 +10,9 @@ import java.util.UUID;
 @Schema(description = "환불 요청")
 public record RefundRequest(
         @Schema(description = "원래 결제 ID") @NotNull Long paymentId,
-        @Schema(description = "사용자 ID") @NotNull UUID userId,
         @Schema(description = "환불 쿠키 수량") @Positive int cookieAmount
 ) {
-    public RefundCommand toCommand() {
+    public RefundCommand toCommand(UUID userId) {
         return new RefundCommand(paymentId, userId, cookieAmount);
     }
 }
