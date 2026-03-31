@@ -26,6 +26,7 @@ import com.example.userservice.presentation.dto.res.UserInfoResponse;
 
 import com.example.userservice.util.JwtProvider;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -37,6 +38,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -116,8 +118,9 @@ public class UserService implements UserUseCase {
     public TokenResponse refresh(String refreshToken) {
         UUID userId;
         try {
-            userId = jwtProvider.getUserIdFromToken(refreshToken);
+            userId = jwtProvider.getUserIdFromToken(refreshToken.trim());
         } catch (Exception e) {
+            log.error("refresh token parse 실패: {}", e.getMessage(), e);  // 이 줄 추가
             throw new InvalidRefreshTokenException();
         }
 
