@@ -245,7 +245,7 @@ feature/*         → 기능 개발
 | gateway    | 8000 |
 | creator    | 8080 |
 | payment    | 8081 |
-| schedule   | 8082 |
+| review     | 8087 |
 | settlement | 8083 |
 | ticket     | 8084 |
 | user       | 8085 |
