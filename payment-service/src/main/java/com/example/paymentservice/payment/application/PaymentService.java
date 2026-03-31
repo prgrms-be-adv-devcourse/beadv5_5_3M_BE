@@ -9,6 +9,7 @@ import com.example.paymentservice.payment.application.event.PaymentCompletedEven
 import com.example.paymentservice.payment.application.event.PaymentFailedEvent;
 import com.example.paymentservice.payment.client.PaymentGateway;
 import com.example.paymentservice.payment.client.PaymentGateway.PaymentGatewayResponse;
+import com.example.paymentservice.payment.domain.PaymentStatus;
 import com.example.paymentservice.payment.domain.model.Payment;
 import com.example.paymentservice.payment.domain.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -38,6 +40,12 @@ public class PaymentService {
 
     @Transactional
     public PaymentInfo confirmPayment(PaymentConfirmCommand command) {
+        // 멱등성: 같은 orderId로 이미 성공한 결제가 있으면 그대로 반환
+        Optional<Payment> existing = paymentRepository.findByOrderId(command.orderId());
+        if (existing.isPresent() && existing.get().getStatus() == PaymentStatus.SUCCESS) {
+            return PaymentInfo.from(existing.get());
+        }
+
         Payment payment = paymentRepository.findByIdForUpdate(command.paymentId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
