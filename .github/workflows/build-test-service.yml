@@ -43,6 +43,16 @@ jobs:
         working-directory: ${{ inputs.service }}
         run: ./gradlew build -x test --no-daemon
 
+      - name: Upload JAR artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jar-${{ inputs.service }}-${{ github.sha }}
+          path: |
+            ${{ inputs.service }}/build/libs/*.jar
+            !${{ inputs.service }}/build/libs/*-plain.jar
+          retention-days: 1
+
       - name: Upload build report on failure
         if: failure()
         uses: actions/upload-artifact@v4

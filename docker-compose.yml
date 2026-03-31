@@ -1,0 +1,118 @@
+services:
+
+  gateway-service:
+    profiles: [gateway-service]
+    image: ${DOCKERHUB_USERNAME}/gateway-service:latest
+    container_name: gateway-service
+    ports:
+      - "${GATEWAY_PORT}:${GATEWAY_PORT}"
+    environment:
+      SERVER_PORT: ${GATEWAY_PORT}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+    restart: unless-stopped
+    networks: [app-network]
+
+  creator-service:
+    profiles: [creator-service]
+    image: ${DOCKERHUB_USERNAME}/creator-service:latest
+    container_name: creator-service
+    ports:
+      - "${CREATOR_PORT}:${CREATOR_PORT}"
+    environment:
+      SERVER_PORT: ${CREATOR_PORT}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${CREATOR_DB_HOST}:5432/creator-db
+      SPRING_DATASOURCE_USERNAME: ${CREATOR_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${CREATOR_DB_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
+    restart: unless-stopped
+    networks: [app-network]
+
+  payment-service:
+    profiles: [payment-service]
+    image: ${DOCKERHUB_USERNAME}/payment-service:latest
+    container_name: payment-service
+    ports:
+      - "${PAYMENT_PORT}:${PAYMENT_PORT}"
+    environment:
+      SERVER_PORT: ${PAYMENT_PORT}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${PAYMENT_DB_HOST}:5432/payment-db
+      SPRING_DATASOURCE_USERNAME: ${PAYMENT_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${PAYMENT_DB_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+    restart: unless-stopped
+    networks: [app-network]
+
+  settlement-service:
+    profiles: [settlement-service]
+    image: ${DOCKERHUB_USERNAME}/settlement-service:latest
+    container_name: settlement-service
+    ports:
+      - "${SETTLEMENT_PORT}:${SETTLEMENT_PORT}"
+    environment:
+      SERVER_PORT: ${SETTLEMENT_PORT}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${SETTLEMENT_DB_HOST}:5432/settlement-db
+      SPRING_DATASOURCE_USERNAME: ${SETTLEMENT_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SETTLEMENT_DB_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      CLIENT_CREATOR_BASE_URL: http://creator-service:${CREATOR_PORT}
+    restart: unless-stopped
+    networks: [app-network]
+
+  ticket-service:
+    profiles: [ticket-service]
+    image: ${DOCKERHUB_USERNAME}/ticket-service:latest
+    container_name: ticket-service
+    ports:
+      - "${TICKET_PORT}:${TICKET_PORT}"
+    environment:
+      SERVER_PORT: ${TICKET_PORT}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${TICKET_DB_HOST}:5432/ticket-db
+      SPRING_DATASOURCE_USERNAME: ${TICKET_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${TICKET_DB_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
+      CLIENT_USER_BASE_URL: http://user-service:${USER_PORT}
+    restart: unless-stopped
+    networks: [app-network]
+
+  user-service:
+    profiles: [user-service]
+    image: ${DOCKERHUB_USERNAME}/user-service:latest
+    container_name: user-service
+    ports:
+      - "${USER_PORT}:${USER_PORT}"
+    environment:
+      SERVER_PORT: ${USER_PORT}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${USER_DB_HOST}:5432/user-db
+      SPRING_DATASOURCE_USERNAME: ${USER_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${USER_DB_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+    restart: unless-stopped
+    networks: [app-network]
+
+  reivew-service:
+    profiles: [reivew-service]
+    image: ${DOCKERHUB_USERNAME}/reivew-service:latest
+    container_name: reivew-service
+    ports:
+      - "${REVIEW_PORT}:${REVIEW_PORT}"
+    environment:
+      SERVER_PORT: ${REVIEW_PORT}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${REVIEW_DB_HOST}:5432/review-db
+      SPRING_DATASOURCE_USERNAME: ${REVIEW_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${REVIEW_DB_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+    restart: unless-stopped
+    networks: [app-network]
+
+networks:
+  app-network:
+    driver: bridge
