@@ -34,8 +34,8 @@ public class KafkaEventPublisher {
             kafkaTemplate.send(PaymentTopics.PAYMENT_CONFIRMED,
                     event.paymentId().toString(), message);
         } catch (Exception e) {
-            log.warn("[Kafka] payment.confirmed 발행 실패 (paymentId={}): {}",
-                    event.paymentId(), e.getMessage());
+            log.error("[Kafka] payment.confirmed 발행 실패 - 재시도 후에도 실패. paymentId={}, userId={}, cookieAmount={}, error={}",
+                    event.paymentId(), event.userId(), event.cookieAmount(), e.getMessage(), e);
         }
     }
 
@@ -50,8 +50,8 @@ public class KafkaEventPublisher {
             kafkaTemplate.send(PaymentTopics.PAYMENT_FAILED,
                     event.paymentId().toString(), event);
         } catch (Exception e) {
-            log.warn("[Kafka] payment.failed 발행 실패 (paymentId={}): {}",
-                    event.paymentId(), e.getMessage());
+            log.error("[Kafka] payment.failed 발행 실패 - 재시도 후에도 실패. paymentId={}, userId={}, error={}",
+                    event.paymentId(), event.userId(), e.getMessage(), e);
         }
     }
 
@@ -71,8 +71,8 @@ public class KafkaEventPublisher {
             kafkaTemplate.send(PaymentTopics.PAYMENT_REFUNDED,
                     event.refundId().toString(), message);
         } catch (Exception e) {
-            log.warn("[Kafka] payment.refunded 발행 실패 (refundId={}): {}",
-                    event.refundId(), e.getMessage());
+            log.error("[Kafka] payment.refunded 발행 실패 - 재시도 후에도 실패. refundId={}, userId={}, cookieAmount={}, error={}",
+                    event.refundId(), event.userId(), event.cookieAmount(), e.getMessage(), e);
         }
     }
 }

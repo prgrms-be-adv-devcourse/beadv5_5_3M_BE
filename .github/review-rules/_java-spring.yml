@@ -10,3 +10,7 @@ rules:
       @Transactional 메서드 안에서 Kafka 발행 또는 외부 HTTP 호출을 하는데,
       해당 호출이 실패할 경우 DB는 롤백되지만 외부 호출은 취소할 수 없는 패턴.
       특히 신규 상태 변경 이후 기존 보상 로직(cancel 등)이 새 상태까지 커버하지 않는 경우 위험.
+      단, Kafka 발행이 @TransactionalEventListener(AFTER_COMMIT)으로 처리되어 있으면
+      DB 커밋 이후 발행되므로 DB-Kafka 불일치는 발생하지 않는다.
+      PG 외부 호출의 경우, 호출 실패 시 markFailed 등 보상 로직이 존재하면
+      이 룰을 위반하지 않는 것으로 판단할 것.
