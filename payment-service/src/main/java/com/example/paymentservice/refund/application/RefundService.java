@@ -18,6 +18,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -37,7 +39,7 @@ public class RefundService {
 
     @Transactional
     public RefundInfo requestRefund(RefundCommand command) {
-        Payment payment = paymentRepository.findById(command.paymentId())
+        Payment payment = paymentRepository.findByIdForUpdate(command.paymentId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
         if (payment.getStatus() != PaymentStatus.SUCCESS) {
             throw new BusinessException(ErrorCode.PAYMENT_ALREADY_PROCESSED);
@@ -62,8 +64,11 @@ public class RefundService {
             throw new BusinessException(ErrorCode.REFUND_EXCEEDS_PAYMENT);
         }
 
-        // 쿠키 수 기준 비례 원금 계산
-        int wonAmount = (int) ((long) command.cookieAmount() * payment.getAmount() / payment.getCookieAmount());
+        // 쿠키 수 기준 비례 원금 계산 (BigDecimal로 반올림 처리)
+        int wonAmount = BigDecimal.valueOf(command.cookieAmount())
+                .multiply(BigDecimal.valueOf(payment.getAmount()))
+                .divide(BigDecimal.valueOf(payment.getCookieAmount()), 0, RoundingMode.HALF_UP)
+                .intValue();
 
         Refund refund = Refund.create(command.paymentId(), command.userId(), wonAmount, command.cookieAmount());
         return RefundInfo.from(refundRepository.save(refund));

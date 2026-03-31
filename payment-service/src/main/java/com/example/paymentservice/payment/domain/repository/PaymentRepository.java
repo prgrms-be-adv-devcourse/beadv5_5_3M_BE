@@ -14,5 +14,7 @@ public interface PaymentRepository {
 
     Optional<Payment> findByIdForUpdate(Long id);
 
+    Optional<Payment> findByOrderId(String orderId);
+
     List<Payment> findByUserId(UUID userId);
 }

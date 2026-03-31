@@ -1,4 +1,4 @@
-package com.example.paymentservice.payment.infrastructure;
+tpackage com.example.paymentservice.payment.infrastructure;
 
 import com.example.paymentservice.payment.domain.model.Payment;
 import jakarta.persistence.LockModeType;
@@ -12,6 +12,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface PaymentJpaRepository extends JpaRepository<Payment, Long> {
+
+    Optional<Payment> findByOrderId(String orderId);
 
     List<Payment> findByUserId(UUID userId);
 
