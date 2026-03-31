@@ -8,6 +8,7 @@ import com.example.rivewservice.application.usecase.ReviewUseCase;
 import com.example.rivewservice.common.exception.ReviewErrorCode;
 import com.example.rivewservice.common.exception.UserErrorCode;
 import com.example.rivewservice.common.model.PageResult;
+import com.example.rivewservice.domain.enums.ReviewStatus;
 import com.example.rivewservice.domain.model.Review;
 import com.example.rivewservice.domain.model.User;
 import com.example.rivewservice.domain.repository.ReviewRepository;
@@ -44,12 +45,13 @@ public class ReviewService implements ReviewUseCase {
             throw UserErrorCode.USER_DELETED.of(userId);
         }
 
-        if (reviewRepository.existsByUserUserIdAndMovieIdAndFlag(userId, request.movieId(), false)) {
-            throw ReviewErrorCode.REVIEW_ALREADY_WRITTEN.of(request.movieId());
-        }
+//        if (reviewRepository.existsByUserUserIdAndMovieIdAndFlag(userId, request.movieId(), false)) {
+//            throw ReviewErrorCode.REVIEW_ALREADY_WRITTEN.of(request.movieId());
+//        }
 
-        Review review = reviewRepository.findFirstByUserUserIdAndMovieIdAndFlag(userId, request.movieId(), true)
-                .orElseThrow(() -> ReviewErrorCode.REVIEW_NOT_AUTHORIZED.of(request.movieId()));
+        Review review = reviewRepository.findFirstByUserUserIdAndMovieIdAndStatusAndFlagIsTrue(
+                userId, request.movieId(), ReviewStatus.AUTHORIZED
+        ).orElseThrow(() -> ReviewErrorCode.REVIEW_NOT_AUTHORIZED.of(request.movieId()));
 
         review.write(request.comment(), request.rating());
         Review saved = reviewRepository.save(review);

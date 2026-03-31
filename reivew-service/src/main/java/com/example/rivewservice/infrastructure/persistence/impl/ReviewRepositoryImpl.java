@@ -1,5 +1,6 @@
 package com.example.rivewservice.infrastructure.persistence.impl;
 
+import com.example.rivewservice.domain.enums.ReviewStatus;
 import com.example.rivewservice.domain.model.Review;
 import com.example.rivewservice.domain.repository.ReviewRepository;
 import com.example.rivewservice.infrastructure.persistence.ReviewJpaRepository;
@@ -59,5 +60,12 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     @Override
     public boolean existsByTicketId(Long ticketId) {
         return reviewJpaRepository.existsByTicketId(ticketId);
+    }
+
+    @Override
+    public Optional<Review> findFirstByUserUserIdAndMovieIdAndStatusAndFlagIsTrue(
+            UUID userId, Long movieId, ReviewStatus status
+    ) {
+        return reviewJpaRepository.findFirstByUserUserIdAndMovieIdAndStatusAndFlagIsTrue(userId, movieId, status);
     }
 }

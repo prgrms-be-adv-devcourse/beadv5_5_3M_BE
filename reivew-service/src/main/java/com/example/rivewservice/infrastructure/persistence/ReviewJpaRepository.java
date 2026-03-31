@@ -1,5 +1,6 @@
 package com.example.rivewservice.infrastructure.persistence;
 
+import com.example.rivewservice.domain.enums.ReviewStatus;
 import com.example.rivewservice.domain.model.Review;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,4 +17,7 @@ public interface ReviewJpaRepository extends JpaRepository<Review, Long> {
     boolean existsByUserUserIdAndScheduleId(UUID userId, Long scheduleId);
     boolean existsByUserUserIdAndMovieId(UUID userId, Long movieId);
     boolean existsByTicketId(Long ticketId);
+    Optional<Review> findFirstByUserUserIdAndMovieIdAndStatusAndFlagIsTrue(
+            UUID userId, Long movieId, ReviewStatus status
+    );
 }
