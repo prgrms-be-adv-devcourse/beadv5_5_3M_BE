@@ -13,4 +13,6 @@ public interface CategoryRepository {
     Category save(Category category);
 
     boolean existsById(Long categoryId);
+
+    boolean existsByNameIgnoreCase(String name);
 }

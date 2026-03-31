@@ -23,6 +23,7 @@ public enum ErrorStatus implements BaseErrorCode {
 
     // Category
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CATEGORY_NOT_FOUND", "카테고리를 찾을 수 없습니다"),
+    CATEGORY_DUPLICATED(HttpStatus.CONFLICT, "CATEGORY_DUPLICATED", "이미 존재하는 카테고리입니다"),
 
     // Schedule
     SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SCHEDULE_NOT_FOUND", "스케줄을 찾을 수 없습니다"),
