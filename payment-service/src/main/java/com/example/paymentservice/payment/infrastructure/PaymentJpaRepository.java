@@ -1,4 +1,4 @@
-tpackage com.example.paymentservice.payment.infrastructure;
+package com.example.paymentservice.payment.infrastructure;
 
 import com.example.paymentservice.payment.domain.model.Payment;
 import jakarta.persistence.LockModeType;
