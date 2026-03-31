@@ -25,3 +25,5 @@ rules:
     description: >
       환불 총액 합산 체크와 새 환불 INSERT 사이에 동시 요청이 들어오면 초과 환불 발생.
       환불 요청에 비관적 락 또는 DB UNIQUE 제약(paymentId + 타임스탬프)으로 방어해야 함.
+      단, Payment 엔티티에 findByIdForUpdate 등 비관적 락이 이미 적용되어 있으면
+      해당 락이 환불 흐름 전체를 직렬화하므로 이 룰을 위반하지 않는 것으로 판단할 것.
