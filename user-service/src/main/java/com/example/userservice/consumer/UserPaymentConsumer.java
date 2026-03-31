@@ -37,10 +37,10 @@ public class UserPaymentConsumer {
     public void paymentConfirmConsumer(String message) {
         PaymentConfirmRequest paymentConfirmRequest = PaymentConfirmRequest.fromJson(message);
         User user = userRepository.findById(paymentConfirmRequest.userId());
-        user.addCookie(paymentConfirmRequest.amount());
+        user.addCookie(paymentConfirmRequest.cookieAmount());
         CookieLog cookieLog = CookieLog.create(
                 user.getUserId(),
-                paymentConfirmRequest.amount(),
+                paymentConfirmRequest.cookieAmount(),
                 null);
 
         cookieLogRepository.save(cookieLog);
@@ -59,10 +59,10 @@ public class UserPaymentConsumer {
     public void paymentRefundConsumer(String message) {
         PaymentRefundRequest paymentConfirmRequest = PaymentRefundRequest.fromJson(message);
         User user = userRepository.findById(paymentConfirmRequest.userId());
-        user.deductCookie(paymentConfirmRequest.amount());
+        user.deductCookie(paymentConfirmRequest.cookieAmount());
         CookieLog cookieLog = CookieLog.create(
                 user.getUserId(),
-                -paymentConfirmRequest.amount(),
+                -paymentConfirmRequest.cookieAmount(),
                 null);
 
         cookieLogRepository.save(cookieLog);
