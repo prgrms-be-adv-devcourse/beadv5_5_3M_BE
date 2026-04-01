@@ -43,7 +43,7 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
 	// AWS S3 (Spring Cloud AWS) 지금은 miniO 사용하는데 바꿔도 호환됨
-	implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.1.1'
+
 
 	//swagger
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.8'
