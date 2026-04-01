@@ -25,7 +25,7 @@ public class ReactiveAuthorization implements ReactiveAuthorizationManager<Autho
     public static final String USER_AUTHORIZATION_URI = "/api/users/authorization/check";
     public static final String CREATOR_AUTHORIZATION_URI = "/api/creators/authorization/check";
 
-    private final List<String> CREATOR_REQUEST_PATH = List.of("/api/settlements", "/api/movies/creator", "/api/movies/schedules/creator", "/api/movies/categories");
+    private final List<String> CREATOR_REQUEST_PATH = List.of("/api/settlements", "/api/wallets", "/api/movies/creator", "/api/movies/schedules/creator", "/api/movies/categories");
 
     @Value("${user-service.host:http://localhost:8085}")
     private String USER_SERVICE_HOST;
