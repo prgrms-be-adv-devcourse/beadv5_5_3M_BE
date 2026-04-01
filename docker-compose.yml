@@ -1,5 +1,58 @@
 services:
 
+  # ──────────────────────────────────────────
+  # PostgreSQL (공유 DB 컨테이너)
+  # - profile 없음 → docker compose up 시 항상 자동 시작
+  # - init.sql로 각 서비스 DB를 최초 1회 자동 생성
+  # - healthcheck로 준비 완료 후 각 서비스가 시작되도록 보장
+  # ──────────────────────────────────────────
+  db:
+    image: postgres:16
+    container_name: db
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: postgres           # 기본 DB (PostgreSQL 필수값)
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql   # 최초 실행 시 DB 자동 생성
+      - db-data:/var/lib/postgresql/data                  # 데이터 영속성
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks: [app-network]
+
+  # ──────────────────────────────────────────
+  # Redis (공유 캐시 컨테이너)
+  # - profile 없음 → docker compose up 시 항상 자동 시작
+  # - ticket-service: 리뷰 권한 캐시 (ZSet)
+  # - user-service: refresh token, 프로필 이미지 URL 캐시
+  # - creator-service: 추후 캐싱 용도로 사용 예정
+  # ──────────────────────────────────────────
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks: [app-network]
+
+  # ──────────────────────────────────────────
+  # Gateway Service (포트 8000)
+  # - 모든 외부 요청의 진입점 (JWT 인증/인가 처리)
+  # - DB 불필요 (Stateless)
+  # ──────────────────────────────────────────
   gateway-service:
     profiles: [gateway-service]
     image: ${DOCKERHUB_USERNAME}/gateway-service:latest
@@ -12,6 +65,11 @@ services:
     restart: unless-stopped
     networks: [app-network]
 
+  # ──────────────────────────────────────────
+  # Creator Service (포트 8080)
+  # - 영화/제작사 정보 관리
+  # - Redis 캐싱 사용 예정
+  # ──────────────────────────────────────────
   creator-service:
     profiles: [creator-service]
     image: ${DOCKERHUB_USERNAME}/creator-service:latest
@@ -20,15 +78,24 @@ services:
       - "${CREATOR_PORT}:${CREATOR_PORT}"
     environment:
       SERVER_PORT: ${CREATOR_PORT}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://${CREATOR_DB_HOST}:5432/creator-db
-      SPRING_DATASOURCE_USERNAME: ${CREATOR_DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${CREATOR_DB_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/creator_db
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
-      SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
-      SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     networks: [app-network]
 
+  # ──────────────────────────────────────────
+  # Payment Service (포트 8081)
+  # - 결제 처리 및 결제 상태 관리
+  # ──────────────────────────────────────────
   payment-service:
     profiles: [payment-service]
     image: ${DOCKERHUB_USERNAME}/payment-service:latest
@@ -37,13 +104,21 @@ services:
       - "${PAYMENT_PORT}:${PAYMENT_PORT}"
     environment:
       SERVER_PORT: ${PAYMENT_PORT}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://${PAYMENT_DB_HOST}:5432/payment-db
-      SPRING_DATASOURCE_USERNAME: ${PAYMENT_DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${PAYMENT_DB_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/payment_db
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
     networks: [app-network]
 
+  # ──────────────────────────────────────────
+  # Settlement Service (포트 8083)
+  # - 제작사 수익 정산 처리
+  # - creator-service HTTP 호출 의존 (함께 실행 필요)
+  # ──────────────────────────────────────────
   settlement-service:
     profiles: [settlement-service]
     image: ${DOCKERHUB_USERNAME}/settlement-service:latest
@@ -52,14 +127,22 @@ services:
       - "${SETTLEMENT_PORT}:${SETTLEMENT_PORT}"
     environment:
       SERVER_PORT: ${SETTLEMENT_PORT}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://${SETTLEMENT_DB_HOST}:5432/settlement-db
-      SPRING_DATASOURCE_USERNAME: ${SETTLEMENT_DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${SETTLEMENT_DB_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/settlement_db
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
       CLIENT_CREATOR_BASE_URL: http://creator-service:${CREATOR_PORT}
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
     networks: [app-network]
 
+  # ──────────────────────────────────────────
+  # Ticket Service (포트 8084)
+  # - 티켓 예약/취소 처리, Redis로 동시성 제어
+  # - user-service HTTP 호출 의존 (함께 실행 필요)
+  # ──────────────────────────────────────────
   ticket-service:
     profiles: [ticket-service]
     image: ${DOCKERHUB_USERNAME}/ticket-service:latest
@@ -68,16 +151,25 @@ services:
       - "${TICKET_PORT}:${TICKET_PORT}"
     environment:
       SERVER_PORT: ${TICKET_PORT}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://${TICKET_DB_HOST}:5432/ticket-db
-      SPRING_DATASOURCE_USERNAME: ${TICKET_DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${TICKET_DB_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/ticket_db
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
-      SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
-      SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       CLIENT_USER_BASE_URL: http://user-service:${USER_PORT}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     networks: [app-network]
 
+  # ──────────────────────────────────────────
+  # User Service (포트 8085)
+  # - 사용자 관리, Redis 세션, AWS S3 파일 저장
+  # ──────────────────────────────────────────
   user-service:
     profiles: [user-service]
     image: ${DOCKERHUB_USERNAME}/user-service:latest
@@ -86,18 +178,28 @@ services:
       - "${USER_PORT}:${USER_PORT}"
     environment:
       SERVER_PORT: ${USER_PORT}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://${USER_DB_HOST}:5432/user-db
-      SPRING_DATASOURCE_USERNAME: ${USER_DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${USER_DB_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/user_db
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
-      SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
-      SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
+      AWS_SECRET_KEY: ${AWS_SECRET_KEY}
+      AWS_REGION: ${AWS_REGION}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     networks: [app-network]
 
+  # ──────────────────────────────────────────
+  # Review Service (포트 8087)
+  # - 리뷰 작성/수정/삭제
+  # ──────────────────────────────────────────
   reivew-service:
     profiles: [reivew-service]
     image: ${DOCKERHUB_USERNAME}/reivew-service:latest
@@ -106,13 +208,31 @@ services:
       - "${REVIEW_PORT}:${REVIEW_PORT}"
     environment:
       SERVER_PORT: ${REVIEW_PORT}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://${REVIEW_DB_HOST}:5432/review-db
-      SPRING_DATASOURCE_USERNAME: ${REVIEW_DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${REVIEW_DB_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/review_db
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
     networks: [app-network]
 
+# ──────────────────────────────────────────
+# Volumes
+# - db-data: PostgreSQL 데이터 영속성 보장
+# - redis-data: Redis 데이터 영속성 보장
+#   (컨테이너 재시작/재생성 시 데이터 유지)
+# ──────────────────────────────────────────
+volumes:
+  db-data:
+  redis-data:
+
+# ──────────────────────────────────────────
+# Networks
+# - app-network: 모든 컨테이너가 컨테이너 이름으로
+#   서로 통신 가능 (예: http://creator-service:8080)
+# ──────────────────────────────────────────
 networks:
   app-network:
     driver: bridge
