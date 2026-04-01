@@ -1,0 +1,75 @@
+# ============================================================
+#  payment-service — Production Profile
+#  활성화: SPRING_PROFILES_ACTIVE=prod (환경 변수로 주입)
+#  민감 정보는 모두 환경 변수로 주입 (기본값 없음)
+# ============================================================
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:5432/payment_db
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000     # 30초: 커넥션 획득 대기 한도
+      idle-timeout: 600000          # 10분: idle 커넥션 반환 시간
+      max-lifetime: 1800000         # 30분: DB wait_timeout 이하로 설정해 stale 커넥션 방지
+      keepalive-time: 30000         # 30초: AWS NAT 세션 유지용 keepalive ping
+      pool-name: PaymentHikariPool
+
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:validate}            # 운영: 스키마 자동 변경 금지, 불일치 시 시작 실패로 조기 감지
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+    show-sql: false
+
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: never      # 운영: Batch 메타 테이블 자동 생성 금지 (init.sql로 별도 관리)
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      group-id: payment-service
+      auto-offset-reset: earliest
+      enable-auto-commit: false     # 운영: 수동 커밋으로 메시지 처리 안정성 보장
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      retries: 3
+      properties:
+        spring.json.add.type.headers: false
+        max.block.ms: 3000
+        retry.backoff.ms: 1000
+        delivery.timeout.ms: 120000
+        acks: all
+
+toss:
+  payments:
+    secret-key: ${TOSS_PAYMENT_SECRET}
+    client-key: ${TOSS_PAYMENT_CK}
+
+server:
+  port: ${SERVER_PORT:8081}
+
+logging:
+  level:
+    root: WARN
+    com.example.paymentservice: INFO
+    org.springframework.kafka: WARN
+    org.hibernate: WARN
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

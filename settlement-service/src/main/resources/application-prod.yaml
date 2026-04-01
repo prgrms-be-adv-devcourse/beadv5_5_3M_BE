@@ -1,0 +1,75 @@
+# ============================================================
+#  settlement-service — Production Profile
+#  활성화: SPRING_PROFILES_ACTIVE=prod (환경 변수로 주입)
+# ============================================================
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:5432/settlement_db
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      keepalive-time: 30000
+      pool-name: SettlementHikariPool
+
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:validate}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+    show-sql: false
+
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: never
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      group-id: settlement-service
+      auto-offset-reset: earliest
+      max-poll-records: 500
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    listener:
+      type: batch
+      ack-mode: manual
+
+  task:
+    scheduling:
+      timezone: Asia/Seoul
+
+# 정산 비즈니스 설정 (docker-compose.yml에서 환경 변수로 override 가능)
+settlement:
+  fee-rate: ${SETTLEMENT_FEE_RATE:0.10}
+  cookie-to-krw-rate: ${SETTLEMENT_COOKIE_TO_KRW_RATE:100}
+  dlq-fallback-path: ${SETTLEMENT_DLQ_FALLBACK_PATH:/tmp/settlement-dlq-fallback.jsonl}
+  dlq-max-retry: ${SETTLEMENT_DLQ_MAX_RETRY:3}
+
+# creator-service HTTP 클라이언트
+creator-service:
+  base-url: ${CLIENT_CREATOR_BASE_URL:http://creator-service:8080}
+
+server:
+  port: ${SERVER_PORT:8083}
+
+logging:
+  level:
+    root: WARN
+    com.example.settlementservice: INFO
+    org.springframework.kafka: WARN
+    org.hibernate: WARN

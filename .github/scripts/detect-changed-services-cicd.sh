@@ -17,7 +17,13 @@ HEAD_SHA="${2:?head_sha is required}"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 # 변경된 파일 목록
-CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+# Zero SHA (0000...): 최초 push 또는 force push 시 github.event.before 값
+# → git diff 불가능하므로 HEAD 커밋 단위로 변경 파일 목록을 가져옴
+if [[ "$BASE_SHA" =~ ^0+$ ]]; then
+  CHANGED_FILES=$(git diff-tree --no-commit-id -r --name-only HEAD 2>/dev/null || echo "")
+else
+  CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+fi
 
 # 변경된 파일에서 서비스 디렉토리 추출
 declare -A SEEN

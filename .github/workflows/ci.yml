@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened]
     branches:
       - main
+      - dev/main
 
 concurrency:
   group: ci-${{ github.event.pull_request.number }}

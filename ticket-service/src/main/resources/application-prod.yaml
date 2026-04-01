@@ -1,0 +1,74 @@
+# ============================================================
+#  ticket-service — Production Profile
+#  활성화: SPRING_PROFILES_ACTIVE=prod (환경 변수로 주입)
+# ============================================================
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:5432/ticket_db
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      keepalive-time: 30000
+      pool-name: TicketHikariPool
+
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:validate}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+    show-sql: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: never
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      group-id: ticket-service
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+
+# user-service HTTP 클라이언트 (UserConfig.java)
+client:
+  user:
+    base-url: ${CLIENT_USER_BASE_URL:http://user-service:8085}
+
+server:
+  port: ${SERVER_PORT:8084}
+
+logging:
+  level:
+    root: WARN
+    com.example.ticketservice: INFO
+    org.springframework.kafka: WARN
+    org.hibernate: WARN
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

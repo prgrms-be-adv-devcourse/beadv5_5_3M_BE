@@ -1,0 +1,29 @@
+# ============================================================
+#  gateway-service — Production Profile
+#  활성화: SPRING_PROFILES_ACTIVE=prod (환경 변수로 주입)
+# ============================================================
+
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+
+# RSA 공개키로 JWT 서명 검증 (JwtProvider.java)
+jwt:
+  token:
+    public: ${JWT_TOKEN_PUBLIC}
+
+# 서비스 간 통신 호스트 (ReactiveAuthorization.java)
+user-service:
+  host: ${USER_SERVICE_HOST:http://user-service:8085}
+
+creator-service:
+  host: ${CREATOR_SERVICE_HOST:http://creator-service:8080}
+
+server:
+  port: ${SERVER_PORT:8000}
+
+logging:
+  level:
+    root: WARN
+    com.example.gatewayservice: INFO
+    org.springframework.cloud.gateway: WARN

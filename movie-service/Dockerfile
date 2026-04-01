@@ -25,7 +25,7 @@ COPY --from=builder /builder/spring-boot-loader/ ./
 COPY --from=builder /builder/snapshot-dependencies/ ./
 COPY --from=builder /builder/application/ ./
 
-EXPOSE 8081
+EXPOSE 8086
 
 ENTRYPOINT ["java", \
   "-XX:+UseContainerSupport", \

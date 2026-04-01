@@ -14,6 +14,10 @@ services:
     environment:
       SERVER_PORT: ${GATEWAY_PORT}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      SPRING_PROFILES_ACTIVE: prod
+      JWT_TOKEN_PUBLIC: ${JWT_TOKEN_PUBLIC}
+      USER_SERVICE_HOST: http://user-service:${USER_PORT}
+      CREATOR_SERVICE_HOST: http://creator-service:${CREATOR_PORT}
     restart: unless-stopped
     networks: [app-network]
 
@@ -36,6 +40,12 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
       SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
       SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
+      SPRING_PROFILES_ACTIVE: prod
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY:3600}
+      JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY:604800}
+      DDL_AUTO: ${DDL_AUTO:validate}
     restart: unless-stopped
     networks: [app-network]
 
@@ -55,6 +65,10 @@ services:
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      TOSS_PAYMENT_SECRET: ${TOSS_PAYMENT_SECRET}
+      TOSS_PAYMENT_CK: ${TOSS_PAYMENT_CK}
+      SPRING_PROFILES_ACTIVE: prod
+      DDL_AUTO: ${DDL_AUTO:validate}
     restart: unless-stopped
     networks: [app-network]
 
@@ -76,6 +90,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
       CLIENT_CREATOR_BASE_URL: http://creator-service:${CREATOR_PORT}
+      SPRING_PROFILES_ACTIVE: prod
+      SETTLEMENT_FEE_RATE: ${SETTLEMENT_FEE_RATE:0.10}
+      SETTLEMENT_COOKIE_TO_KRW_RATE: ${SETTLEMENT_COOKIE_TO_KRW_RATE:100}
+      SETTLEMENT_DLQ_FALLBACK_PATH: ${SETTLEMENT_DLQ_FALLBACK_PATH:/tmp/settlement-dlq-fallback.jsonl}
+      SETTLEMENT_DLQ_MAX_RETRY: ${SETTLEMENT_DLQ_MAX_RETRY:3}
+      SPRING_TASK_SCHEDULING_TIMEZONE: Asia/Seoul
+      DDL_AUTO: ${DDL_AUTO:validate}
     restart: unless-stopped
     networks: [app-network]
 
@@ -99,6 +120,8 @@ services:
       SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
       SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
       CLIENT_USER_BASE_URL: http://user-service:${USER_PORT}
+      SPRING_PROFILES_ACTIVE: prod
+      DDL_AUTO: ${DDL_AUTO:validate}
     restart: unless-stopped
     networks: [app-network]
 
@@ -124,6 +147,16 @@ services:
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
       AWS_REGION: ${AWS_REGION}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      SPRING_PROFILES_ACTIVE: prod
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY:3600}
+      JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY:604800}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      DDL_AUTO: ${DDL_AUTO:validate}
     restart: unless-stopped
     networks: [app-network]
 
@@ -143,6 +176,29 @@ services:
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      SPRING_PROFILES_ACTIVE: prod
+      DDL_AUTO: ${DDL_AUTO:validate}
+    restart: unless-stopped
+    networks: [app-network]
+
+  # ──────────────────────────────────────────
+  # Movie Service (포트 8086)
+  # - 영화 정보 관리
+  # ──────────────────────────────────────────
+  movie-service:
+    profiles: [movie-service]
+    image: ${DOCKERHUB_USERNAME}/movie-service:latest
+    container_name: movie-service
+    ports:
+      - "${MOVIE_PORT}:${MOVIE_PORT}"
+    environment:
+      SERVER_PORT: ${MOVIE_PORT}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:5432/movie_db
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      SPRING_PROFILES_ACTIVE: prod
+      DDL_AUTO: ${DDL_AUTO:validate}
     restart: unless-stopped
     networks: [app-network]
 
