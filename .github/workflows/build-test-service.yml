@@ -41,7 +41,9 @@ jobs:
       - name: Build
         id: build
         working-directory: ${{ inputs.service }}
-        run: ./gradlew build -x test --no-daemon
+        run: |
+          chmod +x gradlew
+          ./gradlew build -x test --no-daemon
 
       - name: Upload JAR artifact
         if: success()
