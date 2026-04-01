@@ -21,7 +21,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: ${DDL_AUTO:validate}            # 운영: 스키마 자동 변경 금지, 불일치 시 시작 실패로 조기 감지
+      ddl-auto: ${DDL_AUTO}            # 운영: 스키마 자동 변경 금지, 불일치 시 시작 실패로 조기 감지
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
