@@ -112,10 +112,10 @@ public class ScheduleController {
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
     })
-    @GetMapping("/creator")
+    @GetMapping("/search")
     public ResponseEntity<List<ScheduleForCreatorResponse>> getByCreatorAndDate(
-            @Parameter(description = "크리에이터 ID (Gateway에서 전달)", required = true)
-            @RequestHeader("X-Creator-Id") UUID creatorId,
+            @Parameter(description = "크리에이터 ID", required = true)
+            @RequestParam UUID creatorId,
             @Parameter(description = "조회할 날짜 (yyyy-MM-dd)", required = true, example = "2026-04-01")
             @RequestParam LocalDate date
     ){
