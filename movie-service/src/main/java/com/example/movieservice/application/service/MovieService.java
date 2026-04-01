@@ -70,6 +70,9 @@ public class MovieService implements MovieUseCase {
         if(!movie.getCreatorId().equals(creatorId)){
             throw new GeneralException(ErrorStatus.MOVIE_INVALID_CREATOR);
         }
+        if(scheduleRepository.existsConfirmedScheduleByMovieId(movieId)){
+            throw new GeneralException(ErrorStatus.MOVIE_ALREADY_SCHEDULED);
+        }
         movie.updateVisibility(Movie.Visibility.valueOf(request.visibility().name()));
     }
 
