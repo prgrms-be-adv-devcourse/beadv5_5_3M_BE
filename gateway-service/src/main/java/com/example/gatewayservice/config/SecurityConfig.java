@@ -59,6 +59,7 @@ public class SecurityConfig {
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .httpBasic(httpBasic -> httpBasic.authenticationEntryPoint(new HttpStatusServerEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeExchange(auth -> auth
+                        .pathMatchers(HttpMethod.OPTIONS, "**").permitAll()
                         .pathMatchers(PERMITALL_ANTPATTERNS).permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/movies/categories").permitAll()
                         .pathMatchers(HttpMethod.POST, USER_SIGNUP_ANTPATTERNS).permitAll()
