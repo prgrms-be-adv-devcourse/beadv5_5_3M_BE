@@ -6,6 +6,57 @@
 spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: creator-service
+              uri: http://${BASE_IP}:${CREATOR_PORT}/
+              predicates:
+                - Path=/api/creators/**
+              filters:
+            - id: payment-service
+              uri: http://${BASE_IP}:${PAYMENT_PORT}/
+              predicates:
+                - Path=/api/payments/**
+              filters:
+            #            - id: schedule-service
+            #              uri: http://${BASE_IP}:${PAYMENT_PORT}/
+            #              predicates:
+            #                - Path=/api/schedule/**
+            #              filters:
+            - id: settlement-service
+              uri: http://${BASE_IP}:${SETTLEMENT_PORT}/
+              predicates:
+                - Path=/api/settlements/**, /api/wallets/**
+              filters:
+            - id: ticket-service
+              uri: http://${BASE_IP}:${TICKET_PORT}/
+              predicates:
+                - Path=/api/tickets/**
+              filters:
+            - id: user-service
+              uri: http://${BASE_IP}:${USER_PORT}/
+              predicates:
+                - Path=/api/users/**
+              filters:
+            - id: movie-service
+              uri: http://${BASE_IP}:${MOVIE_PORT}/
+              predicates:
+                - Path=/api/movies/**
+            - id: review-service
+              uri: http://${BASE_IP}:${REVIEW_PORT}/
+              predicates:
+                - Path=/api/reviews/**
+              filters:
+          #                  - RewritePath=/user-service/(?<segment>.*), /$\{segment} #/user-service(이 부분 제거)/api/users
+          #                  - StripPrefix=1 #origin/endpoint 첫 번째 endpoint 제거 위 RewritePath랑 같은 효과
+          default-filters:
+            - name: Global
+              args:
+                preLogger: true
+                postLogger: true
 
 # RSA 공개키로 JWT 서명 검증 (JwtProvider.java)
 jwt:

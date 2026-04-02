@@ -18,6 +18,14 @@ services:
       JWT_TOKEN_PUBLIC: ${JWT_TOKEN_PUBLIC}
       USER_SERVICE_HOST: http://user-service:${USER_PORT}
       CREATOR_SERVICE_HOST: http://creator-service:${CREATOR_PORT}
+      BASE_IP: ${BASE_IP}
+      CREATOR_PORT: ${CREATOR_PORT}
+      PAYMENT_PORT: ${PAYMENT_PORT}
+      SETTLEMENT_PORT: ${SETTLEMENT_PORT}
+      TICKET_PORT: ${TICKET_PORT}
+      USER_PORT: ${USER_PORT}
+      MOVIE_PORT: ${MOVIE_PORT}
+      REVIEW_PORT: ${REVIEW_PORT}
     restart: unless-stopped
     networks: [app-network]
 
