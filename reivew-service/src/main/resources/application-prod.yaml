@@ -45,7 +45,7 @@ server:
 logging:
   level:
     root: WARN
-    com.example.reivewservice: INFO
+    com.example.rivewservice: INFO
     org.springframework.kafka: WARN
     org.hibernate: WARN
 
