@@ -27,12 +27,12 @@ public class BatchScheduler {
         this.settlementPayoutJob = settlementPayoutJob;
     }
 
-    @Scheduled(cron = "0 * * * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 */1 * * * *", zone = "Asia/Seoul")
     public void runConfirmJob() {
         runJob(settlementConfirmJob, "settlementConfirmJob");
     }
 
-    @Scheduled(cron = "0 * * * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 */2 * * * *", zone = "Asia/Seoul")
     public void runPayoutJob() {
         runJob(settlementPayoutJob, "settlementPayoutJob");
     }
