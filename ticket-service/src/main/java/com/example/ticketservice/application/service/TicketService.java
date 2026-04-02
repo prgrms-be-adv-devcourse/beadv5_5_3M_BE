@@ -5,8 +5,6 @@ import com.example.ticketservice.application.dto.request.TicketCreateRequest;
 import com.example.ticketservice.application.dto.response.TicketResponse;
 import com.example.ticketservice.application.port.out.CachePort;
 import com.example.ticketservice.application.port.out.EventPublisherPort;
-
-import com.example.ticketservice.application.port.out.EventPublisherPort;
 import com.example.ticketservice.application.port.out.UserPort;
 import com.example.ticketservice.application.usecase.TicketUseCase;
 import com.example.ticketservice.common.model.PageResult;
