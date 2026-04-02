@@ -46,8 +46,9 @@ public class ConfirmScheduledTicketsService implements ConfirmScheduledTicketsUs
         LocalDateTime nextHour = LocalDateTime.now().plusHours(1).truncatedTo(ChronoUnit.HOURS);
         List<Schedule> schedules = scheduleRepository.findAllByStartTimeBetween(nextHour, nextHour.plusMinutes(1));
 
+        log.info("-----batch 시작-----");
         if (schedules.isEmpty()) {
-            log.debug("다음 정각({})에 시작하는 스케줄 없음", nextHour);
+            log.info("다음 정각({})에 시작하는 스케줄 없음", nextHour);
             return;
         }
 
@@ -74,13 +75,13 @@ public class ConfirmScheduledTicketsService implements ConfirmScheduledTicketsUs
 
     private void deleteCaches(List<Schedule> schedules) {
         schedules.forEach(s -> cachePort.delete(CACHE_KEY_PREFIX + s.getId()));
-        log.debug("Redis ZSet 삭제 완료 - count: {}", schedules.size());
+        log.info("Redis ZSet 삭제 완료 - count: {}", schedules.size());
     }
 
     private void publishReviewAuthorizations(Map<String, Set<ReviewAuthorizationCache>> cacheMap) {
         long totalCount = cacheMap.values().stream().mapToLong(Set::size).sum();
         if (totalCount == 0) {
-            log.debug("발행할 리뷰 권한 데이터 없음");
+            log.info("발행할 리뷰 권한 데이터 없음");
             return;
         }
 
