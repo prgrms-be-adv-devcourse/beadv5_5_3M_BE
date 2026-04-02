@@ -3,3 +3,4 @@ spring:
     name: gateway-service
   profiles:
     active: dev
+

@@ -3,3 +3,4 @@ spring:
     name: creator-service
   profiles:
     active: dev
+
