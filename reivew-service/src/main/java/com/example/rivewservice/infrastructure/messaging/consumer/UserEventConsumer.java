@@ -22,7 +22,7 @@ public class UserEventConsumer {
     //유저 생성 동기화
     @KafkaListener(topics = "user.created", groupId = "review-service")
     public void createdConsumer(String message) {
-        log.debug("[user.created] 수신: {}", message);
+        log.info("[user.created] 수신: {}", message);
         UserCreatedMessage userCreatedMessage = kafkaMessageUtil.deserialize(message,UserCreatedMessage.class);
 
         if (userRepository.existsById(userCreatedMessage.userId())) {
@@ -36,7 +36,7 @@ public class UserEventConsumer {
                 userCreatedMessage.profileUrl()
         );
         userRepository.save(user);
-        log.debug("[user.created] 유저 저장 완료 - userId={}", userCreatedMessage.userId());
+        log.info("[user.created] 유저 저장 완료 - userId={}", userCreatedMessage.userId());
     }
 
 
