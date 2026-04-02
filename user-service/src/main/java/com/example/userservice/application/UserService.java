@@ -85,8 +85,8 @@ public class UserService implements UserUseCase {
         User user = User.create(request.email(), request.password(), request.nickname());
         userRepository.save(user);
 
-        UserCreatedEvent userCreatedEvent = UserCreatedEvent.from(user);
-        kafkaTemplate.send("user.created", toJsonString(userCreatedEvent));
+//        UserCreatedEvent userCreatedEvent = UserCreatedEvent.from(user);
+        kafkaTemplate.send("user.created", toJsonString(UserCreatedEvent.from(user)));
 
         return user.getUserId();
     }
@@ -194,9 +194,7 @@ public class UserService implements UserUseCase {
     private String toJsonString(Object object) {
         ObjectMapper objectMapper = new ObjectMapper();
         try {
-            String s1 = objectMapper.writeValueAsString(object);
-            log.info(s1);
-            return s1;
+            return objectMapper.writeValueAsString(object);
         } catch (Exception e) {
             throw new RuntimeException("Json 직렬화 실패");
         }
