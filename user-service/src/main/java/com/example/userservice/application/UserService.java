@@ -193,9 +193,10 @@ public class UserService implements UserUseCase {
 
     private String toJsonString(Object object) {
         ObjectMapper objectMapper = new ObjectMapper();
-
         try {
-            return objectMapper.writeValueAsString(object);
+            String s1 = objectMapper.writeValueAsString(object);
+            log.info(s1);
+            return s1;
         } catch (Exception e) {
             throw new RuntimeException("Json 직렬화 실패");
         }
