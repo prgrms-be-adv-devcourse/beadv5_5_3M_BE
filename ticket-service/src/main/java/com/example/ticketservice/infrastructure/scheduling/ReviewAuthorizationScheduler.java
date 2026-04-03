@@ -11,7 +11,7 @@ public class ReviewAuthorizationScheduler {
 
     private final ConfirmScheduledTicketsUseCase confirmScheduledTicketsUseCase;
 
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "0 50 * * * *")
     public void run() {
         confirmScheduledTicketsUseCase.confirm();
     }
