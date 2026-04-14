@@ -7,12 +7,12 @@ import com.example.userservice.domain.repository.CookieLogRepository;
 import com.example.userservice.domain.repository.PermissionRepository;
 import com.example.userservice.domain.repository.UserRepository;
 
-import com.example.userservice.event.UserCreatedEvent;
-import com.example.userservice.event.UserUpdatedEvent;
-import com.example.userservice.exception.DuplicateEmailException;
-import com.example.userservice.exception.DuplicateNicknameException;
-import com.example.userservice.exception.InvalidEmailOrPasswordException;
-import com.example.userservice.exception.InvalidRefreshTokenException;
+import com.example.userservice.infrastructure.kafka.event.UserCreatedEvent;
+import com.example.userservice.infrastructure.kafka.event.UserUpdatedEvent;
+import com.example.userservice.application.exception.DuplicateEmailException;
+import com.example.userservice.application.exception.DuplicateNicknameException;
+import com.example.userservice.application.exception.InvalidEmailOrPasswordException;
+import com.example.userservice.application.exception.InvalidRefreshTokenException;
 
 import java.util.concurrent.TimeUnit;
 

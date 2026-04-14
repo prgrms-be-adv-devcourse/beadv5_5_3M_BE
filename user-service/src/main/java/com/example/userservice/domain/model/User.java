@@ -1,6 +1,6 @@
 package com.example.userservice.domain.model;
 
-import com.example.userservice.exception.InsufficientCookieException;
+import com.example.userservice.application.exception.InsufficientCookieException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;

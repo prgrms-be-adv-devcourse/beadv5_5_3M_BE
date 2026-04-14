@@ -1,8 +1,8 @@
-package com.example.userservice.infrastructure.user;
+package com.example.userservice.infrastructure.persistence.user;
 
 import com.example.userservice.domain.model.User;
 import com.example.userservice.domain.repository.UserRepository;
-import com.example.userservice.exception.UserNotFoundException;
+import com.example.userservice.application.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 

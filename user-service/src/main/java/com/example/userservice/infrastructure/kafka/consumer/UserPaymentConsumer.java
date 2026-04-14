@@ -1,7 +1,7 @@
-package com.example.userservice.consumer;
+package com.example.userservice.infrastructure.kafka.consumer;
 
-import com.example.userservice.consumer.dto.PaymentConfirmRequest;
-import com.example.userservice.consumer.dto.PaymentRefundRequest;
+import com.example.userservice.infrastructure.kafka.consumer.dto.PaymentConfirmRequest;
+import com.example.userservice.infrastructure.kafka.consumer.dto.PaymentRefundRequest;
 import com.example.userservice.domain.model.CookieLog;
 import com.example.userservice.domain.model.User;
 import com.example.userservice.domain.repository.CookieLogRepository;

@@ -1,4 +1,4 @@
-package com.example.userservice.consumer.dto;
+package com.example.userservice.infrastructure.kafka.consumer.dto;
 
 import tools.jackson.databind.ObjectMapper;
 

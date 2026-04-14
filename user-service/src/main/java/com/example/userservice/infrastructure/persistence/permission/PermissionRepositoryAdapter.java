@@ -1,4 +1,4 @@
-package com.example.userservice.infrastructure.permission;
+package com.example.userservice.infrastructure.persistence.permission;
 
 import com.example.userservice.domain.model.Permission;
 import com.example.userservice.domain.model.Role;

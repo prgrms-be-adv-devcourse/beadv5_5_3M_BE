@@ -1,4 +1,4 @@
-package com.example.userservice.infrastructure.cookielog;
+package com.example.userservice.infrastructure.persistence.cookielog;
 
 import com.example.userservice.domain.model.CookieLog;
 import org.springframework.data.jpa.repository.JpaRepository;

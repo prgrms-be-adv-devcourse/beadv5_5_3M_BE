@@ -1,4 +1,4 @@
-package com.example.userservice.exception;
+package com.example.userservice.application.exception;
 
 public class InvalidRefreshTokenException extends RuntimeException {
     public InvalidRefreshTokenException() {
