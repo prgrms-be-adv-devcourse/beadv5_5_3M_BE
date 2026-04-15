@@ -45,11 +45,6 @@ public class TicketRepositoryImpl implements TicketRepository{
     }
 
     @Override
-    public List<Ticket> findAllBySchedule(Schedule schedule) {
-        return  jpaRepository.findAllBySchedule(schedule);
-    }
-
-    @Override
     public List<Ticket> findAllByStatusAndProvideFlag(TicketStatus status, boolean provideFlag) {
         return jpaRepository.findAllByStatusAndProvideFlag(status, provideFlag);
     }

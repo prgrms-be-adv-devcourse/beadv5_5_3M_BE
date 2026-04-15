@@ -95,14 +95,6 @@ public class Ticket {
         }
     }
 
-    // 확정: RESERVED → CONFIRMED (배치 처리)
-    public void confirm() {
-        if (this.status != TicketStatus.RESERVED) {
-            throw TicketErrorCode.NOT_RESERVED.of(this.id);
-        }
-        this.status = TicketStatus.CONFIRMED;
-    }
-
     // 판매 중지 (관리자)
     public void hold() {
         if (this.status == TicketStatus.HOLD) {

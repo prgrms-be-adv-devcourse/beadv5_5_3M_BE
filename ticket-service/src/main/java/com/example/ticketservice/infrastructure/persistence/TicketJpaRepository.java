@@ -10,24 +10,15 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Optional;
-
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface TicketJpaRepository extends JpaRepository<Ticket, Long> {
     Optional<Ticket> findFirstByScheduleAndStatusOrderByTicketNumAsc(Schedule schedule, TicketStatus status);
     Page<Ticket> findAllByUserId(UUID userId, Pageable pageable);
-    List<Ticket> findAllBySchedule(Schedule schedule);
     List<Ticket> findAllByStatusAndProvideFlag(TicketStatus status, boolean provideFlag);
     List<Ticket> findAllByScheduleIdAndStatus(Long scheduleId, TicketStatus status);
-
-    // Bulk Update: 건별 UPDATE 대신 단일 쿼리로 일괄 처리하여 성능 최적화
-    @Modifying
-    @Query("UPDATE Ticket t SET t.status = :newStatus WHERE t.schedule.id IN :scheduleIds AND t.status = :currentStatus")
-    int bulkUpdateStatus(@Param("scheduleIds") List<Long> scheduleIds,
-                         @Param("currentStatus") TicketStatus currentStatus,
-                         @Param("newStatus") TicketStatus newStatus);
 
     // Bulk Update: 대금 지급 완료된 티켓 일괄 플래그 처리
     // clearAutomatically: 벌크 UPDATE 후 1차 캐시 자동 초기화
