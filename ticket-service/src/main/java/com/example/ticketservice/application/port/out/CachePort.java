@@ -14,10 +14,40 @@ public interface CachePort {
 
     boolean exists(String key);
 
+    void expireKey(String key, Duration ttl);
+
+    // Counter 연산 (Redis String — 정수 인코딩)
+    void setCounter(String key, long value, Duration ttl);
+
+    Long increment(String key);
+
+    Long decrement(String key);
+
+    Long getCounter(String key);
+
+    // Set 연산
+    void addToSet(String key, String member);
+
+    void removeFromSet(String key, String member);
+
+    boolean isMemberOfSet(String key, String member);
+
+    Set<String> getSetMembers(String key);
+
+    Long getSetSize(String key);
+
     // ZSet (Sorted Set) 연산
     void addToZSet(String key, Object member, double score);
 
     void removeFromZSetByScore(String key, double score);
 
     <T> Set<T> getZSetMembers(String key, Class<T> type);
+
+    void addToZSetWithTimestamp(String key, String member);
+
+    String popMinFromZSet(String key);
+
+    Long getZSetRank(String key, String member);
+
+    Long getZSetSize(String key);
 }

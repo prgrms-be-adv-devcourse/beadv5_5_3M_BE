@@ -1,6 +1,8 @@
 package com.example.ticketservice.domain.model;
 
 
+import com.example.ticketservice.common.exception.ScheduleErrorCode;
+import com.example.ticketservice.domain.enums.ScheduleStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -26,6 +28,9 @@ public class Schedule {
     @Column(name = "end_time")
     private LocalDateTime endTime;
 
+    @Column(name = "ticketing_time")
+    private LocalDateTime ticketingTime;
+
     @Column(name = "title")
     private String title;
 
@@ -44,16 +49,22 @@ public class Schedule {
     @Column(name = "seats")
     private Integer seats;
 
+    @Column(name = "status")
+    @Enumerated(EnumType.STRING)
+    private ScheduleStatus status;
+
     @OneToMany(mappedBy = "schedule")
     private List<Ticket> tickets = new ArrayList<>();
 
-    public static Schedule create(Long id, LocalDateTime startTime, LocalDateTime endTime,
+    public static Schedule create(Long id, LocalDateTime startTime, LocalDateTime endTime, LocalDateTime ticketingTime,
                                   String title, Integer cookie, UUID creatorId,
                                   Long movieId, String imageUrl, Integer seats) {
         Schedule s = new Schedule();
         s.id = id;
         s.startTime = startTime;
         s.endTime = endTime;
+        s.ticketingTime = ticketingTime;
+        s.status = ScheduleStatus.CART;
         s.title = title;
         s.cookie = cookie;
         s.creatorId = creatorId;
@@ -61,6 +72,22 @@ public class Schedule {
         s.imageUrl = imageUrl;
         s.seats = seats;
         return s;
+    }
+
+    // 장바구니 마감: CART → IN_PROGRESSING
+    public void closeCart() {
+        if (this.status != ScheduleStatus.CART) {
+            throw ScheduleErrorCode.NOT_IN_CART_PERIOD.of(this.id);
+        }
+        this.status = ScheduleStatus.IN_PROGRESSING;
+    }
+
+    // 티켓팅 시작: IN_PROGRESSING → TICKETING
+    public void startTicketing() {
+        if (this.status != ScheduleStatus.IN_PROGRESSING) {
+            throw ScheduleErrorCode.CART_CLOSED.of(this.id);
+        }
+        this.status = ScheduleStatus.TICKETING;
     }
 
     public void decreaseSeats() {
