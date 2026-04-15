@@ -1,20 +1,17 @@
 package com.example.ticketservice.infrastructure.messaging.consumer;
 
 import com.example.ticketservice.common.exception.ScheduleErrorCode;
+import com.example.ticketservice.domain.event.ScheduleConfirmedEvent;
 import com.example.ticketservice.domain.model.Schedule;
-import com.example.ticketservice.domain.model.Ticket;
 import com.example.ticketservice.domain.repository.ScheduleRepository;
-import com.example.ticketservice.domain.repository.TicketRepository;
 import com.example.ticketservice.infrastructure.messaging.dto.request.ScheduleConfirmedMessage;
 import com.example.ticketservice.infrastructure.util.KafkaMessageUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.stream.IntStream;
 
 @Slf4j
 @Component
@@ -22,8 +19,8 @@ import java.util.stream.IntStream;
 public class ScheduleEventConsumer {
 
     private final ScheduleRepository scheduleRepository;
-    private final TicketRepository ticketRepository;
     private final KafkaMessageUtil kafkaMessageUtil;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     @KafkaListener(topics = "movie.schedule.confirmed", groupId = "ticket-group")
@@ -38,6 +35,7 @@ public class ScheduleEventConsumer {
                 request.scheduleId(),
                 request.startTime(),
                 request.endTime(),
+                request.ticketingTime(),
                 request.title(),
                 request.cookie(),
                 request.creatorId(),
@@ -46,12 +44,9 @@ public class ScheduleEventConsumer {
                 request.seats()
         );
         scheduleRepository.save(schedule);
-
-        // 좌석 수만큼 AVAILABLE 티켓 미리 생성 (ticketNum: 1 ~ seats)
-        List<Ticket> tickets = IntStream.rangeClosed(1, request.seats())
-                .mapToObj(num -> Ticket.create(schedule, num))
-                .toList();
-        ticketRepository.saveAll(tickets);
+        log.info("fjsakfjaslkfjaskfjsalkfjafjlaksjf");
+        // DB 커밋 완료 후 Redis 저장을 위해 이벤트 발행
+        eventPublisher.publishEvent(new ScheduleConfirmedEvent(schedule));
 
         log.debug("Schedule confirmed: scheduleId={}, tickets created: {}", request.scheduleId(), request.seats());
     }

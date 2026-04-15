@@ -7,3 +7,4 @@ services:
       - "6379:6379"
     volumes:
       - ./redis_data:/data
+    command: redis-server --notify-keyspace-events Ex

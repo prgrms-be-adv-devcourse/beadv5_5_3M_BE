@@ -14,6 +14,10 @@ public interface CachePort {
 
     boolean exists(String key);
 
+    void increment(String key);
+
+    void decrement(String key);
+
     // ZSet (Sorted Set) 연산
     void addToZSet(String key, Object member, double score);
 

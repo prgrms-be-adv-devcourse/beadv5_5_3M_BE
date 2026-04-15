@@ -49,6 +49,18 @@ public class RedisCacheAdapter implements CachePort {
     }
 
     @Override
+    public void increment(String key) {
+        Long result = redisTemplate.opsForValue().increment(key);
+        log.debug("Redis 카운터 증가 - key: {}, result: {}", key, result);
+    }
+
+    @Override
+    public void decrement(String key) {
+        Long result = redisTemplate.opsForValue().decrement(key);
+        log.debug("Redis 카운터 감소 - key: {}, result: {}", key, result);
+    }
+
+    @Override
     public void addToZSet(String key, Object member, double score) {
         redisTemplate.opsForZSet().add(key, messageUtil.serialize(member), score);
         log.debug("Redis ZSet 추가 - key: {}, score: {}", key, score);

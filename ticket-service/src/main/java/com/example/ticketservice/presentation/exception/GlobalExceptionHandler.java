@@ -1,5 +1,6 @@
 package com.example.ticketservice.presentation.exception;
 
+import com.example.ticketservice.common.exception.CartItemException;
 import com.example.ticketservice.common.exception.ScheduleException;
 import com.example.ticketservice.common.exception.TicketException;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,11 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(CartItemException.class)
+    public ResponseEntity<Map<String, Object>> handleCartItemException(CartItemException e) {
+        return buildResponse(e.getErrorCode().getStatus().value(), e.getMessage());
+    }
 
     @ExceptionHandler(TicketException.class)
     public ResponseEntity<Map<String, Object>> handleTicketException(TicketException e) {
