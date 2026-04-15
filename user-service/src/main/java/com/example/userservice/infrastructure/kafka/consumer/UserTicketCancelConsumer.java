@@ -2,9 +2,9 @@ package com.example.userservice.infrastructure.kafka.consumer;
 
 import com.example.userservice.infrastructure.kafka.consumer.dto.TicketCancelRequest;
 import com.example.userservice.domain.model.CookieLog;
-import com.example.userservice.domain.model.User;
+import com.example.userservice.domain.model.Wallet;
 import com.example.userservice.domain.repository.CookieLogRepository;
-import com.example.userservice.domain.repository.UserRepository;
+import com.example.userservice.domain.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.DltHandler;
@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserTicketCancelConsumer {
 
-    private final UserRepository userRepository;
+    private final WalletRepository walletRepository;
     private final CookieLogRepository cookieLogRepository;
 
     @RetryableTopic(
@@ -35,8 +35,8 @@ public class UserTicketCancelConsumer {
     @Transactional
     public void consume(String message) {
         TicketCancelRequest ticketCancelRequest = TicketCancelRequest.fromJson(message);
-        User user = userRepository.findById(ticketCancelRequest.userId());
-        user.addCookie(ticketCancelRequest.cookieAmount());
+        Wallet wallet = walletRepository.findByUserId(ticketCancelRequest.userId());
+        wallet.add(ticketCancelRequest.cookieAmount());
 
         CookieLog cookieLog = CookieLog.create(
                 ticketCancelRequest.userId(),

@@ -4,9 +4,11 @@ import com.example.userservice.application.usecase.UserUseCase;
 import com.example.userservice.domain.model.CookieLog;
 import com.example.userservice.domain.model.Permission;
 import com.example.userservice.domain.model.User;
+import com.example.userservice.domain.model.Wallet;
 import com.example.userservice.domain.repository.CookieLogRepository;
 import com.example.userservice.domain.repository.PermissionRepository;
 import com.example.userservice.domain.repository.UserRepository;
+import com.example.userservice.domain.repository.WalletRepository;
 
 import com.example.userservice.infrastructure.kafka.event.UserCreatedEvent;
 import com.example.userservice.infrastructure.kafka.event.UserUpdatedEvent;
@@ -48,6 +50,7 @@ import java.util.UUID;
 public class UserService implements UserUseCase {
 
     private final UserRepository userRepository;
+    private final WalletRepository walletRepository;
     private final PermissionRepository permissionRepository;
     private final JwtProvider jwtProvider;
     private final StorageService storageService;
@@ -87,6 +90,7 @@ public class UserService implements UserUseCase {
 
         User user = User.create(request.email(), request.password(), request.nickname());
         userRepository.save(user);
+        walletRepository.save(Wallet.create(user));
 
 //        UserCreatedEvent userCreatedEvent = UserCreatedEvent.from(user);
         kafkaTemplate.send("user.created", toJsonString(UserCreatedEvent.from(user)));
@@ -123,7 +127,7 @@ public class UserService implements UserUseCase {
         try {
             userId = jwtProvider.getUserIdFromToken(refreshToken.trim());
         } catch (Exception e) {
-            log.error("refresh token parse 실패: {}", e.getMessage(), e);  // 이 줄 추가
+            log.error("refresh token parse 실패: {}", e.getMessage(), e);
             throw new InvalidRefreshTokenException();
         }
 
@@ -176,11 +180,9 @@ public class UserService implements UserUseCase {
     @Override
     @Transactional
     public DeductCookieResponse deductCookie(DeductCookieRequest request) {
-        User user = userRepository.findById(request.userId());
-        user.deductCookie(request.amount());
-
+        Wallet wallet = walletRepository.findByUserId(request.userId());
+        wallet.deduct(request.amount());
         CookieLog cookieLog = CookieLog.create(request.userId(), request.amount(), request.ticketId());
-
         cookieLogRepository.save(cookieLog);
         return new DeductCookieResponse(request.userId(), request.ticketId(), request.amount(), true);
     }
@@ -188,8 +190,8 @@ public class UserService implements UserUseCase {
     @Override
     @Transactional
     public RefundCookieResponse refundCookie(RefundCookieRequest request) {
-        User user = userRepository.findById(request.userId());
-        user.addCookie(request.amount());
+        Wallet wallet = walletRepository.findByUserId(request.userId());
+        wallet.add(request.amount());
         CookieLog cookieLog = CookieLog.create(request.userId(), request.amount(), request.ticketId());
         cookieLogRepository.save(cookieLog);
         return new RefundCookieResponse(request.userId(), request.ticketId(), request.amount(), true);
@@ -211,6 +213,5 @@ public class UserService implements UserUseCase {
         } catch (Exception e) {
             throw new RuntimeException("Json 직렬화 실패");
         }
-
     }
 }

@@ -3,9 +3,9 @@ package com.example.userservice.infrastructure.kafka.consumer;
 import com.example.userservice.infrastructure.kafka.consumer.dto.PaymentConfirmRequest;
 import com.example.userservice.infrastructure.kafka.consumer.dto.PaymentRefundRequest;
 import com.example.userservice.domain.model.CookieLog;
-import com.example.userservice.domain.model.User;
+import com.example.userservice.domain.model.Wallet;
 import com.example.userservice.domain.repository.CookieLogRepository;
-import com.example.userservice.domain.repository.UserRepository;
+import com.example.userservice.domain.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.BackOff;
@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserPaymentConsumer {
 
-    private final UserRepository userRepository;
+    private final WalletRepository walletRepository;
     private final CookieLogRepository cookieLogRepository;
 
     @RetryableTopic(
@@ -36,13 +36,12 @@ public class UserPaymentConsumer {
     @Transactional
     public void paymentConfirmConsumer(String message) {
         PaymentConfirmRequest paymentConfirmRequest = PaymentConfirmRequest.fromJson(message);
-        User user = userRepository.findById(paymentConfirmRequest.userId());
-        user.addCookie(paymentConfirmRequest.cookieAmount());
+        Wallet wallet = walletRepository.findByUserId(paymentConfirmRequest.userId());
+        wallet.add(paymentConfirmRequest.cookieAmount());
         CookieLog cookieLog = CookieLog.create(
-                user.getUserId(),
+                paymentConfirmRequest.userId(),
                 paymentConfirmRequest.cookieAmount(),
                 null);
-
         cookieLogRepository.save(cookieLog);
     }
 
@@ -57,14 +56,13 @@ public class UserPaymentConsumer {
     )
     @Transactional
     public void paymentRefundConsumer(String message) {
-        PaymentRefundRequest paymentConfirmRequest = PaymentRefundRequest.fromJson(message);
-        User user = userRepository.findById(paymentConfirmRequest.userId());
-        user.deductCookie(paymentConfirmRequest.cookieAmount());
+        PaymentRefundRequest paymentRefundRequest = PaymentRefundRequest.fromJson(message);
+        Wallet wallet = walletRepository.findByUserId(paymentRefundRequest.userId());
+        wallet.deduct(paymentRefundRequest.cookieAmount());
         CookieLog cookieLog = CookieLog.create(
-                user.getUserId(),
-                -paymentConfirmRequest.cookieAmount(),
+                paymentRefundRequest.userId(),
+                -paymentRefundRequest.cookieAmount(),
                 null);
-
         cookieLogRepository.save(cookieLog);
     }
 
