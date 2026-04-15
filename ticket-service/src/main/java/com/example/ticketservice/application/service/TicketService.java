@@ -3,7 +3,8 @@ package com.example.ticketservice.application.service;
 import com.example.ticketservice.application.dto.request.DeductCookieRequest;
 import com.example.ticketservice.application.dto.request.TicketCreateRequest;
 import com.example.ticketservice.application.dto.response.TicketResponse;
-import com.example.ticketservice.application.port.out.EventPublisherPort;
+import com.example.ticketservice.application.event.TicketCancelledEvent;
+import com.example.ticketservice.application.event.TicketReservedEvent;
 import com.example.ticketservice.application.port.out.UserPort;
 import com.example.ticketservice.application.usecase.TicketUseCase;
 import com.example.ticketservice.common.exception.ScheduleErrorCode;
@@ -13,9 +14,8 @@ import com.example.ticketservice.domain.model.Schedule;
 import com.example.ticketservice.domain.model.Ticket;
 import com.example.ticketservice.domain.repository.ScheduleRepository;
 import com.example.ticketservice.domain.repository.TicketRepository;
-import com.example.ticketservice.infrastructure.messaging.dto.event.TicketCancelledMessage;
-import com.example.ticketservice.infrastructure.messaging.dto.event.TicketReservedMessage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,13 +28,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TicketService implements TicketUseCase {
 
-    public static final String TICKET_RESERVED_TOPIC = "ticket.reserved";
-    public static final String TICKET_CANCELLED_TOPIC = "ticket.cancelled";
-
     private final TicketRepository ticketRepository;
     private final ScheduleRepository scheduleRepository;
     private final UserPort userPort;
-    private final EventPublisherPort eventPublisherPort;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     @Override
@@ -56,8 +53,8 @@ public class TicketService implements TicketUseCase {
 
         userPort.deductTicketFee(new DeductCookieRequest(ticket.getId(), schedule.getCookie(), userId));
 
-        eventPublisherPort.publish(TICKET_RESERVED_TOPIC, ticket.getId().toString(),
-                new TicketReservedMessage(ticket.getId(), schedule.getId(), userId, schedule.getCookie()));
+        eventPublisher.publishEvent(
+                new TicketReservedEvent(ticket.getId(), schedule.getId(), userId, schedule.getCookie()));
 
         return TicketResponse.from(ticket);
     }
@@ -74,8 +71,8 @@ public class TicketService implements TicketUseCase {
         ticket.getSchedule().increaseSeats();
         scheduleRepository.save(ticket.getSchedule());
 
-        eventPublisherPort.publish(TICKET_CANCELLED_TOPIC, ticket.getId().toString(),
-                new TicketCancelledMessage(ticket.getId(), ticket.getSchedule().getId(), userId, ticket.getSchedule().getCookie()));
+        eventPublisher.publishEvent(
+                new TicketCancelledEvent(ticket.getId(), ticket.getSchedule().getId(), userId, ticket.getSchedule().getCookie()));
     }
 
     @Transactional(readOnly = true)

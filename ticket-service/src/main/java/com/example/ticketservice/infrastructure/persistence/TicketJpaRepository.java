@@ -20,6 +20,7 @@ public interface TicketJpaRepository extends JpaRepository<Ticket, Long> {
     Page<Ticket> findAllByUserId(UUID userId, Pageable pageable);
     List<Ticket> findAllBySchedule(Schedule schedule);
     List<Ticket> findAllByStatusAndProvideFlag(TicketStatus status, boolean provideFlag);
+    List<Ticket> findAllByScheduleIdAndStatus(Long scheduleId, TicketStatus status);
 
     // Bulk Update: 건별 UPDATE 대신 단일 쿼리로 일괄 처리하여 성능 최적화
     @Modifying

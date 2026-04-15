@@ -30,14 +30,14 @@
 - [x] `QueueErrorCode` + `QueueException` 생성
 
 ## Phase 2: 리뷰 권한 시스템 리팩토링
-- [ ] `TicketService`에서 Redis 리뷰 캐시 코드 제거 (`addToZSet`, `removeFromZSetByScore`)
-- [ ] `TicketService`를 @TransactionalEventListener 패턴으로 전환
-- [ ] `ConfirmScheduledTicketsService` 리팩토링 (Redis 의존 제거)
-- [ ] `ReviewAuthorizationScheduler` 삭제 (Quartz로 대체)
-- [ ] `ReviewAuthorizationCache` DTO 삭제
-- [ ] `ReviewAuthUseCase` + `ReviewAuthService` 생성 (DB 직접 조회 → Kafka 발행)
-- [ ] `TicketJpaRepository`에 `findAllByScheduleIdAndStatus` 추가
-- [ ] `TicketRepository`에 대응 인터페이스 메서드 추가
+- [x] `TicketService`에서 Redis 리뷰 캐시 코드 제거 (`addToZSet`, `removeFromZSetByScore`)
+- [x] `TicketService`를 @TransactionalEventListener 패턴으로 전환
+- [x] `ConfirmScheduledTicketsService` 리팩토링 (Redis 의존 제거)
+- [x] `ReviewAuthorizationScheduler` 삭제 (Quartz로 대체)
+- [x] `ReviewAuthorizationCache` DTO 삭제
+- [x] `ReviewAuthUseCase` + `ReviewAuthService` 생성 (DB 직접 조회 → Kafka 발행)
+- [x] `TicketJpaRepository`에 `findAllByScheduleIdAndStatus` 추가
+- [x] `TicketRepository`에 대응 인터페이스 메서드 추가
 
 ## Phase 3: 장바구니 시스템
 - [ ] `CartUseCase` 인터페이스 생성
