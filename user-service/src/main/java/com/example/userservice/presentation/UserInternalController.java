@@ -1,6 +1,6 @@
 package com.example.userservice.presentation;
 
-import com.example.userservice.application.UserService;
+import com.example.userservice.application.service.UserService;
 import com.example.userservice.presentation.dto.req.DeductCookieRequest;
 import com.example.userservice.presentation.dto.res.DeductCookieResponse;
 import io.swagger.v3.oas.annotations.Operation;
