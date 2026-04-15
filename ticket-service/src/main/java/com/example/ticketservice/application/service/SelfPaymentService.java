@@ -11,6 +11,7 @@ import com.example.ticketservice.domain.enums.TicketStatus;
 import com.example.ticketservice.domain.model.Schedule;
 import com.example.ticketservice.domain.model.Ticket;
 import com.example.ticketservice.domain.repository.TicketRepository;
+import com.example.ticketservice.application.port.out.CachePort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -26,7 +27,11 @@ public class SelfPaymentService implements SelfPaymentUseCase {
 
     private final TicketRepository ticketRepository;
     private final UserPort userPort;
+    private final CachePort cachePort;
     private final ApplicationEventPublisher eventPublisher;
+    private final QueueAutoProcessService queueAutoProcessService;
+
+    private static final String STOCK_KEY_PREFIX = "stock:schedule:";
 
     @Transactional
     @Override
@@ -49,6 +54,12 @@ public class SelfPaymentService implements SelfPaymentUseCase {
                 new DeductCookieRequest(ticketId, schedule.getCookie(), userId));
 
         if (!response.flag()) {
+            // RESERVED 상태이므로 stock에서 회수 → 대기열 자동 처리 트리거
+            String stockKey = STOCK_KEY_PREFIX + schedule.getId();
+            if (cachePort.exists(stockKey)) {
+                cachePort.increment(stockKey);
+                queueAutoProcessService.checkAndProcess(schedule.getId());
+            }
             throw TicketErrorCode.INSUFFICIENT_BALANCE.of((long) schedule.getCookie());
         }
 

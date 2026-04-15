@@ -2,6 +2,7 @@ package com.example.ticketservice.presentation.controller;
 
 import com.example.ticketservice.application.dto.request.TicketCreateRequest;
 import com.example.ticketservice.application.dto.response.TicketResponse;
+import com.example.ticketservice.application.usecase.RefundUseCase;
 import com.example.ticketservice.application.usecase.SelfPaymentUseCase;
 import com.example.ticketservice.application.usecase.TicketUseCase;
 import com.example.ticketservice.common.model.PageResult;
@@ -24,6 +25,7 @@ public class TicketController {
 
     private final TicketUseCase ticketUseCase;
     private final SelfPaymentUseCase selfPaymentUseCase;
+    private final RefundUseCase refundUseCase;
 
     @Operation(summary = "티켓 예약", description = "스케줄 ID로 티켓을 예약합니다.")
     @ApiResponses({
@@ -89,6 +91,22 @@ public class TicketController {
             @PathVariable Long ticketId
     ) {
         return ResponseEntity.ok(selfPaymentUseCase.pay(userId, ticketId));
+    }
+
+    @Operation(summary = "티켓 환불", description = "CONFIRMED 티켓을 환불하고 쿠키를 복구합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "환불 성공"),
+            @ApiResponse(responseCode = "403", description = "본인 티켓 아님"),
+            @ApiResponse(responseCode = "404", description = "티켓 없음"),
+            @ApiResponse(responseCode = "409", description = "CONFIRMED 상태 아님")
+    })
+    @PostMapping("/{ticketId}/refund")
+    public ResponseEntity<Void> refundTicket(
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable Long ticketId
+    ) {
+        refundUseCase.refund(userId, ticketId);
+        return ResponseEntity.noContent().build();
     }
 
 }

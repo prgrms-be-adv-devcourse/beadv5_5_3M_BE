@@ -1,7 +1,9 @@
 package com.example.ticketservice.infrastructure.client.user;
 
 import com.example.ticketservice.application.dto.request.DeductCookieRequest;
+import com.example.ticketservice.application.dto.request.RefundCookieRequest;
 import com.example.ticketservice.application.dto.response.DeductCookieResponse;
+import com.example.ticketservice.application.dto.response.RefundCookieResponse;
 import com.example.ticketservice.application.port.out.UserPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -16,13 +18,26 @@ public class UserClient implements UserPort {
     // POST baseUrl + internal/users/deduct/cookie
     @Override
     public DeductCookieResponse deductTicketFee(DeductCookieRequest request) {
-
         try {
             return userRestClient.post()
                     .uri("/internal/users/deduct/cookie")
                     .body(request)
                     .retrieve()
                     .body(DeductCookieResponse.class);
+        } catch (RestClientException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    // POST baseUrl + internal/users/refund/cookie
+    @Override
+    public RefundCookieResponse refundCookie(RefundCookieRequest request) {
+        try {
+            return userRestClient.post()
+                    .uri("/internal/users/refund/cookie")
+                    .body(request)
+                    .retrieve()
+                    .body(RefundCookieResponse.class);
         } catch (RestClientException e) {
             throw new RuntimeException(e);
         }

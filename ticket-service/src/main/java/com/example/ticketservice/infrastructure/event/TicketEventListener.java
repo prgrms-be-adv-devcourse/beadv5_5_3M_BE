@@ -2,13 +2,16 @@ package com.example.ticketservice.infrastructure.event;
 
 import com.example.ticketservice.application.event.CartClosedEvent;
 import com.example.ticketservice.application.event.TicketCancelledEvent;
+import com.example.ticketservice.application.event.TicketingStartedEvent;
 import com.example.ticketservice.application.event.TicketPaidEvent;
 import com.example.ticketservice.application.event.TicketRefundedEvent;
 import com.example.ticketservice.application.event.TicketReservedEvent;
 import com.example.ticketservice.application.port.out.CachePort;
 import com.example.ticketservice.application.port.out.EventPublisherPort;
+import com.example.ticketservice.application.service.QueueAutoProcessService;
 import com.example.ticketservice.infrastructure.messaging.dto.event.CartClosedMessage;
 import com.example.ticketservice.infrastructure.messaging.dto.event.TicketCancelledMessage;
+import com.example.ticketservice.infrastructure.messaging.dto.event.TicketingStartedMessage;
 import com.example.ticketservice.infrastructure.messaging.dto.event.TicketPaidMessage;
 import com.example.ticketservice.infrastructure.messaging.dto.event.TicketRefundedMessage;
 import com.example.ticketservice.infrastructure.messaging.dto.event.TicketReservedMessage;
@@ -29,9 +32,11 @@ public class TicketEventListener {
     private static final String TICKET_PAID_TOPIC = "ticket.paid";
     private static final String TICKET_REFUNDED_TOPIC = "ticket.refunded";
     private static final String CART_CLOSED_TOPIC = "cart.closed";
+    private static final String TICKETING_STARTED_TOPIC = "ticketing.started";
 
     private final EventPublisherPort eventPublisherPort;
     private final CachePort cachePort;
+    private final QueueAutoProcessService queueAutoProcessService;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleTicketReserved(TicketReservedEvent event) {
@@ -52,6 +57,9 @@ public class TicketEventListener {
         eventPublisherPort.publish(TICKET_PAID_TOPIC, event.ticketId().toString(),
                 new TicketPaidMessage(event.ticketId(), event.scheduleId(), event.userId(), event.cookie()));
         log.debug("ticket.paid 발행 - ticketId={}", event.ticketId());
+
+        // 결제 완료 후 종료 조건 체크 (stock==0 AND RESERVED==0 → 대기열 clear)
+        queueAutoProcessService.checkAndProcess(event.scheduleId());
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -61,6 +69,8 @@ public class TicketEventListener {
         if (cachePort.exists(stockKey)) {
             cachePort.increment(stockKey);
             log.debug("stock 복구 - scheduleId={}", event.scheduleId());
+            // 재고 복구 후 대기열 자동 드레인
+            queueAutoProcessService.checkAndProcess(event.scheduleId());
         }
         eventPublisherPort.publish(TICKET_REFUNDED_TOPIC, event.ticketId().toString(),
                 new TicketRefundedMessage(event.ticketId(), event.scheduleId(), event.userId(), event.cookie()));
@@ -72,5 +82,12 @@ public class TicketEventListener {
         eventPublisherPort.publish(CART_CLOSED_TOPIC, event.scheduleId().toString(),
                 new CartClosedMessage(event.scheduleId(), event.caseType(), event.seats()));
         log.info("cart.closed 발행 - scheduleId={}, caseType={}", event.scheduleId(), event.caseType());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleTicketingStarted(TicketingStartedEvent event) {
+        eventPublisherPort.publish(TICKETING_STARTED_TOPIC, event.scheduleId().toString(),
+                new TicketingStartedMessage(event.scheduleId()));
+        log.info("ticketing.started 발행 - scheduleId={}", event.scheduleId());
     }
 }

@@ -13,7 +13,6 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -41,9 +40,10 @@ public class RedisCacheAdapter implements CachePort {
     }
 
     @Override
-    public void delete(String key) {
-        redisTemplate.delete(key);
-        log.debug("Redis 삭제 - key: {}", key);
+    public boolean delete(String key) {
+        Boolean deleted = redisTemplate.delete(key);
+        log.debug("Redis 삭제 - key: {}, deleted: {}", key, deleted);
+        return Boolean.TRUE.equals(deleted);
     }
 
     @Override
@@ -112,31 +112,6 @@ public class RedisCacheAdapter implements CachePort {
     @Override
     public Long getSetSize(String key) {
         return redisTemplate.opsForSet().size(key);
-    }
-
-    @Override
-    public void addToZSet(String key, Object member, double score) {
-        redisTemplate.opsForZSet().add(key, messageUtil.serialize(member), score);
-        log.debug("Redis ZSet 추가 - key: {}, score: {}", key, score);
-    }
-
-    @Override
-    public void removeFromZSetByScore(String key, double score) {
-        redisTemplate.opsForZSet().removeRangeByScore(key, score, score);
-        log.debug("Redis ZSet 삭제 - key: {}, score: {}", key, score);
-    }
-
-    @Override
-    public <T> Set<T> getZSetMembers(String key, Class<T> type) {
-        Set<String> members = redisTemplate.opsForZSet().range(key, 0, -1);
-        if (members == null || members.isEmpty()) {
-            log.debug("Redis ZSet 미스 - key: {}", key);
-            return Set.of();
-        }
-        log.debug("Redis ZSet 히트 - key: {}, count: {}", key, members.size());
-        return members.stream()
-                .map(m -> messageUtil.deserialize(m, type))
-                .collect(Collectors.toSet());
     }
 
     @Override

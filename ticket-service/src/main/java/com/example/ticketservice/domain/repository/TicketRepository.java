@@ -21,4 +21,6 @@ public interface TicketRepository {
     int deleteAllByScheduleIdAndStatus(Long scheduleId, TicketStatus status);
 
     long countByScheduleIdAndStatus(Long scheduleId, TicketStatus status);
+
+    void delete(Ticket ticket);
 }

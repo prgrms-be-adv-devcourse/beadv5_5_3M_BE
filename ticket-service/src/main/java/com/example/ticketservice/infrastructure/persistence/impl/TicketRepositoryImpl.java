@@ -63,4 +63,9 @@ public class TicketRepositoryImpl implements TicketRepository{
     public long countByScheduleIdAndStatus(Long scheduleId, TicketStatus status) {
         return jpaRepository.countByScheduleIdAndStatus(scheduleId, status);
     }
+
+    @Override
+    public void delete(Ticket ticket) {
+        jpaRepository.delete(ticket);
+    }
 }

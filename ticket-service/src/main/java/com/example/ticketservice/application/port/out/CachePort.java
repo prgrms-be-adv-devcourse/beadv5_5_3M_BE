@@ -10,7 +10,7 @@ public interface CachePort {
 
     <T> Optional<T> get(String key, Class<T> type);
 
-    void delete(String key);
+    boolean delete(String key);
 
     boolean exists(String key);
 
@@ -37,12 +37,6 @@ public interface CachePort {
     Long getSetSize(String key);
 
     // ZSet (Sorted Set) 연산
-    void addToZSet(String key, Object member, double score);
-
-    void removeFromZSetByScore(String key, double score);
-
-    <T> Set<T> getZSetMembers(String key, Class<T> type);
-
     void addToZSetWithTimestamp(String key, String member);
 
     String popMinFromZSet(String key);
