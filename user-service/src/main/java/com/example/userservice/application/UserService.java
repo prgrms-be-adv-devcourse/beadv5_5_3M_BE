@@ -18,6 +18,8 @@ import java.util.concurrent.TimeUnit;
 
 import com.example.userservice.presentation.dto.req.AuthorizationRequest;
 import com.example.userservice.presentation.dto.req.DeductCookieRequest;
+import com.example.userservice.presentation.dto.req.RefundCookieRequest;
+import com.example.userservice.presentation.dto.res.RefundCookieResponse;
 import com.example.userservice.presentation.dto.req.JoinRequest;
 import com.example.userservice.presentation.dto.req.LoginRequest;
 import com.example.userservice.presentation.dto.res.DeductCookieResponse;
@@ -180,6 +182,18 @@ public class UserService implements UserUseCase {
 
         cookieLogRepository.save(cookieLog);
         return new DeductCookieResponse(request.userId(), request.ticketId(), request.amount(), true);
+    }
+
+    @Override
+    @Transactional
+    public RefundCookieResponse refundCookie(RefundCookieRequest request) {
+        User user = userRepository.findById(request.userId());
+        user.addCookie(request.amount());
+
+        CookieLog cookieLog = CookieLog.create(request.userId(), request.amount(), request.ticketId());
+        cookieLogRepository.save(cookieLog);
+
+        return new RefundCookieResponse(request.userId(), request.ticketId(), request.amount(), true);
     }
 
     private UUID toUUID(String userId) {
