@@ -1,6 +1,6 @@
 package com.example.userservice.presentation;
 
-import com.example.userservice.application.UserUseCase;
+import com.example.userservice.application.usecase.UserUseCase;
 import com.example.userservice.presentation.dto.req.AuthorizationRequest;
 import com.example.userservice.presentation.dto.req.JoinRequest;
 import com.example.userservice.presentation.dto.req.LoginRequest;

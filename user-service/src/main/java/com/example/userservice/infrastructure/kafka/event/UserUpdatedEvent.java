@@ -1,4 +1,4 @@
-package com.example.userservice.event;
+package com.example.userservice.infrastructure.kafka.event;
 
 import com.example.userservice.domain.model.User;
 

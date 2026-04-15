@@ -1,4 +1,4 @@
-package com.example.userservice.exception;
+package com.example.userservice.application.exception;
 
 public class InvalidEmailOrPasswordException extends RuntimeException {
     public InvalidEmailOrPasswordException() {

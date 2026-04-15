@@ -1,4 +1,4 @@
-package com.example.userservice.util;
+package com.example.userservice.global.util;
 
 import io.jsonwebtoken.Jwts;
 import lombok.extern.slf4j.Slf4j;

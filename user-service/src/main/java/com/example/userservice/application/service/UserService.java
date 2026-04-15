@@ -1,5 +1,6 @@
-package com.example.userservice.application;
+package com.example.userservice.application.service;
 
+import com.example.userservice.application.usecase.UserUseCase;
 import com.example.userservice.domain.model.CookieLog;
 import com.example.userservice.domain.model.Permission;
 import com.example.userservice.domain.model.User;
@@ -7,12 +8,12 @@ import com.example.userservice.domain.repository.CookieLogRepository;
 import com.example.userservice.domain.repository.PermissionRepository;
 import com.example.userservice.domain.repository.UserRepository;
 
-import com.example.userservice.event.UserCreatedEvent;
-import com.example.userservice.event.UserUpdatedEvent;
-import com.example.userservice.exception.DuplicateEmailException;
-import com.example.userservice.exception.DuplicateNicknameException;
-import com.example.userservice.exception.InvalidEmailOrPasswordException;
-import com.example.userservice.exception.InvalidRefreshTokenException;
+import com.example.userservice.infrastructure.kafka.event.UserCreatedEvent;
+import com.example.userservice.infrastructure.kafka.event.UserUpdatedEvent;
+import com.example.userservice.application.exception.DuplicateEmailException;
+import com.example.userservice.application.exception.DuplicateNicknameException;
+import com.example.userservice.application.exception.InvalidEmailOrPasswordException;
+import com.example.userservice.application.exception.InvalidRefreshTokenException;
 
 import java.util.concurrent.TimeUnit;
 
@@ -24,7 +25,7 @@ import com.example.userservice.presentation.dto.res.DeductCookieResponse;
 import com.example.userservice.presentation.dto.res.TokenResponse;
 import com.example.userservice.presentation.dto.res.UserInfoResponse;
 
-import com.example.userservice.util.JwtProvider;
+import com.example.userservice.global.util.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;

@@ -1,4 +1,4 @@
-package com.example.userservice.application;
+package com.example.userservice.application.usecase;
 
 import com.example.userservice.presentation.dto.req.AuthorizationRequest;
 import com.example.userservice.presentation.dto.req.DeductCookieRequest;
