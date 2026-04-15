@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 public class TicketingStartService implements TicketingStartUseCase {
 
     static final String STOCK_KEY_PREFIX = "stock:schedule:";
+    static final String PAYING_KEY_PREFIX = "paying:schedule:";
 
     private final ScheduleRepository scheduleRepository;
     private final TicketRepository ticketRepository;
@@ -44,10 +45,11 @@ public class TicketingStartService implements TicketingStartUseCase {
         long confirmedCount = ticketRepository.countByScheduleIdAndStatus(scheduleId, TicketStatus.CONFIRMED);
         long remaining = schedule.getSeats() - confirmedCount;
 
-        // 3. Redis stock 카운터 설정 (공연 시작 10분 전 티켓팅 마감 TTL)
+        // 3. Redis stock / paying 카운터 설정 (공연 시작 10분 전 티켓팅 마감 TTL)
         Duration ttl = Duration.between(LocalDateTime.now(), schedule.getStartTime().minusMinutes(10));
         if (!ttl.isNegative() && !ttl.isZero()) {
             cachePort.setCounter(STOCK_KEY_PREFIX + scheduleId, remaining, ttl);
+            cachePort.setCounter(PAYING_KEY_PREFIX + scheduleId, 0, ttl);
         }
 
         // 4. IN_PROGRESSING → TICKETING

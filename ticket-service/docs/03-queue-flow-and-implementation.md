@@ -98,34 +98,50 @@ public Optional<TicketResponse> tryPurchase(Long scheduleId, UUID userId, int ti
 | 자율결제 실패 시 stock INCR | `SelfPaymentService.pay()` |
 | 결제 완료 후 종료 조건 체크 | `TicketEventListener.handleTicketPaid` (AFTER_COMMIT) |
 
-### drainQueue 루프
+### drainQueue 루프 (윈도우 병렬 처리)
+
+재고 수만큼 한 번에 수집 후 `CompletableFuture`로 병렬 처리한다.
+stock=5이면 5개 HTTP 호출이 동시 실행 → 순차 대비 ~1/N 시간으로 단축.
 
 ```
 while (true):
-  stockAfterDecr = DECR(stock)
+  stock    = GET(stock)
+  queueSize = ZCARD(queue)
 
-  if stockAfterDecr < 0:
-    INCR(stock)  ← 복구
-    break        ← 재고 소진
+  if stock <= 0 OR queueSize == 0:
+    break
 
-  userId = ZPOPMIN(queue)  ← atomic pop
+  window = min(stock, queueSize)
 
-  if userId == null:
-    INCR(stock)  ← 복구
-    break        ← 대기열 비어있음
+  // 1단계: collectWindow — DECR + ZPOPMIN 순차 수집 (원자성 유지)
+  tasks = []
+  for i in 0..window:
+    stockAfterDecr = DECR(stock)
+    if stockAfterDecr < 0:
+      INCR(stock); break
+    userId = ZPOPMIN(queue)
+    if userId == null:
+      INCR(stock); break
+    tasks.add(userId, computeTicketNum(stockAfterDecr))
 
-  try:
-    tryPurchase(scheduleId, userId, ticketNum)
-    ← 실패 시 stock은 tryPurchase 내부에서 복구됨
-    ← 성공 시 stock은 차감 상태 유지
-  catch Exception:
-    INCR(stock)  ← 예외 시 수동 복구
-    log.error(...)
-    ← 해당 userId는 소실, loop 계속
+  if tasks.empty: break
+
+  // 2단계: processWindowParallel — 병렬 실행 후 완료 대기
+  CompletableFuture.allOf(
+    tasks.map(task ->
+      runAsync(() -> tryPurchase(task))  // ForkJoinPool.commonPool()
+      // 실패 → tryPurchase 내부에서 stock INCR 복구
+      // 예외 → catch 후 stock INCR 복구
+    )
+  ).join()
+
+  // 실패한 유저만큼 stock이 복구됨 → 다음 루프에서 재계산
 
 // 루프 종료 후
 checkTermination(scheduleId)
 ```
+
+**스레드 분리:** `@Async` 스레드가 `.join()`으로 대기하고, 실제 tryPurchase는 `ForkJoinPool.commonPool()`에서 실행 → 데드락 없음.
 
 ### 종료 조건 체크 (`checkTermination`)
 

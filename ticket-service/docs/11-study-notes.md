@@ -131,12 +131,20 @@ if (stockAfterDecr < 0) {
 ```
 대기열: [A(시간:100), B(시간:200), C(시간:300)]
 
-스레드 1: ZPOPMIN → A (반환 후 ZSet에서 제거)
-스레드 2: ZPOPMIN → B (A는 이미 없음)
+collectWindow (단일 스레드, 순차):
+  ZPOPMIN → A  (ZSet에서 원자적으로 꺼냄)
+  ZPOPMIN → B
+  ZPOPMIN → C
+
+processWindowParallel (병렬):
+  tryPurchase(A) ┐
+  tryPurchase(B) ├─ 동시 실행 (ForkJoinPool)
+  tryPurchase(C) ┘
 ```
 
-`ZPOPMIN`은 꺼내는 동시에 삭제까지 원자적으로 수행하므로
-여러 async 스레드가 동시에 드레인해도 같은 유저를 중복 처리하지 않는다.
+`ZPOPMIN`은 꺼내는 동시에 삭제까지 원자적으로 수행한다.
+수집(collectWindow)은 단일 스레드 순차 실행이므로 중복 pop이 발생하지 않고,
+이후 병렬 처리(processWindowParallel)는 이미 분리된 userId들을 각자 처리한다.
 
 ### Redis atomic DEL로 중복 이벤트 방지
 

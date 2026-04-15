@@ -1,6 +1,4 @@
-# Quartz Scheduler 사용 가이드
-
-## @Scheduled vs Quartz 차이
+# Quartz Scheduler 사용 가이## @Scheduled vs Quartz 차이
 
 | | @Scheduled | Quartz |
 |-|-----------|--------|

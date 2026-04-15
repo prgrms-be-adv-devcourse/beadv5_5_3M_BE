@@ -9,10 +9,8 @@ import com.example.ticketservice.common.exception.QueueErrorCode;
 import com.example.ticketservice.common.exception.TicketErrorCode;
 import com.example.ticketservice.common.exception.ScheduleErrorCode;
 import com.example.ticketservice.domain.enums.ScheduleStatus;
-import com.example.ticketservice.domain.enums.TicketStatus;
 import com.example.ticketservice.domain.model.Schedule;
 import com.example.ticketservice.domain.repository.ScheduleRepository;
-import com.example.ticketservice.domain.repository.TicketRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,9 +27,9 @@ public class QueueService implements QueueUseCase {
 
     private static final String QUEUE_KEY_PREFIX = "queue:schedule:";
     private static final String STOCK_KEY_PREFIX = "stock:schedule:";
+    private static final String PAYING_KEY_PREFIX = "paying:schedule:";
 
     private final ScheduleRepository scheduleRepository;
-    private final TicketRepository ticketRepository;
     private final CachePort cachePort;
     private final QueuePurchaseProcessor purchaseProcessor;
 
@@ -46,12 +44,23 @@ public class QueueService implements QueueUseCase {
         }
 
         String stockKey = STOCK_KEY_PREFIX + scheduleId;
+        String payingKey = PAYING_KEY_PREFIX + scheduleId;
         Long stockAfterDecr = cachePort.decrement(stockKey);
 
         if (stockAfterDecr != null && stockAfterDecr >= 0) {
             // stock > 0 → 바로 구매 시도
             int ticketNum = (int) (schedule.getSeats() - stockAfterDecr);
-            Optional<TicketResponse> result = purchaseProcessor.tryPurchase(scheduleId, userId, ticketNum);
+            cachePort.increment(payingKey);
+            Optional<TicketResponse> result;
+            try {
+                result = purchaseProcessor.tryPurchase(scheduleId, userId, ticketNum);
+            } catch (Exception e) {
+                // 예외 발생 시 stock 복구 (tryPurchase 내부에서 복구되지 않음)
+                cachePort.increment(stockKey);
+                throw e;
+            } finally {
+                cachePort.decrement(payingKey);
+            }
             if (result.isPresent()) {
                 return QueueEntryResponse.purchased(result.get());
             }
@@ -64,9 +73,9 @@ public class QueueService implements QueueUseCase {
             }
         }
 
-        // stock == 0: RESERVED 티켓 유무 확인
-        long reservedCount = ticketRepository.countByScheduleIdAndStatus(scheduleId, TicketStatus.RESERVED);
-        if (reservedCount == 0) {
+        // stock == 0: 결제 진행 중인 유저 유무 확인 (paying > 0이면 실패 시 stock 복구 가능)
+        Long payingCount = cachePort.getCounter(payingKey);
+        if (payingCount == null || payingCount <= 0) {
             throw QueueErrorCode.SOLD_OUT.of(scheduleId);
         }
 
@@ -80,11 +89,9 @@ public class QueueService implements QueueUseCase {
 
         cachePort.addToZSetWithTimestamp(queueKey, userIdStr);
 
-        // 대기열 TTL: 공연 시작 10분 전
+        // 대기열 TTL: 공연 시작 10분 전 (이미 지난 경우 1초 후 만료)
         Duration ttl = Duration.between(LocalDateTime.now(), schedule.getStartTime().minusMinutes(10));
-        if (!ttl.isNegative() && !ttl.isZero()) {
-            cachePort.expireKey(queueKey, ttl);
-        }
+        cachePort.expireKey(queueKey, ttl.isNegative() || ttl.isZero() ? Duration.ofSeconds(1) : ttl);
 
         Long rank = cachePort.getZSetRank(queueKey, userIdStr);
         long position = rank != null ? rank + 1 : 1;

@@ -6,6 +6,7 @@
 |---------|------|-----|----------|
 | `cart:count:schedule:{id}` | String (Counter) | `ticketingTime - 24h - now` | ScheduleEventListener |
 | `stock:schedule:{id}` | String (Counter) | `startTime - 10min - now` | TicketingStartService |
+| `paying:schedule:{id}` | String (Counter) | `startTime - 10min - now` | TicketingStartService |
 | `queue:schedule:{id}` | ZSet | `startTime - 10min - now` | QueueService.enter() |
 
 ---
@@ -57,11 +58,11 @@ value: 현재 구매 가능한 잔여 좌석 수
   → TTL = startTime - 10min - now  ← 공연 10분 전 티켓팅 마감
 
 [DECR] QueueService.enter()  ← 구매 시도 시 선점
-       QueueAutoProcessService.drainQueue()  ← 드레인 루프
+       QueueAutoProcessService.collectWindow()  ← 윈도우 수집 루프
 
 [INCR] QueuePurchaseProcessor.tryPurchase() (쿠키 부족 시 복구)
-       QueueAutoProcessService.drainQueue() (재고 없음·대기열 비어있음 시 복구)
-       QueueAutoProcessService.drainQueue() (tryPurchase 예외 시 복구)
+       QueueAutoProcessService.collectWindow() (재고 없음·대기열 비어있음 시 복구)
+       QueueAutoProcessService.processWindowParallel() (tryPurchase 예외 시 복구)
        SelfPaymentService.pay() (쿠키 부족 시 복구)
        TicketEventListener.handleTicketRefunded() (환불 시 복구)
 
@@ -93,7 +94,60 @@ if (cachePort.exists(stockKey)) {
 
 ---
 
-## 3. 대기열
+## 3. 결제 진행 카운터
+
+```
+key:   paying:schedule:{scheduleId}
+type:  String (정수 인코딩)
+value: 현재 tryPurchase 호출 중인 유저 수
+```
+
+### 생명주기
+
+```
+[설정] TicketingStartService.execute()
+  → cachePort.setCounter("paying:schedule:{id}", 0, ttl)
+  → TTL = startTime - 10min - now  ← stock 키와 동일
+
+[INCR] QueueService.enter()          ← tryPurchase 시작 전
+       QueueAutoProcessService.collectWindow()  ← 수집 성공 시
+
+[DECR] QueueService.enter()  (finally)  ← tryPurchase 완료 후 (성공/실패/예외 모든 경로)
+       QueueAutoProcessService.processWindowParallel() (finally)
+
+[소멸] TTL 만료 (startTime - 10min)
+```
+
+### 용도
+
+stock=0일 때 대기열 진입 가능 여부를 판단한다.
+`paying > 0`이면 현재 결제 시도 중인 유저가 있고, 실패 시 stock이 복구될 수 있어 대기열 진입을 허용한다.
+`paying == 0`이면 stock 복구 가능성이 없으므로 SOLD_OUT으로 판단한다.
+
+```
+stock > 0  →  즉시 구매 시도 (paying 무관)
+stock == 0, paying > 0  →  대기열 진입 허용
+stock == 0, paying == 0  →  SOLD_OUT
+```
+
+DB `COUNT(RESERVED)` 쿼리를 대체해 O(1)로 판단 가능.
+
+### 왜 DB COUNT 대신 Redis paying 카운터인가
+
+| 항목 | DB COUNT | Redis paying |
+|------|----------|--------------|
+| 정확도 | 항상 정확 | DECR 누락 시 stale 가능 |
+| 호출 빈도 | stock=0일 때만 | - |
+| 응답 속도 | 느림 (DB 쿼리) | 빠름 (O(1)) |
+| 장애 복구 | 재시작 후 자동 정확 | try-finally 보장으로 stale 위험 낮음 |
+
+`try-finally` 패턴으로 DECR 누락을 방지하기 때문에 stale 위험이 낮다.
+단, Redis crash 후 재시작 시 paying 키가 유실되면 0으로 인식 → SOLD_OUT 오판 가능.
+이 경우 TicketingStartService 재실행으로 복구한다.
+
+---
+
+## 4. 대기열
 
 ```
 key:   queue:schedule:{scheduleId}
@@ -109,8 +163,9 @@ score: System.currentTimeMillis()  ← 진입 순서 결정
   → ZADD queue:schedule:{id} {timestamp} {userId}
   → expireKey(queueKey, startTime - 10min - now)
 
-[POP] QueueAutoProcessService.drainQueue()
+[POP] QueueAutoProcessService.collectWindow()
   → ZPOPMIN  ← score(시간) 가장 낮은(먼저 들어온) 유저를 원자적으로 꺼냄
+  → window 크기만큼 순차 호출, 꺼낸 유저들은 이후 병렬 처리
 
 [RANK] QueueService.getPosition()
   → ZRANK → 0-indexed rank, +1 하면 순번
@@ -123,8 +178,10 @@ score: System.currentTimeMillis()  ← 진입 순서 결정
 
 ### ZPOPMIN 원자성
 
-Redis ZPOPMIN은 atomic 연산이므로
-여러 async 스레드가 동시에 drainQueue를 실행해도 동일 유저가 중복 처리되지 않는다.
+Redis ZPOPMIN은 atomic 연산이므로 꺼내는 동시에 ZSet에서 제거된다.
+`collectWindow()`에서 window 크기만큼 순차 호출해 유저를 수집하고,
+수집 완료 후 `processWindowParallel()`에서 병렬로 처리한다.
+수집 단계는 단일 스레드에서 순차 실행되므로 중복 처리 없음이 보장된다.
 
 ---
 
