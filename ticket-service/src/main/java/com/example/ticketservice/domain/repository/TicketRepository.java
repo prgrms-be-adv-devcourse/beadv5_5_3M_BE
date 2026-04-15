@@ -17,4 +17,8 @@ public interface TicketRepository {
     Page<Ticket> findAllByUserId(UUID userId, int page, int size);
     List<Ticket> findAllByStatusAndProvideFlag(TicketStatus status, boolean provideFlag);
     List<Ticket> findAllByScheduleIdAndStatus(Long scheduleId, TicketStatus status);
+
+    int deleteAllByScheduleIdAndStatus(Long scheduleId, TicketStatus status);
+
+    long countByScheduleIdAndStatus(Long scheduleId, TicketStatus status);
 }

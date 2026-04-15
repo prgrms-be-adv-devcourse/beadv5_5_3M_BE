@@ -2,6 +2,7 @@ package com.example.ticketservice.presentation.controller;
 
 import com.example.ticketservice.application.dto.request.TicketCreateRequest;
 import com.example.ticketservice.application.dto.response.TicketResponse;
+import com.example.ticketservice.application.usecase.SelfPaymentUseCase;
 import com.example.ticketservice.application.usecase.TicketUseCase;
 import com.example.ticketservice.common.model.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,6 +23,7 @@ import java.util.UUID;
 public class TicketController {
 
     private final TicketUseCase ticketUseCase;
+    private final SelfPaymentUseCase selfPaymentUseCase;
 
     @Operation(summary = "티켓 예약", description = "스케줄 ID로 티켓을 예약합니다.")
     @ApiResponses({
@@ -71,6 +73,22 @@ public class TicketController {
     ) {
         ticketUseCase.cancelTicket(userId, ticketId);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "자율 결제", description = "RESERVED 티켓에 대해 쿠키를 차감하고 CONFIRMED 상태로 전환합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "결제 성공"),
+            @ApiResponse(responseCode = "402", description = "쿠키 잔액 부족"),
+            @ApiResponse(responseCode = "403", description = "본인 티켓 아님"),
+            @ApiResponse(responseCode = "404", description = "티켓 없음"),
+            @ApiResponse(responseCode = "409", description = "RESERVED 상태 아님")
+    })
+    @PostMapping("/{ticketId}/pay")
+    public ResponseEntity<TicketResponse> payTicket(
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable Long ticketId
+    ) {
+        return ResponseEntity.ok(selfPaymentUseCase.pay(userId, ticketId));
     }
 
 }

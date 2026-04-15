@@ -25,4 +25,11 @@ public interface TicketJpaRepository extends JpaRepository<Ticket, Long> {
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Ticket t SET t.provideFlag = true WHERE t.id IN :ticketIds")
     int bulkMarkProvided(@Param("ticketIds") List<Long> ticketIds);
+
+    // Bulk Delete: 미결제 RESERVED 티켓 일괄 삭제 (미결제 회수)
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM Ticket t WHERE t.schedule.id = :scheduleId AND t.status = :status")
+    int deleteAllByScheduleIdAndStatus(@Param("scheduleId") Long scheduleId, @Param("status") TicketStatus status);
+
+    long countByScheduleIdAndStatus(Long scheduleId, TicketStatus status);
 }

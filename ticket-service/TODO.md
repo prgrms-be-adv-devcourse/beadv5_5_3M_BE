@@ -47,18 +47,17 @@
 - [x] `ScheduleEventListener` 구현 (AFTER_COMMIT → Quartz 3개 Job 등록만, Redis 초기화 불필요)
 
 ## Phase 4: 장바구니 마감 & 가예약
-- [ ] `CartCloseUseCase` 인터페이스 생성
-- [ ] `CartCloseService` 구현 (Case A: 수요 < 재고 → 전원 가예약 / Case B: 수요 >= 재고 → 선착순 모드)
-- [ ] `TicketCleanupBatchConfig` 생성 (JPQL 미결제 RESERVED 티켓 일괄 DELETE)
-- [ ] `TicketCleanupBatchAdapter` 구현 (TicketCleanupBatchPort)
-- [ ] `TicketJpaRepository`에 `bulkReleaseUnpaid`, `countByScheduleIdAndStatus` 추가
-- [ ] `CartClosedMessage` Kafka DTO 생성
+- [x] `CartCloseUseCase` 인터페이스 생성
+- [x] `CartCloseService` 구현 (Case A: 수요 < 재고 → 전원 가예약 / Case B: 수요 >= 재고 → 선착순 모드)
+- [x] `TicketCleanupBatchAdapter` 구현 (TicketCleanupBatchPort, JPQL bulk DELETE)
+- [x] `TicketJpaRepository`에 `deleteAllByScheduleIdAndStatus`, `countByScheduleIdAndStatus` 추가
+- [x] `CartClosedEvent` + `CartClosedMessage` Kafka DTO 생성
 
 ## Phase 5: 자율 결제 (24시간 Grace Period)
-- [ ] `SelfPaymentUseCase` 인터페이스 생성
-- [ ] `SelfPaymentService` 구현 (RESERVED → CONFIRMED + 쿠키 차감)
-- [ ] `POST /api/tickets/{ticketId}/pay` 엔드포인트 추가
-- [ ] `TicketPaidMessage` Kafka DTO 생성
+- [x] `SelfPaymentUseCase` 인터페이스 생성
+- [x] `SelfPaymentService` 구현 (RESERVED → CONFIRMED + 쿠키 차감, @TransactionalEventListener 패턴)
+- [x] `POST /api/tickets/{ticketId}/pay` 엔드포인트 추가
+- [x] `TicketPaidMessage` Kafka DTO (Phase 1에서 이미 생성됨)
 
 ## Phase 6: 미결제 회수 & 선착순 대기열
 - [ ] `TicketingStartUseCase` 인터페이스 생성

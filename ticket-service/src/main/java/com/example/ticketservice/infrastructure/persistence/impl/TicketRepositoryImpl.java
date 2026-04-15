@@ -53,4 +53,14 @@ public class TicketRepositoryImpl implements TicketRepository{
     public List<Ticket> findAllByScheduleIdAndStatus(Long scheduleId, TicketStatus status) {
         return jpaRepository.findAllByScheduleIdAndStatus(scheduleId, status);
     }
+
+    @Override
+    public int deleteAllByScheduleIdAndStatus(Long scheduleId, TicketStatus status) {
+        return jpaRepository.deleteAllByScheduleIdAndStatus(scheduleId, status);
+    }
+
+    @Override
+    public long countByScheduleIdAndStatus(Long scheduleId, TicketStatus status) {
+        return jpaRepository.countByScheduleIdAndStatus(scheduleId, status);
+    }
 }
