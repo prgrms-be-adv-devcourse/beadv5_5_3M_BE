@@ -40,11 +40,11 @@
 - [x] `TicketRepository`에 대응 인터페이스 메서드 추가
 
 ## Phase 3: 장바구니 시스템
-- [ ] `CartUseCase` 인터페이스 생성
-- [ ] `CartService` 구현 (addToCart, removeFromCart, getMyCart, getCartCount) — Cart 엔티티(DB) 기반
-- [ ] `CartController` 생성 (POST/DELETE/GET /api/cart)
-- [ ] `CartItemResponse` DTO 생성
-- [ ] `ScheduleEventListener` 구현 (AFTER_COMMIT → Quartz 3개 Job 등록만, Redis 초기화 불필요)
+- [x] `CartUseCase` 인터페이스 생성
+- [x] `CartService` 구현 (addToCart, removeFromCart, getMyCart, getCartCount) — Cart 엔티티(DB) 기반
+- [x] `CartController` 생성 (POST/DELETE/GET /api/cart)
+- [x] `CartItemResponse` DTO 생성
+- [x] `ScheduleEventListener` 구현 (AFTER_COMMIT → Quartz 3개 Job 등록만, Redis 초기화 불필요)
 
 ## Phase 4: 장바구니 마감 & 가예약
 - [ ] `CartCloseUseCase` 인터페이스 생성
