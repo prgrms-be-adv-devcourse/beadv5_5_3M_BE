@@ -2,7 +2,7 @@
 
 ## 개요
 
-스케줄 하나당 3개의 Quartz Job이 등록된다.
+스케줄 하나당 5개의 Quartz Job이 등록된다.
 각 Job은 독립적으로 트리거되지만 실행 순서가 보장되어 있고,
 앞 단계의 상태 전이(`schedule.status`)를 뒷 단계가 검증한다.
 
@@ -21,7 +21,9 @@ ScheduleEventListener.handleScheduleInitialized()
   │
   ├─ schedulerPort.scheduleCartCloseJob(scheduleId, ticketingTime.minusHours(24))
   ├─ schedulerPort.scheduleTicketingStartJob(scheduleId, ticketingTime)
-  └─ schedulerPort.scheduleReviewAuthJob(scheduleId, startTime)
+  ├─ schedulerPort.scheduleReviewAuthJob(scheduleId, startTime)
+  ├─ schedulerPort.scheduleStreamingStartJob(scheduleId, startTime)
+  └─ schedulerPort.scheduleStreamingFinishJob(scheduleId, endTime)
 ```
 
 DB 커밋 후 `@TransactionalEventListener(AFTER_COMMIT)`에서 등록하므로
@@ -76,6 +78,30 @@ JobData: scheduleId
     → 각 userId에 Kafka ticket.review-auth 발행
 ```
 
+### Job 4: StreamingStartQuartzJob
+
+```
+트리거:  startTime (공연 시작)
+그룹:    STREAMING_START
+JobData: scheduleId
+
+실행:
+  StreamingStartUseCase.execute(scheduleId)
+    → schedule.startStreaming() → TICKETING → STREAMING
+```
+
+### Job 5: StreamingFinishQuartzJob
+
+```
+트리거:  endTime (공연 종료)
+그룹:    STREAMING_FINISH
+JobData: scheduleId
+
+실행:
+  StreamingFinishUseCase.execute(scheduleId)
+    → schedule.finishStreaming() → STREAMING → FINISH
+```
+
 ---
 
 ## Job 타임라인 시각화
@@ -106,10 +132,19 @@ JobData: scheduleId
     │
     │                                              startTime
     │                                                 │
-    │                                        [Job 3: ReviewAuthJob]
-    │                                        CONFIRMED 티켓 → 리뷰 권한 발행
+    │                                   [Job 3: ReviewAuthJob]
+    │                                   CONFIRMED 티켓 → 리뷰 권한 발행
+    │                                   [Job 4: StreamingStartJob]
+    │                                   → STREAMING
     │
-    startTime
+    │◄──────────────── STREAMING 기간 ───────────────────►│
+    │                                                     │
+    │                                               endTime
+    │                                                 │
+    │                                   [Job 5: StreamingFinishJob]
+    │                                   → FINISH
+    │
+    endTime
 ```
 
 ---
@@ -162,10 +197,12 @@ Job 정보를 DB에 영속화하여 서버 재시작 시에도 예약된 Job이 
 스케줄이 취소되는 경우 `schedulerPort.cancelScheduledJobs(scheduleId)` 호출:
 
 ```java
-// 3개 그룹의 Job을 모두 삭제
+// 5개 그룹의 Job을 모두 삭제
 scheduler.deleteJob(JobKey.jobKey("cartClose-" + scheduleId, "CART_CLOSE"));
 scheduler.deleteJob(JobKey.jobKey("ticketingStart-" + scheduleId, "TICKETING_START"));
 scheduler.deleteJob(JobKey.jobKey("reviewAuth-" + scheduleId, "REVIEW_AUTH"));
+scheduler.deleteJob(JobKey.jobKey("streamingStart-" + scheduleId, "STREAMING_START"));
+scheduler.deleteJob(JobKey.jobKey("streamingFinish-" + scheduleId, "STREAMING_FINISH"));
 ```
 
 ---
@@ -178,6 +215,8 @@ scheduler.deleteJob(JobKey.jobKey("reviewAuth-" + scheduleId, "REVIEW_AUTH"));
 |-----|----------|--------|
 | CartCloseJob | `schedule.status == CART` | `IN_PROGRESSING` |
 | TicketingStartJob | `schedule.status == IN_PROGRESSING` | `TICKETING` |
+| StreamingStartJob | (상태 검증 없음, 공연 시작 시점) | `STREAMING` |
+| StreamingFinishJob | (상태 검증 없음, 공연 종료 시점) | `FINISH` |
 | ReviewAuthJob | (상태 검증 없음, 공연 시작 시점) | 변경 없음 |
 
 상태가 맞지 않으면 예외(`ScheduleErrorCode`)를 던지고 Job 실행을 중단한다.

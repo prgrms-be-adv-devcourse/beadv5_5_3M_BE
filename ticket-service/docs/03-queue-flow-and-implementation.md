@@ -10,14 +10,16 @@ Redis atomic DECR로 재고를 선점하고, ZSet으로 순서를 유지한다.
 
 ## 진입 흐름 (`QueueService.enter`)
 
-> `QueueService.enter()`는 `@Transactional` 없음.
-> 내부 DB 쿼리는 각자 별도 연결. 실제 트랜잭션은 `QueuePurchaseProcessor`가 관리.
+> `QueueService.enter()`는 `@Transactional` 없음, **DB 조회 없음**.
+> TICKETING 상태 확인·seats·cookie·startTime 모두 Redis에서 조회.
+> 실제 트랜잭션은 `QueuePurchaseProcessor`가 관리.
 
 ```
 POST /api/queue/{scheduleId}/enter
   │
   ▼
-schedule.status == TICKETING 검증
+EXISTS stock:schedule:{scheduleId}?  ← Redis 키 존재 = 티켓팅 진행 중
+  ├─ false → QUEUE_NOT_OPEN 에러
   │
   ▼
 Redis DECR stock:schedule:{scheduleId}
@@ -25,9 +27,14 @@ Redis DECR stock:schedule:{scheduleId}
   ├─ stockAfterDecr >= 0  →  [즉시 구매 시도]
   │     │
   │     ▼
+  │  seats = getCounter(seats:schedule:{id})
+  │  ticketNum = seats - stockAfterDecr
+  │     │
+  │     ▼
   │  QueuePurchaseProcessor.tryPurchase()
   │     ├─ 성공: QueueEntryResponse(type=PURCHASED, ticket=...)
   │     └─ 실패(쿠키 부족): INSUFFICIENT_BALANCE 에러 반환
+  │         cookie = getCounter(cookie:schedule:{id})
   │         (stock은 tryPurchase 내부에서 INCR 복구됨)
   │
   └─ stockAfterDecr < 0  →  [재고 없음]
@@ -35,7 +42,7 @@ Redis DECR stock:schedule:{scheduleId}
         └─ Redis INCR 복구 (원복)
         │
         ▼
-     countByScheduleIdAndStatus(RESERVED) > 0?
+     getCounter(paying:schedule:{id}) > 0?
         ├─ false → SOLD_OUT 에러
         └─ true  → [대기열 진입]
               │
@@ -46,6 +53,7 @@ Redis DECR stock:schedule:{scheduleId}
            ZADD queue:schedule:{scheduleId} {timestamp} {userId}
               │
               ▼
+           startTime = get(startTime:schedule:{id})
            TTL 설정 (startTime - 10min)
               │
               ▼
@@ -169,9 +177,9 @@ eventPublisherPort.publish("queue.terminated", ..., new QueueTerminatedMessage(s
 ## ticketNum 계산
 
 ```java
-// schedule.seats = 전체 좌석 수 (예: 100)
+// seats = Redis getCounter("seats:schedule:{id}") → 전체 좌석 수 (예: 100)
 // stockAfterDecr = DECR 후 값 (예: 42 → 43번째 티켓)
-ticketNum = schedule.seats - stockAfterDecr;
+ticketNum = seats - stockAfterDecr;
 // = 100 - 42 = 58번째 티켓
 ```
 
@@ -203,7 +211,7 @@ ticketNum이 중복되지 않는다.
 
 | 에러 | 상황 |
 |------|------|
-| `QUEUE_NOT_OPEN` | schedule.status != TICKETING |
+| `QUEUE_NOT_OPEN` | `stock:schedule:{id}` 키 미존재 (티켓팅 전/후) |
 | `INSUFFICIENT_BALANCE` | 재고 있는데 쿠키 부족 |
 | `ALREADY_IN_QUEUE` | 이미 대기열에 있음 |
-| `SOLD_OUT` | stock=0 AND RESERVED=0 (매진 확정) |
+| `SOLD_OUT` | stock=0 AND paying=0 (매진 확정) |

@@ -7,6 +7,9 @@
 | `cart:count:schedule:{id}` | String (Counter) | `ticketingTime - 24h - now` | ScheduleEventListener |
 | `stock:schedule:{id}` | String (Counter) | `startTime - 10min - now` | TicketingStartService |
 | `paying:schedule:{id}` | String (Counter) | `startTime - 10min - now` | TicketingStartService |
+| `seats:schedule:{id}` | String (Counter) | `startTime - 10min - now` | TicketingStartService |
+| `cookie:schedule:{id}` | String (Counter) | `startTime - 10min - now` | TicketingStartService |
+| `startTime:schedule:{id}` | String (ISO-8601) | `startTime - 10min - now` | TicketingStartService |
 | `queue:schedule:{id}` | ZSet | `startTime - 10min - now` | QueueService.enter() |
 
 ---
@@ -147,7 +150,50 @@ DB `COUNT(RESERVED)` 쿼리를 대체해 O(1)로 판단 가능.
 
 ---
 
-## 4. 대기열
+## 4. 티켓팅 메타데이터 캐시 (seats / cookie / startTime)
+
+`QueueService.enter()` 핫패스에서 DB 조회 없이 동작하기 위해 티켓팅 시작 시점에 함께 캐싱된다.
+`stock` / `paying` 키와 **동일한 TTL**로 설정되므로 항상 같이 존재하거나 같이 만료된다.
+
+```
+key:   seats:schedule:{scheduleId}
+type:  String (정수 인코딩)
+value: 해당 스케줄의 총 좌석 수 (schedule.seats)
+용도:  ticketNum 계산 (ticketNum = seats - stockAfterDecr)
+
+key:   cookie:schedule:{scheduleId}
+type:  String (정수 인코딩)
+value: 티켓 1장 가격 (schedule.cookie)
+용도:  INSUFFICIENT_BALANCE 에러 메시지
+
+key:   startTime:schedule:{scheduleId}
+type:  String (ISO-8601 문자열, e.g. "2026-05-01T19:00:00")
+value: 공연 시작 시각 (schedule.startTime.toString())
+용도:  대기열 TTL 계산 (startTime - 10min - now)
+```
+
+### 생명주기
+
+```
+[설정] TicketingStartService.execute()
+  → cachePort.setCounter("seats:schedule:{id}", schedule.getSeats(), ttl)
+  → cachePort.setCounter("cookie:schedule:{id}", schedule.getCookie(), ttl)
+  → cachePort.set("startTime:schedule:{id}", schedule.getStartTime().toString(), ttl)
+  → TTL = startTime - 10min - now  ← stock 키와 동일
+
+[소멸] TTL 만료 (startTime - 10min)
+```
+
+### 왜 캐싱하는가
+
+`QueueService.enter()`는 초당 수백 건 이상의 동시 요청을 받는 핫패스다.
+원래 `scheduleRepository.findById()`로 `seats`, `cookie`, `startTime`을 조회했으나,
+이 DB 쿼리가 HikariCP 커넥션 풀(max=10)을 고갈시켜 30s 타임아웃 + 500 에러를 유발했다.
+세 값 모두 티켓팅 시작 후 불변이므로 Redis에 캐싱해도 정확성 손실이 없다.
+
+---
+
+## 5. 대기열
 
 ```
 key:   queue:schedule:{scheduleId}

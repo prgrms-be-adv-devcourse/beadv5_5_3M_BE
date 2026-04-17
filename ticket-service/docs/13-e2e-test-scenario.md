@@ -1,4 +1,14 @@
-# E2E 수동 테스트 시나리오
+# E2E 테스트 시나리오
+
+> **자동화 스크립트:** `e2e/e2e_test.py` (Python) — 서비스 기동 후 `python e2e/e2e_test.py` 실행.
+> 45개 테스트 케이스 포함, 500명 동시 진입 시나리오(Scenario E) 검증.
+> 아래 문서는 각 시나리오의 의도와 검증 포인트 참고용이다.
+>
+> **E2E 실행 전 준비:** `e2e/test_users.sql`을 user_db에 적용하고, `e2e/schedule_events.json`의 Kafka 메시지를 발행할 것.
+
+---
+
+## 수동 테스트 가이드
 
 ## 사전 준비
 
@@ -170,6 +180,15 @@ SELECT COUNT(*) FROM tickets WHERE schedule_id = 1 AND status = 'RESERVED';
 ```bash
 redis-cli GET stock:schedule:1
 # 2  (seats=3, CONFIRMED=1 → 잔여=2)
+
+redis-cli GET seats:schedule:1
+# 3  (총 좌석 수 캐시)
+
+redis-cli GET cookie:schedule:1
+# 5000  (티켓 가격 캐시)
+
+redis-cli GET startTime:schedule:1
+# "2026-05-01T19:00:00"  (공연 시작 시각 캐시)
 ```
 
 **Kafka:** `ticketing.started` 이벤트 발행 확인
@@ -356,6 +375,11 @@ redis-cli ZRANGE queue:schedule:{scheduleId} 0 -1 WITHSCORES
 
 # 장바구니 카운터
 redis-cli GET cart:count:schedule:{scheduleId}
+
+# 티켓팅 메타데이터 (TicketingStart 후 존재해야 함)
+redis-cli GET seats:schedule:{scheduleId}
+redis-cli GET cookie:schedule:{scheduleId}
+redis-cli GET startTime:schedule:{scheduleId}
 ```
 
 ## Quartz DB 확인 쿼리

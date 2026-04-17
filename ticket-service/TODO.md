@@ -60,21 +60,26 @@
 - [x] `TicketPaidMessage` Kafka DTO (Phase 1에서 이미 생성됨)
 
 ## Phase 6: 미결제 회수 & 선착순 대기열
-- [ ] `TicketingStartUseCase` 인터페이스 생성
-- [ ] `TicketingStartService` 구현 (미결제 회수 → Redis 재고 설정 → TICKETING 전환)
-- [ ] `QueueUseCase` 인터페이스 생성
-- [ ] `QueueService` 구현 (enterQueue, getQueuePosition, processQueuePurchase)
-- [ ] `QueueController` 생성 (POST enter, GET position, POST purchase)
-- [ ] `QueueEntryResponse`, `QueuePositionResponse` DTO 생성
+- [x] `TicketingStartUseCase` 인터페이스 생성
+- [x] `TicketingStartService` 구현 (미결제 회수 → Redis 재고 설정 → TICKETING 전환)
+- [x] `QueueUseCase` 인터페이스 생성
+- [x] `QueueService` 구현 (enter, getPosition) — DB 조회 없이 Redis 전용 핫패스
+- [x] `QueueController` 생성 (POST enter, GET position)
+- [x] `QueueEntryResponse`, `QueuePositionResponse` DTO 생성
+- [x] `QueueAutoProcessService` 구현 (윈도우 병렬 드레인, @Async)
+- [x] `QueuePurchaseProcessor` 구현 (tryPurchase — @Transactional 분리)
+- [x] `StreamingStartUseCase` + `StreamingStartService` 생성 (TICKETING → STREAMING)
+- [x] `StreamingFinishUseCase` + `StreamingFinishService` 생성 (STREAMING → FINISH)
+- [x] `StreamingStartQuartzJob` + `StreamingFinishQuartzJob` 구현
 
 ## Phase 7: 환불 & 예외 처리
-- [ ] `RefundUseCase` 인터페이스 생성
-- [ ] `RefundService` 구현 (CONFIRMED → AVAILABLE + 재고 복구 + 쿠키 환불 이벤트)
-- [ ] `POST /api/tickets/{ticketId}/refund` 엔드포인트 추가
-- [ ] `TicketRefundedMessage` Kafka DTO 생성
+- [x] `RefundUseCase` 인터페이스 생성
+- [x] `RefundService` 구현 (CONFIRMED → AVAILABLE + 재고 복구 + 쿠키 환불 이벤트)
+- [x] `POST /api/tickets/{ticketId}/refund` 엔드포인트 추가
+- [x] `TicketRefundedMessage` Kafka DTO 생성
 
 ## Phase 8: 통합 & 정리
-- [ ] `GlobalExceptionHandler`에 `QueueException` 핸들러 추가
-- [ ] Swagger 어노테이션 추가 (새 컨트롤러들)
-- [ ] `TicketUseCase` + `TicketService` + `TicketController` 에서 `reserveTicket()` → `purchaseTicket(UUID userId, Long ticketId)` 리네임 및 파라미터 변경 (이미 RESERVED된 티켓 결제 → CONFIRMED)
-- [ ] 전체 빌드 및 정합성 테스트
+- [x] `GlobalExceptionHandler`에 `QueueException` 핸들러 추가
+- [x] Swagger 어노테이션 추가 (새 컨트롤러들)
+- [x] 전체 빌드 및 정합성 테스트 (E2E 45 passed, 500 동시 요청 0.56s)
+- [x] HikariCP 커넥션 풀 고갈 장애 해결 (QueueService 핫패스 DB 제거, pool-size 25로 확대)
