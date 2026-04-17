@@ -108,9 +108,9 @@ jobs:
             echo "──────────────────────────────────"
             echo "🔍 $SERVICE 리뷰 시작"
 
-            # 서비스별 diff 추출 (awk로 해당 서비스 경로 diff 블록만 정확히 추출)
+            # 서비스별 diff 추출 (awk로 해당 서비스 경로 diff 블록만 추출, .md 파일 제외)
             awk -v svc="$SERVICE/" '
-              /^diff --git / { in_svc = ($0 ~ svc) }
+              /^diff --git / { in_svc = ($0 ~ svc) && ($0 !~ /\.md"?$/) }
               in_svc { print }
             ' /tmp/full_pr.diff > /tmp/service_diff.txt || true
 
