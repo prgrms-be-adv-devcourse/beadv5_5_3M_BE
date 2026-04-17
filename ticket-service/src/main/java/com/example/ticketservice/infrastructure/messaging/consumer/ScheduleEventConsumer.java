@@ -46,7 +46,7 @@ public class ScheduleEventConsumer {
         scheduleRepository.save(schedule);
 
         eventPublisher.publishEvent(new ScheduleInitializedEvent(
-                request.scheduleId(), request.ticketingTime(), request.startTime()));
+                request.scheduleId(), request.ticketingTime(), request.startTime(), request.endTime()));
 
         log.debug("Schedule confirmed: scheduleId={}, seats={}", request.scheduleId(), request.seats());
     }

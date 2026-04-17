@@ -1,0 +1,33 @@
+package com.example.ticketservice.infrastructure.scheduling;
+
+import com.example.ticketservice.application.usecase.StreamingStartUseCase;
+import lombok.extern.slf4j.Slf4j;
+import org.quartz.DisallowConcurrentExecution;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+import org.springframework.scheduling.quartz.QuartzJobBean;
+
+@Slf4j
+@DisallowConcurrentExecution
+public class StreamingStartQuartzJob extends QuartzJobBean {
+
+    public static final String SCHEDULE_ID_KEY = "scheduleId";
+
+    private StreamingStartUseCase streamingStartUseCase;
+
+    public void setStreamingStartUseCase(StreamingStartUseCase streamingStartUseCase) {
+        this.streamingStartUseCase = streamingStartUseCase;
+    }
+
+    @Override
+    protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
+        Long scheduleId = context.getJobDetail().getJobDataMap().getLong(SCHEDULE_ID_KEY);
+        log.info("StreamingStartQuartzJob 실행 - scheduleId={}", scheduleId);
+        try {
+            streamingStartUseCase.execute(scheduleId);
+        } catch (Exception e) {
+            log.error("StreamingStartQuartzJob 실패 - scheduleId={}", scheduleId, e);
+            throw new JobExecutionException(e);
+        }
+    }
+}

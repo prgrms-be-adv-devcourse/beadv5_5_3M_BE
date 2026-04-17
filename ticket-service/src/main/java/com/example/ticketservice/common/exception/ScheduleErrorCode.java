@@ -10,7 +10,8 @@ public enum ScheduleErrorCode {
     ALREADY_CONFIRMED(HttpStatus.CONFLICT, "이미 등록된 스케줄입니다: %s"),
     NOT_IN_CART_PERIOD(HttpStatus.CONFLICT, "장바구니 기간이 아닌 스케줄입니다: %s"),
     CART_CLOSED(HttpStatus.CONFLICT, "장바구니가 마감된 스케줄입니다: %s"),
-    NOT_IN_TICKETING(HttpStatus.CONFLICT, "티켓팅 기간이 아닌 스케줄입니다: %s");
+    NOT_IN_TICKETING(HttpStatus.CONFLICT, "티켓팅 기간이 아닌 스케줄입니다: %s"),
+    NOT_IN_STREAMING(HttpStatus.CONFLICT, "스트리밍 중이 아닌 스케줄입니다: %s");
 
     private final HttpStatus status;
     private final String messageTemplate;

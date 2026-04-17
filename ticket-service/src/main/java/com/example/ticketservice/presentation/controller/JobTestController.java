@@ -2,6 +2,8 @@ package com.example.ticketservice.presentation.controller;
 
 import com.example.ticketservice.application.usecase.CartCloseUseCase;
 import com.example.ticketservice.application.usecase.ReviewAuthUseCase;
+import com.example.ticketservice.application.usecase.StreamingFinishUseCase;
+import com.example.ticketservice.application.usecase.StreamingStartUseCase;
 import com.example.ticketservice.application.usecase.TicketingStartUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +25,8 @@ public class JobTestController {
     private final CartCloseUseCase cartCloseUseCase;
     private final TicketingStartUseCase ticketingStartUseCase;
     private final ReviewAuthUseCase reviewAuthUseCase;
+    private final StreamingStartUseCase streamingStartUseCase;
+    private final StreamingFinishUseCase streamingFinishUseCase;
 
     @Operation(summary = "장바구니 마감 트리거",
             description = "CartCloseQuartzJob 수동 실행 — Case A/B 분기, CART → IN_PROGRESSING")
@@ -45,6 +49,22 @@ public class JobTestController {
     @PostMapping("/review-auth/{scheduleId}")
     public ResponseEntity<Void> reviewAuth(@PathVariable Long scheduleId) {
         reviewAuthUseCase.publishReviewAuth(scheduleId);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "스트리밍 시작 트리거",
+            description = "StreamingStartQuartzJob 수동 실행 — TICKETING → STREAMING")
+    @PostMapping("/streaming-start/{scheduleId}")
+    public ResponseEntity<Void> streamingStart(@PathVariable Long scheduleId) {
+        streamingStartUseCase.execute(scheduleId);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "스트리밍 종료 트리거",
+            description = "StreamingFinishQuartzJob 수동 실행 — STREAMING → FINISH")
+    @PostMapping("/streaming-finish/{scheduleId}")
+    public ResponseEntity<Void> streamingFinish(@PathVariable Long scheduleId) {
+        streamingFinishUseCase.execute(scheduleId);
         return ResponseEntity.ok().build();
     }
 }

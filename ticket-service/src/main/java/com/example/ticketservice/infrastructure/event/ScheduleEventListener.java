@@ -27,8 +27,10 @@ public class ScheduleEventListener {
         schedulerPort.scheduleCartCloseJob(event.scheduleId(), event.ticketingTime().minusHours(24));
         schedulerPort.scheduleTicketingStartJob(event.scheduleId(), event.ticketingTime());
         schedulerPort.scheduleReviewAuthJob(event.scheduleId(), event.startTime());
-        log.info("Quartz Job 등록 완료 - scheduleId={}, ticketingTime={}, startTime={}",
-                event.scheduleId(), event.ticketingTime(), event.startTime());
+        schedulerPort.scheduleStreamingStartJob(event.scheduleId(), event.startTime());
+        schedulerPort.scheduleStreamingFinishJob(event.scheduleId(), event.endTime());
+        log.info("Quartz Job 등록 완료 - scheduleId={}, ticketingTime={}, startTime={}, endTime={}",
+                event.scheduleId(), event.ticketingTime(), event.startTime(), event.endTime());
 
         Duration ttl = Duration.between(LocalDateTime.now(), event.ticketingTime().minusHours(24));
         if (!ttl.isNegative() && !ttl.isZero()) {

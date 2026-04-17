@@ -90,6 +90,22 @@ public class Schedule {
         this.status = ScheduleStatus.TICKETING;
     }
 
+    // 스트리밍 시작: TICKETING → STREAMING
+    public void startStreaming() {
+        if (this.status != ScheduleStatus.TICKETING) {
+            throw ScheduleErrorCode.NOT_IN_TICKETING.of(this.id);
+        }
+        this.status = ScheduleStatus.STREAMING;
+    }
+
+    // 스트리밍 종료: STREAMING → FINISH
+    public void finishStreaming() {
+        if (this.status != ScheduleStatus.STREAMING) {
+            throw ScheduleErrorCode.NOT_IN_STREAMING.of(this.id);
+        }
+        this.status = ScheduleStatus.FINISH;
+    }
+
     public void decreaseSeats() {
         this.seats--;
     }

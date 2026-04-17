@@ -23,8 +23,11 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class TicketingStartService implements TicketingStartUseCase {
 
-    static final String STOCK_KEY_PREFIX = "stock:schedule:";
-    static final String PAYING_KEY_PREFIX = "paying:schedule:";
+    static final String STOCK_KEY_PREFIX     = "stock:schedule:";
+    static final String PAYING_KEY_PREFIX    = "paying:schedule:";
+    static final String SEATS_KEY_PREFIX     = "seats:schedule:";
+    static final String COOKIE_KEY_PREFIX    = "cookie:schedule:";
+    static final String START_TIME_KEY_PREFIX = "startTime:schedule:";
 
     private final ScheduleRepository scheduleRepository;
     private final TicketRepository ticketRepository;
@@ -50,6 +53,9 @@ public class TicketingStartService implements TicketingStartUseCase {
         if (!ttl.isNegative() && !ttl.isZero()) {
             cachePort.setCounter(STOCK_KEY_PREFIX + scheduleId, remaining, ttl);
             cachePort.setCounter(PAYING_KEY_PREFIX + scheduleId, 0, ttl);
+            cachePort.setCounter(SEATS_KEY_PREFIX + scheduleId, schedule.getSeats(), ttl);
+            cachePort.setCounter(COOKIE_KEY_PREFIX + scheduleId, schedule.getCookie(), ttl);
+            cachePort.set(START_TIME_KEY_PREFIX + scheduleId, schedule.getStartTime().toString(), ttl);
         }
 
         // 4. IN_PROGRESSING → TICKETING

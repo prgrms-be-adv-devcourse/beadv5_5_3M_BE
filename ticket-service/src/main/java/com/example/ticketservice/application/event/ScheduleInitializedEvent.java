@@ -5,5 +5,6 @@ import java.time.LocalDateTime;
 public record ScheduleInitializedEvent(
         Long scheduleId,
         LocalDateTime ticketingTime,
-        LocalDateTime startTime
+        LocalDateTime startTime,
+        LocalDateTime endTime
 ) {}

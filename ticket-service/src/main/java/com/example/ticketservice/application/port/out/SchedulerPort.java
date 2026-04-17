@@ -10,5 +10,9 @@ public interface SchedulerPort {
 
     void scheduleReviewAuthJob(Long scheduleId, LocalDateTime triggerTime);
 
+    void scheduleStreamingStartJob(Long scheduleId, LocalDateTime triggerTime);
+
+    void scheduleStreamingFinishJob(Long scheduleId, LocalDateTime triggerTime);
+
     void cancelScheduledJobs(Long scheduleId);
 }

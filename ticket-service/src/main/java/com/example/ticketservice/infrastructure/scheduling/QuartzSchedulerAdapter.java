@@ -18,6 +18,8 @@ public class QuartzSchedulerAdapter implements SchedulerPort {
     private static final String CART_CLOSE_GROUP = "CART_CLOSE";
     private static final String TICKETING_START_GROUP = "TICKETING_START";
     private static final String REVIEW_AUTH_GROUP = "REVIEW_AUTH";
+    private static final String STREAMING_START_GROUP = "STREAMING_START";
+    private static final String STREAMING_FINISH_GROUP = "STREAMING_FINISH";
 
     private final Scheduler scheduler;
 
@@ -55,10 +57,34 @@ public class QuartzSchedulerAdapter implements SchedulerPort {
     }
 
     @Override
+    public void scheduleStreamingStartJob(Long scheduleId, LocalDateTime triggerTime) {
+        JobDetail job = JobBuilder.newJob(StreamingStartQuartzJob.class)
+                .withIdentity("StreamingStartJob_" + scheduleId, STREAMING_START_GROUP)
+                .usingJobData(StreamingStartQuartzJob.SCHEDULE_ID_KEY, scheduleId)
+                .storeDurably()
+                .build();
+        Trigger trigger = buildTrigger("StreamingStartTrigger_" + scheduleId, STREAMING_START_GROUP, triggerTime);
+        scheduleJob(job, trigger, scheduleId, "StreamingStart");
+    }
+
+    @Override
+    public void scheduleStreamingFinishJob(Long scheduleId, LocalDateTime triggerTime) {
+        JobDetail job = JobBuilder.newJob(StreamingFinishQuartzJob.class)
+                .withIdentity("StreamingFinishJob_" + scheduleId, STREAMING_FINISH_GROUP)
+                .usingJobData(StreamingFinishQuartzJob.SCHEDULE_ID_KEY, scheduleId)
+                .storeDurably()
+                .build();
+        Trigger trigger = buildTrigger("StreamingFinishTrigger_" + scheduleId, STREAMING_FINISH_GROUP, triggerTime);
+        scheduleJob(job, trigger, scheduleId, "StreamingFinish");
+    }
+
+    @Override
     public void cancelScheduledJobs(Long scheduleId) {
         deleteJob("CartCloseJob_" + scheduleId, CART_CLOSE_GROUP, scheduleId);
         deleteJob("TicketingStartJob_" + scheduleId, TICKETING_START_GROUP, scheduleId);
         deleteJob("ReviewAuthJob_" + scheduleId, REVIEW_AUTH_GROUP, scheduleId);
+        deleteJob("StreamingStartJob_" + scheduleId, STREAMING_START_GROUP, scheduleId);
+        deleteJob("StreamingFinishJob_" + scheduleId, STREAMING_FINISH_GROUP, scheduleId);
     }
 
     private Trigger buildTrigger(String name, String group, LocalDateTime triggerTime) {
