@@ -1,6 +1,5 @@
 package com.example.userservice.domain.model;
 
-import com.example.userservice.application.exception.InsufficientCookieException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
@@ -55,8 +54,8 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
-    @Schema(description = "쿠키 잔액", example = "10")
-    private Integer balance;
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Wallet wallet;
 
     @Schema(description = "생성일시")
     private LocalDateTime createAt;
@@ -72,7 +71,6 @@ public class User {
         user.role = Role.USER;
         user.saltKey = generateSalt();
         user.password = new BCryptPasswordEncoder().encode(rawPassword + user.saltKey);
-        user.balance = 0;
         return user;
     }
 
@@ -88,16 +86,8 @@ public class User {
         if (profileUrl != null) this.profileUrl = profileUrl;
     }
 
-    public void deductCookie(Integer amount) {
-        if (this.balance - amount < 0) {
-            throw new InsufficientCookieException();
-        }
-
-        this.balance -= amount;
-    }
-
-    public void addCookie(Integer amount) {
-        this.balance += amount;
+    public Integer getBalance() {
+        return wallet != null ? wallet.getBalance() : 0;
     }
 
     @PrePersist
