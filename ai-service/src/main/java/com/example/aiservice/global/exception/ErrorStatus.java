@@ -16,6 +16,11 @@ public enum ErrorStatus implements BaseErrorCode {
 
     // Kafka
     KAFKA_PUBLISH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "KAFKA_PUBLISH_FAILED", "Kafka 메시지 발행에 실패했습니다"),
+
+    // Creator
+    CREATOR_NOT_FOUND(HttpStatus.NOT_FOUND, "CREATOR_NOT_FOUND", "크리에이터를 찾을 수 없습니다"),
+
+
     ;
 
     private final HttpStatus httpStatus;
