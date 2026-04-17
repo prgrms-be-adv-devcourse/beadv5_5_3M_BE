@@ -4,8 +4,8 @@ import com.example.ticketservice.application.port.out.CachePort;
 import com.example.ticketservice.application.port.out.EventPublisherPort;
 import com.example.ticketservice.domain.repository.ScheduleRepository;
 import com.example.ticketservice.infrastructure.messaging.dto.event.QueueTerminatedMessage;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -13,10 +13,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class QueueAutoProcessService {
 
     static final String STOCK_KEY_PREFIX = "stock:schedule:";
@@ -28,12 +28,25 @@ public class QueueAutoProcessService {
     private final ScheduleRepository scheduleRepository;
     private final QueuePurchaseProcessor purchaseProcessor;
     private final EventPublisherPort eventPublisherPort;
+    private final Executor queueExecutor;
+
+    public QueueAutoProcessService(CachePort cachePort,
+                                   ScheduleRepository scheduleRepository,
+                                   QueuePurchaseProcessor purchaseProcessor,
+                                   EventPublisherPort eventPublisherPort,
+                                   @Qualifier("queueExecutor") Executor queueExecutor) {
+        this.cachePort = cachePort;
+        this.scheduleRepository = scheduleRepository;
+        this.purchaseProcessor = purchaseProcessor;
+        this.eventPublisherPort = eventPublisherPort;
+        this.queueExecutor = queueExecutor;
+    }
 
     /**
      * 재고 복구 시 or 결제 완료 후 대기열을 드레인하고 종료 조건을 체크한다.
-     * @Async: 호출 스레드(트랜잭션)를 블록하지 않음
+     * @Async("queueExecutor"): 전용 스레드풀에서 비동기 실행하여 호출 스레드 블록 방지
      */
-    @Async
+    @Async("queueExecutor")
     public void checkAndProcess(Long scheduleId) {
         Long queueSize = cachePort.getZSetSize(QUEUE_KEY_PREFIX + scheduleId);
         if (queueSize == null || queueSize == 0) {
@@ -101,7 +114,7 @@ public class QueueAutoProcessService {
 
     /**
      * 수집된 tasks를 CompletableFuture로 병렬 실행 후 전체 완료 대기.
-     * ForkJoinPool.commonPool() 사용 → @Async 스레드풀과 분리되어 데드락 없음.
+     * queueExecutor 전용 스레드풀 사용 → commonPool 경합 제거, 스레드 수 명시적 제어.
      * 각 task는 완료(성공/실패/예외) 후 paying DECR.
      */
     private void processWindowParallel(Long scheduleId, List<PurchaseTask> tasks) {
@@ -117,7 +130,7 @@ public class QueueAutoProcessService {
                     } finally {
                         cachePort.decrement(payingKey);
                     }
-                }))
+                }, queueExecutor))
                 .toList();
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
