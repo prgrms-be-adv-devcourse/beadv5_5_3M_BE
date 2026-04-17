@@ -3,6 +3,8 @@ package com.example.aiservice.application.service;
 import com.example.aiservice.application.usecase.UserPreferenceUseCase;
 import com.example.aiservice.domain.model.UserPreference;
 import com.example.aiservice.domain.model.enums.Gender;
+import com.example.aiservice.domain.repository.RecommendedMovieRepository;
+import com.example.aiservice.domain.repository.UserInteractionHistoryRepository;
 import com.example.aiservice.domain.repository.UserPreferenceRepository;
 import com.example.aiservice.infrastructure.kafka.dto.consume.UserCreatedMessage;
 import com.example.aiservice.infrastructure.kafka.dto.consume.UserDeletedMessage;
@@ -16,9 +18,12 @@ import java.time.LocalDateTime;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserPreferenceService implements UserPreferenceUseCase {
 
     private final UserPreferenceRepository userPreferenceRepository;
+    private final UserInteractionHistoryRepository userInteractionHistoryRepository;
+    private final RecommendedMovieRepository recommendedMovieRepository;
 
     @Override
     @Transactional
@@ -44,9 +49,9 @@ public class UserPreferenceService implements UserPreferenceUseCase {
     @Override
     @Transactional
     public void handleUserDeleted(UserDeletedMessage msg) {
-        // TODO(movie-sync): user_interaction_history DELETE WHERE user_id = ?
-        // TODO(movie-sync): recommended_movie DELETE WHERE user_id = ?
         // TODO(recommendation-api): recommended_log DELETE WHERE user_id = ?
+        userInteractionHistoryRepository.deleteByUserId(msg.userId());
+        recommendedMovieRepository.deleteByUserId(msg.userId());
         userPreferenceRepository.deleteById(msg.userId());
         log.info("[Kafka] user.deleted 처리 완료 - userId: {}", msg.userId());
     }
