@@ -3,12 +3,10 @@ package com.example.paymentservice.payment.presentation;
 import com.example.paymentservice.payment.application.PaymentService;
 import com.example.paymentservice.payment.application.dto.PaymentInfo;
 import com.example.paymentservice.payment.presentation.dto.PaymentConfirmRequest;
-import com.example.paymentservice.payment.presentation.dto.PaymentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,19 +21,12 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
-    @Operation(summary = "결제 생성", description = "Toss 결제를 위한 결제 건을 생성한다.")
-    @PostMapping
-    public ResponseEntity<PaymentInfo> createPayment(
-            @RequestHeader("X-User-Id") UUID userId,
-            @RequestBody @Valid PaymentRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(paymentService.createPayment(request.toCommand(userId)));
-    }
-
-    @Operation(summary = "결제 승인", description = "Toss 결제 완료 후 paymentKey/orderId를 전달받아 결제를 승인한다.")
+    @Operation(summary = "결제 승인", description = "Toss 결제 완료 후 paymentKey/orderId/금액을 전달받아 결제를 생성하고 승인한다.")
     @PostMapping("/confirm")
-    public ResponseEntity<PaymentInfo> confirmPayment(@RequestBody @Valid PaymentConfirmRequest request) {
-        return ResponseEntity.ok(paymentService.confirmPayment(request.toCommand()));
+    public ResponseEntity<PaymentInfo> confirmPayment(
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestBody @Valid PaymentConfirmRequest request) {
+        return ResponseEntity.ok(paymentService.confirmPayment(request.toCommand(userId)));
     }
 
     @Operation(summary = "결제 실패 처리", description = "결제 건을 실패 상태로 변경한다.")

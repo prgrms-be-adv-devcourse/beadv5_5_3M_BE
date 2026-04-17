@@ -51,14 +51,9 @@ public class Payment {
         payment.userId = userId;
         payment.amount = amount;
         payment.cookieAmount = cookieAmount;
-        payment.status = PaymentStatus.READY;
+        payment.status = PaymentStatus.IN_PROGRESS;
         payment.createdAt = LocalDateTime.now();
         return payment;
-    }
-
-    public void markInProgress() {
-        validateNotProcessed();
-        this.status = PaymentStatus.IN_PROGRESS;
     }
 
     public void markSuccess(String paymentKey, String orderId) {
@@ -78,9 +73,4 @@ public class Payment {
         this.status = PaymentStatus.CANCELLED;
     }
 
-    private void validateNotProcessed() {
-        if (this.status == PaymentStatus.SUCCESS || this.status == PaymentStatus.FAILED) {
-            throw new BusinessException(ErrorCode.PAYMENT_ALREADY_PROCESSED);
-        }
-    }
 }
