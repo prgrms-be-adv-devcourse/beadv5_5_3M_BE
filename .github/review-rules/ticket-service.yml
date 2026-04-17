@@ -3,11 +3,184 @@ scope: service
 service: ticket-service
 
 rules:
+  # ──────────────────────────────────────────────
+  # TKT: 도메인 로직 / 동시성 / 정합성
+  # ──────────────────────────────────────────────
+
   - id: TKT-001
     severity: CRITICAL
-    title: 티켓 조회 시 비관적 락 누락
+    title: paying 카운터 finally 블록 외부 감소
     description: >
-      AVAILABLE 티켓을 조회하는 쿼리(findFirstAvailableBySchedule 등)에
-      @Lock(LockModeType.PESSIMISTIC_WRITE)가 없는 경우.
-      동시 요청 시 동일 티켓을 두 사용자가 예약하여 초과 예약 발생.
-      상태 전이(AVAILABLE→RESERVED)를 수반하는 모든 조회는 SELECT FOR UPDATE 필요.
+      QueueAutoProcessService.processWindowParallel()에서 paying 카운터 감소
+      (cachePort.decrement(PAYING_KEY_PREFIX + scheduleId))가 finally 블록 밖에
+      위치한 경우.
+      예외 발생 시 paying이 영구적으로 누적되어 checkTermination()의
+      "stock <= 0 && paying <= 0 && queue > 0" 종료 조건이 절대 충족되지 않음.
+      결과적으로 잔여 대기자가 큐에서 영구 대기하고 queue.terminated 이벤트가
+      발행되지 않아 해당 scheduleId의 큐 자원이 TTL 만료 전까지 누수됨.
+      정상 패턴: try { tryPurchase() } catch (Exception e) { cachePort.increment(stockKey) }
+      finally { cachePort.decrement(payingKey) }
+
+  - id: TKT-002
+    severity: CRITICAL
+    title: DECR 후 ZPOPMIN null 반환 시 stock 미복구
+    description: >
+      QueueAutoProcessService.collectWindow()에서 cachePort.decrement(STOCK_KEY_PREFIX)
+      성공 후 cachePort.popMinFromZSet(QUEUE_KEY_PREFIX)가 null을 반환(큐 비어있음)했을 때
+      cachePort.increment(STOCK_KEY_PREFIX)로 stock을 복구하지 않는 경우.
+      DECR과 ZPOPMIN은 원자적이지 않으므로, stock을 먼저 감소시킨 뒤 큐에서 사용자를
+      꺼내지 못하면 해당 좌석은 영구적으로 감소한 채 복구되지 않음.
+      실제 잔여 좌석이 있어도 SOLD_OUT으로 처리되거나 이후 드레인 윈도우가 과소하게 계산됨.
+      정상 패턴: popMin 결과가 null이면 즉시 stock INCR 후 해당 슬롯 스킵.
+
+  - id: TKT-003
+    severity: CRITICAL
+    title: ticketProvideJob — bulkMarkProvided 후 Kafka 발행 누락 또는 단일 KafkaTemplate 사용
+    description: >
+      TicketProvideBatchConfig의 ticketProvideStep Tasklet에서 아래 두 가지 패턴 중 하나:
+      (1) ticketJpaRepository.bulkMarkProvided(ticketIds) 실행 후
+          eventPublisherPort.publish(TOPIC, ...) 호출이 없거나 예외로 건너뛰는 경우.
+      (2) 배치 Kafka 발행에 @Primary KafkaTemplate(단일 이벤트 최적화)을 사용하고
+          @Qualifier("bulkKafkaTemplate")(batch.size=64KB, linger.ms=20, lz4)을
+          사용하지 않는 경우.
+      (1)의 위험: DB에 provideFlag=true가 기록됐으나 ticket.provide 이벤트 미전달 →
+      settlement-service가 정산을 처리하지 못해 크리에이터 정산 누락.
+      (2)의 위험: 대량 티켓에 대해 단일 KafkaTemplate으로 발행 시 네트워크 요청 폭발 및
+      Kafka 브로커 부하 급증.
+      정상 패턴: bulkMarkProvided → messages.forEach(eventPublisherPort.publish) 순서 보장,
+      TicketProvideBatchAdapter에 @Qualifier("bulkKafkaTemplate") 주입 확인.
+
+  - id: TKT-004
+    severity: HIGH
+    title: SelfPayment 쿠키 차감 실패 시 stock 복구 경로 오류
+    description: >
+      SelfPaymentService.pay()에서 userPort.deductTicketFee() 결과 flag==false
+      (잔액 부족)일 때 아래 두 가지 오류 패턴:
+      (1) cachePort.exists(STOCK_KEY_PREFIX + scheduleId) 체크 없이 stock을 무조건 INCR.
+          TICKETING 단계가 아닐 때 존재하지 않는 stock 키가 생성되어 이후 QueueService에서
+          QUEUE_NOT_OPEN 체크를 우회하거나 잘못된 재고 값이 세팅됨.
+      (2) stock INCR 자체를 생략.
+          해당 RESERVED 티켓을 점유한 재고가 복구되지 않아 잔여 대기자가 구매 기회를 잃음.
+      두 경우 모두 queueAutoProcessService.checkAndProcess(scheduleId) 호출도 누락되면
+      대기열 드레인이 중단됨.
+      정상 패턴: if (cachePort.exists(STOCK_KEY_PREFIX + scheduleId)) {
+        cachePort.increment(STOCK_KEY_PREFIX + scheduleId);
+        queueAutoProcessService.checkAndProcess(scheduleId); }
+
+  - id: TKT-005
+    severity: HIGH
+    title: StreamingStart/Finish Job 상태 전이 가드 누락
+    description: >
+      StreamingStartService.execute() 또는 StreamingFinishService.execute()에서
+      schedule.startStreaming() / schedule.finishStreaming() 호출 전에
+      현재 scheduleStatus 검증(guard)이 없는 경우.
+      Quartz Job은 @DisallowConcurrentExecution으로 중복 실행을 방지하지만,
+      잡 재실행(misfire), 클러스터 페일오버, 수동 트리거 등 예외 상황에서
+      이미 FINISH 상태인 스케줄에 startStreaming()을 호출하거나
+      STREAMING 상태가 아닌데 finishStreaming()을 호출할 수 있음.
+      도메인 엔티티의 상태 전이 메서드에 가드가 있더라도 서비스 레이어에서
+      명시적 검증 없이 예외를 그냥 throw하면 Quartz Job이 FAILED로 기록되고
+      재시도 트리거에서 무한 루프 위험.
+      정상 패턴: execute() 진입 시 schedule.getStatus() == 기대_상태 아니면 early return.
+
+  - id: TKT-006
+    severity: HIGH
+    title: '@Transactional 내 Quartz Job 직접 등록 (AFTER_COMMIT 우회)'
+    description: >
+      @Transactional 메서드 내부에서 schedulerPort.scheduleCartCloseJob() 등을
+      직접 호출하는 경우 (ScheduleEventListener의 @TransactionalEventListener를
+      거치지 않는 경우).
+      DB 트랜잭션이 롤백되더라도 Quartz JDBC Job Store에 이미 등록된 Job은
+      롤백되지 않아, 존재하지 않는 scheduleId에 대해 CartCloseQuartzJob 등이
+      실행됨 → ScheduleException(NOT_FOUND) 반복 발생, Quartz FAILED 잡 누적.
+      정상 패턴: 반드시 @TransactionalEventListener(phase = AFTER_COMMIT) 내에서
+      schedulerPort 호출. @Transactional 메서드에서는 ApplicationEventPublisher로
+      이벤트만 발행.
+
+  - id: TKT-007
+    severity: HIGH
+    title: DailyTicketFeeProvideScheduler 클러스터 중복 실행 방지 장치 없음
+    description: >
+      DailyTicketFeeProvideScheduler에 @Scheduled(cron = "0 0 1 * * *")만 사용하고
+      ShedLock, Quartz Job Store 클러스터 모드, 또는 분산 락 등 중복 실행 방지 장치가
+      없는 경우.
+      @Scheduled는 모든 JVM 인스턴스에서 독립적으로 실행되므로, 다중 인스턴스 배포 시
+      같은 시각에 ticketProvideJob이 여러 번 실행됨.
+      bulkMarkProvided는 멱등적(@Modifying UPDATE)이나 ticket.provide Kafka 이벤트는
+      중복 발행되어 settlement-service에서 이중 정산 처리 가능성 있음.
+      현재 단일 EC2이더라도 배포 전략(Rolling, Blue-Green) 전환 시 순간적으로
+      두 인스턴스가 공존하면 동일 위험 발생.
+      정상 패턴: Quartz 클러스터 모드(org.quartz.jobStore.isClustered=true) 활용
+      또는 @SchedulerLock(ShedLock) 적용.
+
+  # ──────────────────────────────────────────────
+  # RES: 리소스 (t3.large 단일 EC2 — 2 vCPU, 8GB RAM)
+  # ──────────────────────────────────────────────
+
+  - id: RES-001
+    severity: CRITICAL
+    title: Dockerfile JVM 힙 제한 없음 — 단일 EC2 OOM 위험
+    description: >
+      ticket-service Dockerfile의 ENTRYPOINT에 -Xmx, -Xms, -XX:MaxRAMPercentage,
+      JAVA_TOOL_OPTIONS 등 JVM 힙 상한 설정이 전혀 없는 경우.
+      Java 21은 컨테이너 메모리 제한이 없으면 호스트 전체 RAM을 기준으로 힙을 산정
+      (기본 MaxRAMPercentage=25%). 8GB 호스트라면 서비스당 최대 ~2GB.
+      8개 서비스가 동시에 힙을 확장하면 총 16GB 요구 → Linux OOM Killer 발동,
+      컨테이너 랜덤 종료, 서비스 다운.
+      특히 ticketProvideJob(배치) + 큐 드레인 병렬처리가 동시에 발생하는
+      1:00 AM 전후에 메모리 스파이크 가능성이 높음.
+      정상 패턴: JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:InitialRAMPercentage=25.0"
+      + docker-compose의 deploy.resources.limits.memory 또는 mem_limit 설정.
+
+  - id: RES-002
+    severity: CRITICAL
+    title: '@Async 전용 스레드풀 미설정 — SimpleAsyncTaskExecutor 스레드 무제한 생성'
+    description: >
+      QueueAutoProcessService.checkAndProcess()의 @Async가 Bean qualifier 없이
+      사용되고 @Bean ThreadPoolTaskExecutor가 별도 정의되지 않은 경우.
+      Spring Boot 기본값인 SimpleAsyncTaskExecutor는 매 @Async 호출마다 새 OS 스레드를
+      생성(스레드 풀링 없음). refund → stock INCR → checkAndProcess(), 결제 완료 →
+      checkAndProcess() 등 이벤트가 연속 발생하면 스레드가 무제한으로 생성됨.
+      2 vCPU(t3.large)에서 스레드 수백 개는 컨텍스트 스위칭 오버헤드로 CPU 버스트
+      크레딧을 급격히 소진시키고, 스택 메모리(기본 512KB~1MB/스레드) 누적으로
+      OOM까지 발생 가능.
+      정상 패턴:
+        @Bean("queueExecutor")
+        public ThreadPoolTaskExecutor queueExecutor() {
+          executor.setCorePoolSize(2); executor.setMaxPoolSize(4);
+          executor.setQueueCapacity(50); ... }
+        @Async("queueExecutor") public void checkAndProcess(...)
+
+  - id: RES-003
+    severity: HIGH
+    title: CompletableFuture.runAsync() 기본 commonPool 사용 — 2 vCPU 환경 직렬화
+    description: >
+      QueueAutoProcessService.processWindowParallel()에서
+      CompletableFuture.runAsync(task) 또는 supplyAsync(task)를
+      Executor 인자 없이 호출하는 경우.
+      Executor 미지정 시 ForkJoinPool.commonPool()을 사용하며,
+      commonPool 병렬도 = Runtime.availableProcessors() - 1.
+      Docker 컨테이너가 CPU 쿼터 미설정 상태로 t3.large(2 vCPU)에서 실행되면
+      병렬도 = 1 → 윈도우 내 병렬처리가 사실상 직렬 실행, 큐 드레인 지연.
+      또한 @Async 스레드(RES-002 참고)와 commonPool 스레드를 함께 사용하면
+      2 vCPU에서 스레드 경합이 심해지고, allOf().join()이 commonPool 스레드를
+      블록하는 경우 데드락 위험.
+      정상 패턴: 전용 ThreadPoolExecutor(또는 queueExecutor)를
+      runAsync() 두 번째 인자로 전달하여 스레드 수를 명시적으로 제어.
+
+  - id: RES-004
+    severity: HIGH
+    title: HikariCP maximum-pool-size 인상 시 PostgreSQL max_connections 초과 위험
+    description: >
+      ticket-service의 HikariCP maximum-pool-size를 현재(25)보다 높게 설정하거나,
+      다른 서비스의 풀 크기를 인상하여 전체 서비스 합산 커넥션 수가
+      PostgreSQL max_connections(기본값 100)를 초과하는 경우.
+      현황: ticket-service 25 × 1 + 나머지 7개 서비스의 풀 합산이 100을 초과하면
+      신규 커넥션 획득 실패(HikariCP connectionTimeout 30s 후 SQLException).
+      단일 EC2에서 PostgreSQL도 같은 머신에서 실행 중이므로 max_connections가
+      별도로 튜닝되지 않았을 가능성이 높음.
+      배치 실행 시 JPA가 다수의 커넥션을 동시에 점유하여 다른 서비스 요청이
+      커넥션 대기 → 응답 지연 전파.
+      정상 패턴: PostgreSQL max_connections 확인 후 (max_connections - 여유분) / 서비스수
+      로 각 서비스의 maximum-pool-size 상한 설정. ticket-service는 배치 실행 고려해
+      다른 서비스보다 약간 높게 유지하되 합산은 max_connections 이내로 제한.
