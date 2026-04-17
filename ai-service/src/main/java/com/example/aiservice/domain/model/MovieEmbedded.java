@@ -1,6 +1,5 @@
 package com.example.aiservice.domain.model;
 
-import com.pgvector.PGvector;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -18,9 +17,9 @@ public class MovieEmbedded {
     @Column(name = "movie_id")
     private Long movieId;
 
-    // 차원수는 임베딩 모델 결정 후 DDL에서 확정 (현재 placeholder)
-    @Column(name = "embedding", columnDefinition = "vector")
-    private PGvector embedding;
+    @JdbcTypeCode(SqlTypes.VECTOR)
+    @Column(name = "embedding", columnDefinition = "vector(1536)")
+    private float[] embedding;
 
     @Column(name = "summary", columnDefinition = "text")
     private String summary;
