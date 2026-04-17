@@ -50,3 +50,5 @@ __pycache__/
 
 # 캐시 및 임시 파일
 .cache/
+
+docs/
