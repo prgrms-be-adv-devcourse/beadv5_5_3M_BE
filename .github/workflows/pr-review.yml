@@ -108,9 +108,17 @@ jobs:
             echo "──────────────────────────────────"
             echo "🔍 $SERVICE 리뷰 시작"
 
-            # 서비스별 diff 추출 (awk로 해당 서비스 경로 diff 블록만 추출, .md 파일 제외)
+            # 서비스별 diff 추출 (awk로 해당 서비스 경로 diff 블록만 추출)
+            # 제외: 문서·테스트·빌드·스크립트 등 리뷰 불필요 파일
             awk -v svc="$SERVICE/" '
-              /^diff --git / { in_svc = ($0 ~ svc) && ($0 !~ /\.md"?$/) }
+              /^diff --git / {
+                excluded = ($0 ~ /\.(md|sql|py|gradle|json|sh|txt|gitignore)"?$/) ||
+                           ($0 ~ /gradlew(\.bat)?"?$/) ||
+                           ($0 ~ /(Test|Tests)\.java"?$/) ||
+                           ($0 ~ /\/e2e\//) ||
+                           ($0 ~ /\/local\//)
+                in_svc = ($0 ~ svc) && !excluded
+              }
               in_svc { print }
             ' /tmp/full_pr.diff > /tmp/service_diff.txt || true
 
