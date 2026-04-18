@@ -6,7 +6,9 @@ import com.example.ticketservice.application.dto.response.DeductCookieResponse;
 import com.example.ticketservice.application.dto.response.RefundCookieResponse;
 import com.example.ticketservice.application.port.out.UserPort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -24,6 +26,9 @@ public class UserClient implements UserPort {
                     .body(request)
                     .retrieve()
                     .body(DeductCookieResponse.class);
+        } catch (HttpClientErrorException e) {
+            // 4xx: 잔액 부족(402), 유저 없음(404) 등 — 차감 실패로 처리
+            return new DeductCookieResponse(null, null, null, false);
         } catch (RestClientException e) {
             throw new RuntimeException(e);
         }
@@ -38,6 +43,9 @@ public class UserClient implements UserPort {
                     .body(request)
                     .retrieve()
                     .body(RefundCookieResponse.class);
+        } catch (HttpClientErrorException e) {
+            // 4xx: 환불 대상 없음 등 클라이언트 오류 — flag=false 응답으로 변환하여 호출부에서 처리
+            return new RefundCookieResponse(request.userId(), request.ticketId(), 0, false);
         } catch (RestClientException e) {
             throw new RuntimeException(e);
         }

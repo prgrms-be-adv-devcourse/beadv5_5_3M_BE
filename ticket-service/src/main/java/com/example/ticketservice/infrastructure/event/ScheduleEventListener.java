@@ -1,9 +1,9 @@
 package com.example.ticketservice.infrastructure.event;
 
+import com.example.ticketservice.application.constants.RedisKeys;
 import com.example.ticketservice.application.event.ScheduleInitializedEvent;
 import com.example.ticketservice.application.port.out.CachePort;
 import com.example.ticketservice.application.port.out.SchedulerPort;
-import com.example.ticketservice.application.service.CartService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -34,7 +34,7 @@ public class ScheduleEventListener {
 
         Duration ttl = Duration.between(LocalDateTime.now(), event.ticketingTime().minusHours(24));
         if (!ttl.isNegative() && !ttl.isZero()) {
-            cachePort.setCounter(CartService.CART_COUNT_KEY_PREFIX + event.scheduleId(), 0, ttl);
+            cachePort.setCounter(RedisKeys.CART_COUNT + event.scheduleId(), 0, ttl);
             log.debug("장바구니 수요 카운터 초기화 - scheduleId={}, ttl={}s", event.scheduleId(), ttl.getSeconds());
         }
     }

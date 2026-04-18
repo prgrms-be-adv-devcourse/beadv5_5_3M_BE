@@ -4,6 +4,7 @@ import com.example.ticketservice.application.port.out.SchedulerPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
+import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -15,92 +16,66 @@ import java.util.Date;
 @RequiredArgsConstructor
 public class QuartzSchedulerAdapter implements SchedulerPort {
 
-    private static final String CART_CLOSE_GROUP = "CART_CLOSE";
-    private static final String TICKETING_START_GROUP = "TICKETING_START";
-    private static final String REVIEW_AUTH_GROUP = "REVIEW_AUTH";
-    private static final String STREAMING_START_GROUP = "STREAMING_START";
-    private static final String STREAMING_FINISH_GROUP = "STREAMING_FINISH";
+    private static final String SCHEDULE_ID_KEY = "scheduleId";
 
     private final Scheduler scheduler;
 
     @Override
     public void scheduleCartCloseJob(Long scheduleId, LocalDateTime triggerTime) {
-        JobDetail job = JobBuilder.newJob(CartCloseQuartzJob.class)
-                .withIdentity("CartCloseJob_" + scheduleId, CART_CLOSE_GROUP)
-                .usingJobData(CartCloseQuartzJob.SCHEDULE_ID_KEY, scheduleId)
-                .storeDurably()
-                .build();
-        Trigger trigger = buildTrigger("CartCloseTrigger_" + scheduleId, CART_CLOSE_GROUP, triggerTime);
-        scheduleJob(job, trigger, scheduleId, "CartClose");
+        scheduleJobForSchedule(CartCloseQuartzJob.class, "CartClose", scheduleId, triggerTime);
     }
 
     @Override
     public void scheduleTicketingStartJob(Long scheduleId, LocalDateTime triggerTime) {
-        JobDetail job = JobBuilder.newJob(TicketingStartQuartzJob.class)
-                .withIdentity("TicketingStartJob_" + scheduleId, TICKETING_START_GROUP)
-                .usingJobData(TicketingStartQuartzJob.SCHEDULE_ID_KEY, scheduleId)
-                .storeDurably()
-                .build();
-        Trigger trigger = buildTrigger("TicketingStartTrigger_" + scheduleId, TICKETING_START_GROUP, triggerTime);
-        scheduleJob(job, trigger, scheduleId, "TicketingStart");
+        scheduleJobForSchedule(TicketingStartQuartzJob.class, "TicketingStart", scheduleId, triggerTime);
     }
 
     @Override
     public void scheduleReviewAuthJob(Long scheduleId, LocalDateTime triggerTime) {
-        JobDetail job = JobBuilder.newJob(ReviewAuthQuartzJob.class)
-                .withIdentity("ReviewAuthJob_" + scheduleId, REVIEW_AUTH_GROUP)
-                .usingJobData(ReviewAuthQuartzJob.SCHEDULE_ID_KEY, scheduleId)
-                .storeDurably()
-                .build();
-        Trigger trigger = buildTrigger("ReviewAuthTrigger_" + scheduleId, REVIEW_AUTH_GROUP, triggerTime);
-        scheduleJob(job, trigger, scheduleId, "ReviewAuth");
+        scheduleJobForSchedule(ReviewAuthQuartzJob.class, "ReviewAuth", scheduleId, triggerTime);
     }
 
     @Override
     public void scheduleStreamingStartJob(Long scheduleId, LocalDateTime triggerTime) {
-        JobDetail job = JobBuilder.newJob(StreamingStartQuartzJob.class)
-                .withIdentity("StreamingStartJob_" + scheduleId, STREAMING_START_GROUP)
-                .usingJobData(StreamingStartQuartzJob.SCHEDULE_ID_KEY, scheduleId)
-                .storeDurably()
-                .build();
-        Trigger trigger = buildTrigger("StreamingStartTrigger_" + scheduleId, STREAMING_START_GROUP, triggerTime);
-        scheduleJob(job, trigger, scheduleId, "StreamingStart");
+        scheduleJobForSchedule(StreamingStartQuartzJob.class, "StreamingStart", scheduleId, triggerTime);
     }
 
     @Override
     public void scheduleStreamingFinishJob(Long scheduleId, LocalDateTime triggerTime) {
-        JobDetail job = JobBuilder.newJob(StreamingFinishQuartzJob.class)
-                .withIdentity("StreamingFinishJob_" + scheduleId, STREAMING_FINISH_GROUP)
-                .usingJobData(StreamingFinishQuartzJob.SCHEDULE_ID_KEY, scheduleId)
-                .storeDurably()
-                .build();
-        Trigger trigger = buildTrigger("StreamingFinishTrigger_" + scheduleId, STREAMING_FINISH_GROUP, triggerTime);
-        scheduleJob(job, trigger, scheduleId, "StreamingFinish");
+        scheduleJobForSchedule(StreamingFinishQuartzJob.class, "StreamingFinish", scheduleId, triggerTime);
     }
 
     @Override
     public void cancelScheduledJobs(Long scheduleId) {
-        deleteJob("CartCloseJob_" + scheduleId, CART_CLOSE_GROUP, scheduleId);
-        deleteJob("TicketingStartJob_" + scheduleId, TICKETING_START_GROUP, scheduleId);
-        deleteJob("ReviewAuthJob_" + scheduleId, REVIEW_AUTH_GROUP, scheduleId);
-        deleteJob("StreamingStartJob_" + scheduleId, STREAMING_START_GROUP, scheduleId);
-        deleteJob("StreamingFinishJob_" + scheduleId, STREAMING_FINISH_GROUP, scheduleId);
+        deleteJob("CartCloseJob_" + scheduleId, "CART_CLOSE", scheduleId);
+        deleteJob("TicketingStartJob_" + scheduleId, "TICKETING_START", scheduleId);
+        deleteJob("ReviewAuthJob_" + scheduleId, "REVIEW_AUTH", scheduleId);
+        deleteJob("StreamingStartJob_" + scheduleId, "STREAMING_START", scheduleId);
+        deleteJob("StreamingFinishJob_" + scheduleId, "STREAMING_FINISH", scheduleId);
     }
 
-    private Trigger buildTrigger(String name, String group, LocalDateTime triggerTime) {
+    private void scheduleJobForSchedule(Class<? extends QuartzJobBean> jobClass, String jobType,
+                                        Long scheduleId, LocalDateTime triggerTime) {
+        String group = jobType.replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase();
+        String jobName = jobType + "Job_" + scheduleId;
+        String triggerName = jobType + "Trigger_" + scheduleId;
+
+        JobDetail job = JobBuilder.newJob(jobClass)
+                .withIdentity(jobName, group)
+                .usingJobData(SCHEDULE_ID_KEY, scheduleId)
+                .storeDurably()
+                .build();
+
         Date startAt = Date.from(triggerTime.atZone(ZoneId.systemDefault()).toInstant());
-        return TriggerBuilder.newTrigger()
-                .withIdentity(name, group)
+        Trigger trigger = TriggerBuilder.newTrigger()
+                .withIdentity(triggerName, group)
                 .startAt(startAt)
                 .withSchedule(SimpleScheduleBuilder.simpleSchedule())
                 .build();
-    }
 
-    private void scheduleJob(JobDetail job, Trigger trigger, Long scheduleId, String jobType) {
         try {
             scheduler.scheduleJob(job, trigger);
-            log.info("{} Job 등록 - scheduleId={}, triggerTime={}", jobType, scheduleId,
-                    trigger.getStartTime());
+            log.info("{} Job 등록 - scheduleId={}, triggerTime={}", jobType, scheduleId, startAt);
         } catch (SchedulerException e) {
             log.error("{} Job 등록 실패 - scheduleId={}", jobType, scheduleId, e);
             throw new RuntimeException("Quartz job 등록 실패: " + jobType + ", scheduleId=" + scheduleId, e);

@@ -12,6 +12,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+
 @Entity
 @Table(name = "tickets", uniqueConstraints = {
         @UniqueConstraint(name = "uk_ticket_user_schedule", columnNames = {"user_id", "schedule_id"})
@@ -69,41 +70,4 @@ public class Ticket {
         this.status = TicketStatus.CONFIRMED;
     }
 
-    // 예매: AVAILABLE → RESERVED (레거시, Phase 8에서 제거)
-    public void reserved(UUID userId) {
-        switch (this.status) {
-            case RESERVED -> throw TicketErrorCode.ALREADY_RESERVED.of(this.id);
-            case CONFIRMED -> throw TicketErrorCode.ALREADY_CONFIRMED.of(this.id);
-            case HOLD -> throw TicketErrorCode.ALREADY_HOLD.of(this.id);
-            default -> {
-                this.userId = userId;
-                this.status = TicketStatus.RESERVED;
-            }
-        }
-    }
-
-    // 취소: RESERVED → AVAILABLE (티켓 풀로 반환)
-    public void cancel() {
-        switch (this.status) {
-            case AVAILABLE -> throw TicketErrorCode.NOT_RESERVED.of(this.id);
-            case CONFIRMED -> throw TicketErrorCode.ALREADY_CONFIRMED.of(this.id);
-            case HOLD -> throw TicketErrorCode.ALREADY_HOLD.of(this.id);
-            default -> {
-                this.userId = null;
-                this.status = TicketStatus.AVAILABLE;
-            }
-        }
-    }
-
-    // 판매 중지 (관리자)
-    public void hold() {
-        if (this.status == TicketStatus.HOLD) {
-            throw TicketErrorCode.ALREADY_HOLD.of(this.id);
-        }
-        this.status = TicketStatus.HOLD;
-    }
-
-    public void markProvided() {
-        this.provideFlag = true;
-    }
 }

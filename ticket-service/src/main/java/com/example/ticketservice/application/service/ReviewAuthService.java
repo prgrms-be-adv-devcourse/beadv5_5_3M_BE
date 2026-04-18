@@ -5,20 +5,20 @@ import com.example.ticketservice.application.usecase.ReviewAuthUseCase;
 import com.example.ticketservice.domain.enums.TicketStatus;
 import com.example.ticketservice.domain.model.Ticket;
 import com.example.ticketservice.domain.repository.TicketRepository;
+import com.example.ticketservice.infrastructure.messaging.KafkaTopics;
 import com.example.ticketservice.infrastructure.messaging.dto.event.ReviewAuthorizationMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReviewAuthService implements ReviewAuthUseCase {
 
-    public static final String REVIEW_AUTH_TOPIC = "ticket.review.authorized";
+    private static final int PAGE_SIZE = 500;
 
     private final TicketRepository ticketRepository;
     private final EventPublisherPort eventPublisherPort;
@@ -26,22 +26,31 @@ public class ReviewAuthService implements ReviewAuthUseCase {
     @Transactional(readOnly = true)
     @Override
     public void publishReviewAuth(Long scheduleId) {
-        List<Ticket> tickets = ticketRepository.findAllByScheduleIdAndStatus(scheduleId, TicketStatus.CONFIRMED);
-        log.info("리뷰 권한 발행 시작 - scheduleId={}, confirmedCount={}", scheduleId, tickets.size());
+        log.info("리뷰 권한 발행 시작 - scheduleId={}", scheduleId);
+        int page = 0;
+        int totalPublished = 0;
 
-        for (Ticket ticket : tickets) {
-            eventPublisherPort.publish(
-                    REVIEW_AUTH_TOPIC,
-                    ticket.getId().toString(),
-                    new ReviewAuthorizationMessage(
-                            ticket.getId(),
-                            ticket.getSchedule().getMovieId(),
-                            scheduleId,
-                            ticket.getUserId()
-                    )
-            );
-        }
+        Slice<Ticket> slice;
+        do {
+            slice = ticketRepository.findByScheduleIdAndStatus(scheduleId, TicketStatus.CONFIRMED, page, PAGE_SIZE);
 
-        log.info("리뷰 권한 발행 완료 - scheduleId={}, publishedCount={}", scheduleId, tickets.size());
+            for (Ticket ticket : slice.getContent()) {
+                eventPublisherPort.publish(
+                        KafkaTopics.REVIEW_AUTHORIZED,
+                        ticket.getId().toString(),
+                        new ReviewAuthorizationMessage(
+                                ticket.getId(),
+                                ticket.getSchedule().getMovieId(),
+                                scheduleId,
+                                ticket.getUserId()
+                        )
+                );
+            }
+
+            totalPublished += slice.getNumberOfElements();
+            page++;
+        } while (slice.hasNext());
+
+        log.info("리뷰 권한 발행 완료 - scheduleId={}, publishedCount={}", scheduleId, totalPublished);
     }
 }

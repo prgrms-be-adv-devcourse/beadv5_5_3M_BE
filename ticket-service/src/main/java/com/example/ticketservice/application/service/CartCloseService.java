@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -37,6 +38,8 @@ public class CartCloseService implements CartCloseUseCase {
         List<Cart> carts = cartRepository.findAllByScheduleId(scheduleId);
         int demand = carts.size();
         int seats = schedule.getSeats();
+
+        List<UUID> userIds = carts.stream().map(Cart::getUserId).toList();
 
         String caseType;
         if (demand < seats) {
@@ -59,6 +62,6 @@ public class CartCloseService implements CartCloseUseCase {
 
         cartRepository.deleteAllByScheduleId(scheduleId);
 
-        eventPublisher.publishEvent(new CartClosedEvent(scheduleId, caseType, schedule.getSeats()));
+        eventPublisher.publishEvent(new CartClosedEvent(scheduleId, caseType, schedule.getSeats(), userIds));
     }
 }

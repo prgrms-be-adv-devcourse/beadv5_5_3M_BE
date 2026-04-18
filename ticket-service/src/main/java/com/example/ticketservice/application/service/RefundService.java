@@ -1,8 +1,6 @@
 package com.example.ticketservice.application.service;
 
-import com.example.ticketservice.application.dto.request.RefundCookieRequest;
 import com.example.ticketservice.application.event.TicketRefundedEvent;
-import com.example.ticketservice.application.port.out.UserPort;
 import com.example.ticketservice.application.usecase.RefundUseCase;
 import com.example.ticketservice.common.exception.TicketErrorCode;
 import com.example.ticketservice.domain.enums.TicketStatus;
@@ -22,7 +20,6 @@ import java.util.UUID;
 public class RefundService implements RefundUseCase {
 
     private final TicketRepository ticketRepository;
-    private final UserPort userPort;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -39,10 +36,6 @@ public class RefundService implements RefundUseCase {
             throw TicketErrorCode.NOT_CONFIRMED.of(ticketId);
         }
 
-        // 직접 환불: /internal/users/refund/cookie
-        userPort.refundCookie(
-                new RefundCookieRequest(ticketId, ticket.getSchedule().getCookie(), userId));
-
         Long scheduleId = ticket.getSchedule().getId();
         Integer cookie = ticket.getSchedule().getCookie();
 
@@ -50,8 +43,8 @@ public class RefundService implements RefundUseCase {
         ticketRepository.delete(ticket);
 
         // DB 커밋 후 @TransactionalEventListener(AFTER_COMMIT)에서:
-        // - stock INCR (티켓팅 중이면)
-        // - queueAutoProcessService.checkAndProcess()
+        // - 쿠키 환불 HTTP 호출 (DB 커밋 후 실행 → 이중 환불 방지)
+        // - stock INCR (티켓팅 중이면) + queue.drain 발행
         // - Kafka ticket.refunded 발행
         eventPublisher.publishEvent(new TicketRefundedEvent(ticketId, scheduleId, userId, cookie));
         log.info("환불 완료 - ticketId={}, userId={}", ticketId, userId);

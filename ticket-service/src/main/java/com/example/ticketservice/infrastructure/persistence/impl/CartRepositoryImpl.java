@@ -41,11 +41,6 @@ public class CartRepositoryImpl implements CartRepository {
     }
 
     @Override
-    public long countByScheduleId(Long scheduleId) {
-        return cartJpaRepository.countByScheduleId(scheduleId);
-    }
-
-    @Override
     public void deleteAllByScheduleId(Long scheduleId) {
         cartJpaRepository.deleteAllByScheduleId(scheduleId);
     }

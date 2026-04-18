@@ -1,7 +1,6 @@
 package com.example.ticketservice.application.service;
 
 import com.example.ticketservice.application.event.TicketingStartedEvent;
-import com.example.ticketservice.application.port.out.CachePort;
 import com.example.ticketservice.application.port.out.TicketCleanupBatchPort;
 import com.example.ticketservice.application.usecase.TicketingStartUseCase;
 import com.example.ticketservice.common.exception.ScheduleErrorCode;
@@ -15,24 +14,14 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class TicketingStartService implements TicketingStartUseCase {
 
-    static final String STOCK_KEY_PREFIX     = "stock:schedule:";
-    static final String PAYING_KEY_PREFIX    = "paying:schedule:";
-    static final String SEATS_KEY_PREFIX     = "seats:schedule:";
-    static final String COOKIE_KEY_PREFIX    = "cookie:schedule:";
-    static final String START_TIME_KEY_PREFIX = "startTime:schedule:";
-
     private final ScheduleRepository scheduleRepository;
     private final TicketRepository ticketRepository;
     private final TicketCleanupBatchPort ticketCleanupBatchPort;
-    private final CachePort cachePort;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -41,29 +30,26 @@ public class TicketingStartService implements TicketingStartUseCase {
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> ScheduleErrorCode.NOT_FOUND.of(scheduleId));
 
-        // 1. 미결제 RESERVED 티켓 일괄 삭제
-        ticketCleanupBatchPort.run(scheduleId);
+        // 1. 미결제 RESERVED 티켓 일괄 삭제 — 실패 시 TICKETING 전이 중단
+        try {
+            ticketCleanupBatchPort.run(scheduleId);
+        } catch (Exception e) {
+            throw new RuntimeException("미결제 RESERVED 티켓 삭제 실패 - scheduleId=" + scheduleId
+                    + ", TICKETING 전이를 중단합니다.", e);
+        }
 
         // 2. 남은 재고 계산: 총 좌석 - 결제 완료(CONFIRMED) 수
         long confirmedCount = ticketRepository.countByScheduleIdAndStatus(scheduleId, TicketStatus.CONFIRMED);
         long remaining = schedule.getSeats() - confirmedCount;
 
-        // 3. Redis stock / paying 카운터 설정 (공연 시작 10분 전 티켓팅 마감 TTL)
-        Duration ttl = Duration.between(LocalDateTime.now(), schedule.getStartTime().minusMinutes(10));
-        if (!ttl.isNegative() && !ttl.isZero()) {
-            cachePort.setCounter(STOCK_KEY_PREFIX + scheduleId, remaining, ttl);
-            cachePort.setCounter(PAYING_KEY_PREFIX + scheduleId, 0, ttl);
-            cachePort.setCounter(SEATS_KEY_PREFIX + scheduleId, schedule.getSeats(), ttl);
-            cachePort.setCounter(COOKIE_KEY_PREFIX + scheduleId, schedule.getCookie(), ttl);
-            cachePort.set(START_TIME_KEY_PREFIX + scheduleId, schedule.getStartTime().toString(), ttl);
-        }
-
-        // 4. IN_PROGRESSING → TICKETING
+        // 3. IN_PROGRESSING → TICKETING
         schedule.startTicketing();
         scheduleRepository.save(schedule);
 
-        // 5. DB 커밋 후 @TransactionalEventListener(AFTER_COMMIT)에서 Kafka ticketing.started 발행
-        eventPublisher.publishEvent(new TicketingStartedEvent(scheduleId));
+        // 4. DB 커밋 후 @TransactionalEventListener(AFTER_COMMIT)에서 Redis 키 설정 + Kafka 발행
+        //    Redis 설정을 AFTER_COMMIT으로 이동: DB 롤백 시 Redis 키 잔류 방지
+        eventPublisher.publishEvent(new TicketingStartedEvent(
+                scheduleId, remaining, schedule.getSeats(), schedule.getCookie(), schedule.getStartTime()));
         log.info("티켓팅 시작 - scheduleId={}, remaining={}", scheduleId, remaining);
     }
 }

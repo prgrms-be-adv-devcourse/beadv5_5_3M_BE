@@ -1,6 +1,8 @@
 package com.example.ticketservice.application.service;
 
+import com.example.ticketservice.application.constants.RedisKeys;
 import com.example.ticketservice.application.dto.response.CartItemResponse;
+import com.example.ticketservice.application.event.CartUpdatedEvent;
 import com.example.ticketservice.application.port.out.CachePort;
 import com.example.ticketservice.application.usecase.CartUseCase;
 import com.example.ticketservice.common.exception.ScheduleErrorCode;
@@ -11,21 +13,24 @@ import com.example.ticketservice.domain.model.Schedule;
 import com.example.ticketservice.domain.repository.CartRepository;
 import com.example.ticketservice.domain.repository.ScheduleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class CartService implements CartUseCase {
 
-    public static final String CART_COUNT_KEY_PREFIX = "cart:count:schedule:";
-
     private final CartRepository cartRepository;
     private final ScheduleRepository scheduleRepository;
     private final CachePort cachePort;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     @Override
@@ -42,23 +47,36 @@ public class CartService implements CartUseCase {
         }
 
         cartRepository.save(Cart.of(userId, scheduleId));
-        cachePort.increment(CART_COUNT_KEY_PREFIX + scheduleId);
+        // Redis 카운터 조작은 AFTER_COMMIT으로 위임 — DB 롤백 시 Redis 불일치 방지
+        eventPublisher.publishEvent(new CartUpdatedEvent(scheduleId, userId, true));
     }
 
     @Transactional
     @Override
     public void removeFromCart(UUID userId, Long scheduleId) {
         cartRepository.deleteByUserIdAndScheduleId(userId, scheduleId);
-        cachePort.decrement(CART_COUNT_KEY_PREFIX + scheduleId);
+        // Redis 카운터 조작은 AFTER_COMMIT으로 위임 — DB 롤백 시 Redis 불일치 방지
+        eventPublisher.publishEvent(new CartUpdatedEvent(scheduleId, userId, false));
     }
 
     @Transactional(readOnly = true)
     @Override
     public List<CartItemResponse> getMyCart(UUID userId) {
-        return cartRepository.findAllByUserId(userId).stream()
+        List<Cart> carts = cartRepository.findAllByUserId(userId);
+        if (carts.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> scheduleIds = carts.stream().map(Cart::getScheduleId).toList();
+        Map<Long, Schedule> scheduleMap = scheduleRepository.findAllById(scheduleIds).stream()
+                .collect(Collectors.toMap(Schedule::getId, Function.identity()));
+
+        return carts.stream()
                 .map(cart -> {
-                    Schedule schedule = scheduleRepository.findById(cart.getScheduleId())
-                            .orElseThrow(() -> ScheduleErrorCode.NOT_FOUND.of(cart.getScheduleId()));
+                    Schedule schedule = scheduleMap.get(cart.getScheduleId());
+                    if (schedule == null) {
+                        throw ScheduleErrorCode.NOT_FOUND.of(cart.getScheduleId());
+                    }
                     return CartItemResponse.from(cart, schedule);
                 })
                 .toList();
@@ -66,7 +84,7 @@ public class CartService implements CartUseCase {
 
     @Override
     public long getCartCount(Long scheduleId) {
-        Long count = cachePort.getCounter(CART_COUNT_KEY_PREFIX + scheduleId);
+        Long count = cachePort.getCounter(RedisKeys.CART_COUNT + scheduleId);
         return count != null ? count : 0L;
     }
 }

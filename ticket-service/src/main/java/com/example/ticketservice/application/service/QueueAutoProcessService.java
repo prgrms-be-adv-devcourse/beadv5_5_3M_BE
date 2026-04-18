@@ -1,12 +1,13 @@
 package com.example.ticketservice.application.service;
 
+import com.example.ticketservice.application.constants.RedisKeys;
 import com.example.ticketservice.application.port.out.CachePort;
 import com.example.ticketservice.application.port.out.EventPublisherPort;
 import com.example.ticketservice.domain.repository.ScheduleRepository;
+import com.example.ticketservice.infrastructure.messaging.KafkaTopics;
 import com.example.ticketservice.infrastructure.messaging.dto.event.QueueTerminatedMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -18,11 +19,6 @@ import java.util.concurrent.Executor;
 @Slf4j
 @Service
 public class QueueAutoProcessService {
-
-    static final String STOCK_KEY_PREFIX = "stock:schedule:";
-    static final String QUEUE_KEY_PREFIX = "queue:schedule:";
-    static final String PAYING_KEY_PREFIX = "paying:schedule:";
-    private static final String QUEUE_TERMINATED_TOPIC = "queue.terminated";
 
     private final CachePort cachePort;
     private final ScheduleRepository scheduleRepository;
@@ -44,11 +40,11 @@ public class QueueAutoProcessService {
 
     /**
      * 재고 복구 시 or 결제 완료 후 대기열을 드레인하고 종료 조건을 체크한다.
-     * @Async("queueExecutor"): 전용 스레드풀에서 비동기 실행하여 호출 스레드 블록 방지
+     * Kafka queue.drain 컨슈머 스레드에서 호출 → HTTP 요청 스레드와 완전 분리.
+     * 컨슈머 스레드가 완료까지 블록하므로 소비 속도가 드레인 처리 속도에 맞춰 자동 조절.
      */
-    @Async("queueExecutor")
     public void checkAndProcess(Long scheduleId) {
-        Long queueSize = cachePort.getZSetSize(QUEUE_KEY_PREFIX + scheduleId);
+        Long queueSize = cachePort.getZSetSize(RedisKeys.QUEUE + scheduleId);
         if (queueSize == null || queueSize == 0) {
             return; // 대기열 비어있음
         }
@@ -57,10 +53,12 @@ public class QueueAutoProcessService {
         checkTermination(scheduleId);
     }
 
+    private static final int MAX_DRAIN_ITERATIONS = 500;
+
     private void drainQueue(Long scheduleId) {
-        while (true) {
-            Long stock = cachePort.getCounter(STOCK_KEY_PREFIX + scheduleId);
-            Long queueSize = cachePort.getZSetSize(QUEUE_KEY_PREFIX + scheduleId);
+        for (int i = 0; i < MAX_DRAIN_ITERATIONS; i++) {
+            Long stock = cachePort.getCounter(RedisKeys.STOCK + scheduleId);
+            Long queueSize = cachePort.getZSetSize(RedisKeys.QUEUE + scheduleId);
 
             if (stock == null || stock <= 0 || queueSize == null || queueSize == 0) {
                 break;
@@ -86,9 +84,9 @@ public class QueueAutoProcessService {
      */
     private List<PurchaseTask> collectWindow(Long scheduleId, int window) {
         List<PurchaseTask> tasks = new ArrayList<>(window);
-        String stockKey = STOCK_KEY_PREFIX + scheduleId;
-        String queueKey = QUEUE_KEY_PREFIX + scheduleId;
-        String payingKey = PAYING_KEY_PREFIX + scheduleId;
+        String stockKey = RedisKeys.STOCK + scheduleId;
+        String queueKey = RedisKeys.QUEUE + scheduleId;
+        String payingKey = RedisKeys.PAYING + scheduleId;
 
         for (int i = 0; i < window; i++) {
             Long stockAfterDecr = cachePort.decrement(stockKey);
@@ -118,8 +116,8 @@ public class QueueAutoProcessService {
      * 각 task는 완료(성공/실패/예외) 후 paying DECR.
      */
     private void processWindowParallel(Long scheduleId, List<PurchaseTask> tasks) {
-        String stockKey = STOCK_KEY_PREFIX + scheduleId;
-        String payingKey = PAYING_KEY_PREFIX + scheduleId;
+        String stockKey = RedisKeys.STOCK + scheduleId;
+        String payingKey = RedisKeys.PAYING + scheduleId;
         List<CompletableFuture<Void>> futures = tasks.stream()
                 .map(task -> CompletableFuture.runAsync(() -> {
                     try {
@@ -138,9 +136,9 @@ public class QueueAutoProcessService {
     private record PurchaseTask(UUID userId, int ticketNum) {}
 
     private void checkTermination(Long scheduleId) {
-        Long stockLeft = cachePort.getCounter(STOCK_KEY_PREFIX + scheduleId);
-        Long payingCount = cachePort.getCounter(PAYING_KEY_PREFIX + scheduleId);
-        Long queueSize = cachePort.getZSetSize(QUEUE_KEY_PREFIX + scheduleId);
+        Long stockLeft = cachePort.getCounter(RedisKeys.STOCK + scheduleId);
+        Long payingCount = cachePort.getCounter(RedisKeys.PAYING + scheduleId);
+        Long queueSize = cachePort.getZSetSize(RedisKeys.QUEUE + scheduleId);
 
         boolean noStock = stockLeft == null || stockLeft <= 0;
         boolean noPaying = payingCount == null || payingCount <= 0;
@@ -153,12 +151,12 @@ public class QueueAutoProcessService {
 
     private void terminateQueue(Long scheduleId) {
         // atomic DEL: 첫 번째 스레드만 true 반환 → 중복 Kafka 발행 방지
-        boolean deleted = cachePort.delete(QUEUE_KEY_PREFIX + scheduleId);
+        boolean deleted = cachePort.delete(RedisKeys.QUEUE + scheduleId);
         if (!deleted) {
             return;
         }
         log.info("대기열 종료 - scheduleId={}", scheduleId);
-        eventPublisherPort.publish(QUEUE_TERMINATED_TOPIC, scheduleId.toString(),
+        eventPublisherPort.publish(KafkaTopics.QUEUE_TERMINATED, scheduleId.toString(),
                 new QueueTerminatedMessage(scheduleId));
     }
 

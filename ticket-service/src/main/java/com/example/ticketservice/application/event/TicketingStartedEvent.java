@@ -1,3 +1,11 @@
 package com.example.ticketservice.application.event;
 
-public record TicketingStartedEvent(Long scheduleId) {}
+import java.time.LocalDateTime;
+
+public record TicketingStartedEvent(
+        Long scheduleId,
+        long remaining,
+        int seats,
+        int cookie,
+        LocalDateTime startTime
+) {}

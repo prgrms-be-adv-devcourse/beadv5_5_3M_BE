@@ -6,6 +6,8 @@ import com.example.ticketservice.infrastructure.persistence.ScheduleJpaRepositor
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -21,6 +23,11 @@ public class ScheduleRepositoryImpl implements ScheduleRepository {
     @Override
     public Optional<Schedule> findById(Long id) {
         return scheduleJpaRepository.findById(id);
+    }
+
+    @Override
+    public List<Schedule> findAllById(Collection<Long> ids) {
+        return scheduleJpaRepository.findAllById(ids);
     }
 
     @Override

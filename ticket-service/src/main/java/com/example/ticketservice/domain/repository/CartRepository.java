@@ -17,7 +17,5 @@ public interface CartRepository {
 
     List<Cart> findAllByUserId(UUID userId);
 
-    long countByScheduleId(Long scheduleId);
-
     void deleteAllByScheduleId(Long scheduleId);
 }

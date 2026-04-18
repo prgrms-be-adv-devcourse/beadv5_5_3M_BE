@@ -106,11 +106,4 @@ public class Schedule {
         this.status = ScheduleStatus.FINISH;
     }
 
-    public void decreaseSeats() {
-        this.seats--;
-    }
-
-    public void increaseSeats() {
-        this.seats++;
-    }
 }

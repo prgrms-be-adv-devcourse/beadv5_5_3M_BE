@@ -16,7 +16,5 @@ public interface CartJpaRepository extends JpaRepository<Cart, Long> {
 
     List<Cart> findAllByUserId(UUID userId);
 
-    long countByScheduleId(Long scheduleId);
-
     void deleteAllByScheduleId(Long scheduleId);
 }

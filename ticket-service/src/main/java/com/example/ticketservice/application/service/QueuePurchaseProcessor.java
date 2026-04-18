@@ -1,5 +1,6 @@
 package com.example.ticketservice.application.service;
 
+import com.example.ticketservice.application.constants.RedisKeys;
 import com.example.ticketservice.application.dto.request.DeductCookieRequest;
 import com.example.ticketservice.application.dto.response.DeductCookieResponse;
 import com.example.ticketservice.application.dto.response.TicketResponse;
@@ -26,8 +27,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class QueuePurchaseProcessor {
 
-    static final String STOCK_KEY_PREFIX = "stock:schedule:";
-
     private final ScheduleRepository scheduleRepository;
     private final TicketRepository ticketRepository;
     private final UserPort userPort;
@@ -51,11 +50,14 @@ public class QueuePurchaseProcessor {
                 new DeductCookieRequest(ticket.getId(), schedule.getCookie(), userId));
 
         if (!response.flag()) {
-            cachePort.increment(STOCK_KEY_PREFIX + scheduleId); // 재고 복구 (Redis는 트랜잭션 밖)
+            cachePort.increment(RedisKeys.STOCK + scheduleId); // 재고 복구 (Redis는 트랜잭션 밖)
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly(); // 티켓 save 롤백
             log.info("구매 실패(쿠키부족) - scheduleId={}, userId={}", scheduleId, userId);
             return Optional.empty();
         }
+
+        // DB 커밋 실패 시 쿠키 차감 보상 — HTTP 성공 후 DB 롤백되면 쿠키만 차감되는 불일치 방지
+        CookieCompensationHelper.registerRollbackRefund(userPort, ticket.getId(), schedule.getCookie(), userId);
 
         ticket.pay(); // RESERVED → CONFIRMED
         // DB 커밋 후 @TransactionalEventListener(AFTER_COMMIT)에서 Kafka ticket.paid 발행

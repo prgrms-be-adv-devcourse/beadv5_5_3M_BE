@@ -1,5 +1,6 @@
 package com.example.ticketservice.application.service;
 
+import com.example.ticketservice.application.constants.RedisKeys;
 import com.example.ticketservice.application.dto.response.QueueEntryResponse;
 import com.example.ticketservice.application.dto.response.QueuePositionResponse;
 import com.example.ticketservice.application.dto.response.TicketResponse;
@@ -21,30 +22,23 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class QueueService implements QueueUseCase {
 
-    private static final String QUEUE_KEY_PREFIX     = "queue:schedule:";
-    private static final String STOCK_KEY_PREFIX     = "stock:schedule:";
-    private static final String PAYING_KEY_PREFIX    = "paying:schedule:";
-    private static final String SEATS_KEY_PREFIX     = "seats:schedule:";
-    private static final String COOKIE_KEY_PREFIX    = "cookie:schedule:";
-    private static final String START_TIME_KEY_PREFIX = "startTime:schedule:";
-
     private final CachePort cachePort;
     private final QueuePurchaseProcessor purchaseProcessor;
 
     // @Transactional 없음: DB 조회 없음, 실제 트랜잭션은 QueuePurchaseProcessor가 관리
     @Override
     public QueueEntryResponse enter(UUID userId, Long scheduleId) {
-        String stockKey = STOCK_KEY_PREFIX + scheduleId;
+        String stockKey = RedisKeys.STOCK + scheduleId;
         if (!cachePort.exists(stockKey)) {
             throw QueueErrorCode.QUEUE_NOT_OPEN.of(scheduleId);
         }
 
-        String payingKey = PAYING_KEY_PREFIX + scheduleId;
+        String payingKey = RedisKeys.PAYING + scheduleId;
         Long stockAfterDecr = cachePort.decrement(stockKey);
 
         if (stockAfterDecr != null && stockAfterDecr >= 0) {
             // stock > 0 → 바로 구매 시도
-            Long seats = cachePort.getCounter(SEATS_KEY_PREFIX + scheduleId);
+            Long seats = cachePort.getCounter(RedisKeys.SEATS + scheduleId);
             int ticketNum = (int) (seats - stockAfterDecr);
             cachePort.increment(payingKey);
             Optional<TicketResponse> result;
@@ -61,7 +55,7 @@ public class QueueService implements QueueUseCase {
                 return QueueEntryResponse.purchased(result.get());
             }
             // 쿠키 부족: stock은 tryPurchase 내부에서 복구됨 → 즉시 에러 반환
-            Long cookie = cachePort.getCounter(COOKIE_KEY_PREFIX + scheduleId);
+            Long cookie = cachePort.getCounter(RedisKeys.COOKIE + scheduleId);
             throw TicketErrorCode.INSUFFICIENT_BALANCE.of(cookie != null ? cookie : 0L);
         } else {
             // stock 없음: decrement 복구
@@ -77,7 +71,7 @@ public class QueueService implements QueueUseCase {
         }
 
         // 대기열 진입
-        String queueKey = QUEUE_KEY_PREFIX + scheduleId;
+        String queueKey = RedisKeys.QUEUE + scheduleId;
         String userIdStr = userId.toString();
 
         if (cachePort.getZSetRank(queueKey, userIdStr) != null) {
@@ -87,7 +81,7 @@ public class QueueService implements QueueUseCase {
         cachePort.addToZSetWithTimestamp(queueKey, userIdStr);
 
         // 대기열 TTL: 공연 시작 10분 전 (이미 지난 경우 1초 후 만료)
-        String startTimeStr = cachePort.get(START_TIME_KEY_PREFIX + scheduleId, String.class).orElse(null);
+        String startTimeStr = cachePort.get(RedisKeys.START_TIME + scheduleId, String.class).orElse(null);
         LocalDateTime startTime = startTimeStr != null ? LocalDateTime.parse(startTimeStr) : LocalDateTime.now();
         Duration ttl = Duration.between(LocalDateTime.now(), startTime.minusMinutes(10));
         cachePort.expireKey(queueKey, ttl.isNegative() || ttl.isZero() ? Duration.ofSeconds(1) : ttl);
@@ -101,7 +95,7 @@ public class QueueService implements QueueUseCase {
 
     @Override
     public QueuePositionResponse getPosition(UUID userId, Long scheduleId) {
-        Long rank = cachePort.getZSetRank(QUEUE_KEY_PREFIX + scheduleId, userId.toString());
+        Long rank = cachePort.getZSetRank(RedisKeys.QUEUE + scheduleId, userId.toString());
         long position = rank != null ? rank + 1 : 0;
         return new QueuePositionResponse(scheduleId, position);
     }
