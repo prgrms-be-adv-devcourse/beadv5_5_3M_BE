@@ -403,35 +403,25 @@ def test_scenario_c():
 def test_scenario_d():
     log_header("Scenario D: INSUFFICIENT_BALANCE")
 
-    # Use schedule_id=1 which is in TICKETING state
-    # user2901 has balance=0
-    # But schedule 1 might have no stock left from Scenario A
-    # Instead, test self-payment failure with broke user
-    # We need a RESERVED ticket for a broke user
-
-    # Actually, the simplest test: if schedule 4 already had sold out,
-    # user2901 can't enter queue anyway (SOLD_OUT).
-    # Let's test INSUFFICIENT_BALANCE in scenario A's context if stock remains,
-    # or demonstrate the concept.
+    # user4501~user5000: balance=0 (test_users.sql 기준)
+    # schedule_id=1 은 Scenario A 이후 TICKETING 상태이며 잔여 재고 있음
+    BROKE_USER = 4501
 
     log_step("D-1: 잔액 부족 유저 대기열 진입 테스트")
-    # Try on schedule 1 (TICKETING state from scenario A)
-    resp = enter_queue(2901, 1)
-    log(f"  user2901 enter queue response: status={resp.status_code}")
-    if resp.status_code == 200:
+    resp = enter_queue(BROKE_USER, 1)
+    log(f"  user{BROKE_USER:04d} enter queue response: status={resp.status_code}")
+    if resp.status_code == 402:
+        assert_true("INSUFFICIENT_BALANCE (402)", True, f"user{BROKE_USER:04d} 잔액 부족으로 거절됨")
+    elif resp.status_code == 409:
+        log(f"  Got 409 (SOLD_OUT or already in queue): {resp.json().get('message', '')}")
+        assert_true("INSUFFICIENT_BALANCE test skipped (sold out)", True)
+    elif resp.status_code == 200:
         data = resp.json()
         log(f"  type={data.get('type')}")
-        if data.get("type") == "PURCHASED":
-            # If stock available, it tried to purchase but should fail due to balance
-            log(f"  (unexpected: purchased despite 0 balance)")
-    elif resp.status_code == 402:
-        log(f"  [PASS] INSUFFICIENT_BALANCE as expected")
-        global PASS
-        PASS += 1
-    elif resp.status_code == 409:
-        log(f"  Got 409 (likely SOLD_OUT or already in queue): {resp.json().get('message', '')}")
+        assert_true("expected 402 but got 200", False, f"user{BROKE_USER:04d} balance=0 임에도 구매 성공")
     else:
         log(f"  response: {resp.json()}")
+        assert_true("expected 402", False, f"unexpected status {resp.status_code}")
 
 
 # ══════════════════════════════════════════════════════════════

@@ -3,8 +3,8 @@
     "_comment": "이벤트 1: Case A 테스트 (수요 < 좌석, seats=100)",
     "topic": "movie.schedule.confirmed",
     "value": {
-      "scheduleId": 1,
-      "startTime": "2026-04-20T19:00:00",
+        "scheduleId": 1,
+        "startTime": "2026-04-20T19:00:00",
       "endTime": "2026-04-20T21:00:00",
       "ticketingTime": "2026-04-19T10:00:00",
       "title": "E2E 테스트 공연 A",
