@@ -4,7 +4,7 @@
 
 `ticketingTime`부터 `startTime - 10분`까지 유효한 선착순 대기열.
 Redis atomic DECR로 재고를 선점하고, ZSet으로 순서를 유지한다.
-재고 복구(환불·결제 실패) 시 `@Async`로 자동 드레인한다.
+재고 복구(환불·결제 실패) 시 Kafka `queue.drain` 토픽을 발행하여 `QueueDrainConsumer`가 자동 드레인한다.
 
 ---
 
@@ -64,7 +64,7 @@ Redis DECR stock:schedule:{scheduleId}
 
 ## 개별 구매 처리 (`QueuePurchaseProcessor.tryPurchase`)
 
-별도 `@Component` Bean — `@Async`/`@Transactional` 자기호출(self-invocation) 문제 방지.
+별도 `@Component` Bean — `@Transactional` 자기호출(self-invocation) 문제 방지.
 
 ```java
 @Transactional
@@ -78,13 +78,15 @@ public Optional<TicketResponse> tryPurchase(Long scheduleId, UUID userId, int ti
 
 4. UserPort.deductTicketFee(ticketId, cookie, userId)
    → HTTP POST /internal/users/deduct/cookie
+   → 모든 4xx 응답은 flag=false로 처리
 
-5. flag=false (쿠키 부족):
+5. flag=false (쿠키 부족 또는 HTTP 에러):
    - cachePort.increment(stock)  ← Redis는 트랜잭션 밖, 즉시 복구
    - TransactionAspectSupport.setRollbackOnly()  ← ticket save 롤백
    - return Optional.empty()
 
 6. flag=true (성공):
+   - CookieCompensationHelper.registerRollbackRefund()  ← DB 롤백 시 쿠키 보상 등록
    - ticket.pay() → RESERVED → CONFIRMED
    - publishEvent(TicketPaidEvent)  ← AFTER_COMMIT에서 Kafka 발행
    - return Optional.of(TicketResponse)
@@ -94,17 +96,23 @@ public Optional<TicketResponse> tryPurchase(Long scheduleId, UUID userId, int ti
 
 ---
 
-## 자동 드레인 (`QueueAutoProcessService`)
+## 자동 드레인 (`QueueDrainConsumer` → `QueueAutoProcessService`)
 
-재고가 복구될 때마다 `@Async`로 호출되어 대기열을 소진한다.
+재고가 복구될 때마다 Kafka `queue.drain` 토픽이 발행되고, `QueueDrainConsumer`가 소비하여 `checkAndProcess()`를 동기적으로 호출한다.
+
+### QueueDrainConsumer
+
+- **토픽:** `queue.drain` (key=scheduleId → 동일 스케줄은 동일 파티션)
+- **groupId:** `queue-drain-group`, **concurrency=4**
+- 컨슈머 스레드가 `checkAndProcess()` 완료까지 블록 → 소비 속도가 드레인 처리 속도에 맞춰 자동 조절
 
 ### 트리거 시점
 
-| 이벤트 | 위치 |
-|--------|------|
-| 환불 완료 후 stock INCR | `TicketEventListener.handleTicketRefunded` (AFTER_COMMIT) |
-| 자율결제 실패 시 stock INCR | `SelfPaymentService.pay()` |
-| 결제 완료 후 종료 조건 체크 | `TicketEventListener.handleTicketPaid` (AFTER_COMMIT) |
+| 이벤트 | 위치 | 메커니즘 |
+|--------|------|----------|
+| 환불 완료 후 stock INCR | `TicketEventListener.handleTicketRefunded` | AFTER_COMMIT → Kafka `queue.drain` 발행 |
+| 결제 완료 후 | `TicketEventListener.handleTicketPaid` | AFTER_COMMIT → Kafka `queue.drain` 발행 |
+| 자율결제 실패 시 stock INCR | `SelfPaymentService.pay()` | 직접 Kafka `queue.drain` 발행 (롤백 경로) |
 
 ### drainQueue 루프 (윈도우 병렬 처리)
 
@@ -112,7 +120,7 @@ public Optional<TicketResponse> tryPurchase(Long scheduleId, UUID userId, int ti
 stock=5이면 5개 HTTP 호출이 동시 실행 → 순차 대비 ~1/N 시간으로 단축.
 
 ```
-while (true):
+while (true):  // MAX_DRAIN_ITERATIONS=500
   stock    = GET(stock)
   queueSize = ZCARD(queue)
 
@@ -131,15 +139,18 @@ while (true):
     if userId == null:
       INCR(stock); break
     tasks.add(userId, computeTicketNum(stockAfterDecr))
+    INCR(paying)  // 결제 진행 중 카운터
 
   if tasks.empty: break
 
-  // 2단계: processWindowParallel — 병렬 실행 후 완료 대기
+  // 2단계: processWindowParallel — queueExecutor 스레드풀로 병렬 실행
   CompletableFuture.allOf(
     tasks.map(task ->
-      runAsync(() -> tryPurchase(task))  // ForkJoinPool.commonPool()
-      // 실패 → tryPurchase 내부에서 stock INCR 복구
-      // 예외 → catch 후 stock INCR 복구
+      runAsync(() -> {
+        try { tryPurchase(task) }
+        catch { stock INCR 복구 }
+        finally { paying DECR }
+      }, queueExecutor)  // 전용 스레드풀 (core=4, max=8)
     )
   ).join()
 
@@ -149,14 +160,14 @@ while (true):
 checkTermination(scheduleId)
 ```
 
-**스레드 분리:** `@Async` 스레드가 `.join()`으로 대기하고, 실제 tryPurchase는 `ForkJoinPool.commonPool()`에서 실행 → 데드락 없음.
+**스레드 분리:** Kafka 컨슈머 스레드가 `.join()`으로 대기하고, 실제 tryPurchase는 `queueExecutor` (core=4, max=8, CallerRunsPolicy)에서 실행.
 
 ### 종료 조건 체크 (`checkTermination`)
 
 ```
 stock <= 0
-AND countByStatus(RESERVED) == 0   ← 결제 대기 없음
-AND queueSize > 0                   ← 남은 대기자 있음
+AND paying == 0     ← 결제 진행 중 없음
+AND queueSize > 0   ← 남은 대기자 있음
   →  terminateQueue()
 ```
 
@@ -177,7 +188,7 @@ eventPublisherPort.publish("queue.terminated", ..., new QueueTerminatedMessage(s
 ## ticketNum 계산
 
 ```java
-// seats = Redis getCounter("seats:schedule:{id}") → 전체 좌석 수 (예: 100)
+// seats = Schedule.getSeats() → 전체 좌석 수 (예: 100)
 // stockAfterDecr = DECR 후 값 (예: 42 → 43번째 티켓)
 ticketNum = seats - stockAfterDecr;
 // = 100 - 42 = 58번째 티켓

@@ -154,13 +154,19 @@ int retryCount  = dataMap.getInt("retryCount");
 
 ```
 CART_CLOSE 그룹
-  └─ CartCloseJob_{scheduleId}   → CartCloseTrigger_{scheduleId}
+  └─ CartCloseJob_{scheduleId}         → CartCloseTrigger_{scheduleId}
 
 TICKETING_START 그룹
-  └─ TicketingStartJob_{scheduleId} → TicketingStartTrigger_{scheduleId}
+  └─ TicketingStartJob_{scheduleId}    → TicketingStartTrigger_{scheduleId}
 
 REVIEW_AUTH 그룹
-  └─ ReviewAuthJob_{scheduleId}  → ReviewAuthTrigger_{scheduleId}
+  └─ ReviewAuthJob_{scheduleId}        → ReviewAuthTrigger_{scheduleId}
+
+STREAMING_START 그룹
+  └─ StreamingStartJob_{scheduleId}    → StreamingStartTrigger_{scheduleId}
+
+STREAMING_FINISH 그룹
+  └─ StreamingFinishJob_{scheduleId}   → StreamingFinishTrigger_{scheduleId}
 ```
 
 그룹을 쓰는 이유: 취소 시 그룹 단위 조회가 가능하고, 로그/모니터링에서 구분하기 쉽다.

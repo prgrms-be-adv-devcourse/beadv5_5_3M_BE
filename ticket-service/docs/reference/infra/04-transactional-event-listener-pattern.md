@@ -77,7 +77,8 @@ public TicketResponse pay(UUID userId, Long ticketId) {
 public void handleTicketPaid(TicketPaidEvent event) {
     // DB 커밋이 보장된 이후에만 실행
     eventPublisherPort.publish("ticket.paid", ..., new TicketPaidMessage(...));
-    queueAutoProcessService.checkAndProcess(event.scheduleId());
+    // 드레인 트리거: Kafka queue.drain 발행 (QueueDrainConsumer가 checkAndProcess 실행)
+    eventPublisherPort.publish("queue.drain", scheduleId.toString(), new QueueDrainMessage(scheduleId));
 }
 ```
 
@@ -87,13 +88,12 @@ public void handleTicketPaid(TicketPaidEvent event) {
 
 | 이벤트 | 발행처 | 리스너 처리 |
 |--------|--------|------------|
-| `TicketReservedEvent` | `TicketService` | Kafka `ticket.reserved` |
-| `TicketCancelledEvent` | `TicketService` | Kafka `ticket.cancelled` |
-| `TicketPaidEvent` | `SelfPaymentService`, `QueuePurchaseProcessor` | Kafka `ticket.paid` + checkAndProcess |
-| `TicketRefundedEvent` | `RefundService` | Redis stock INCR + checkAndProcess + Kafka `ticket.refunded` |
+| `TicketPaidEvent` | `SelfPaymentService`, `QueuePurchaseProcessor` | Kafka `ticket.paid` + Kafka `queue.drain` |
+| `TicketRefundedEvent` | `RefundService` | 쿠키 환불 HTTP 호출 + Redis stock INCR + Kafka `queue.drain` + Kafka `ticket.refunded` |
 | `CartClosedEvent` | `CartCloseService` | Kafka `cart.closed` |
-| `TicketingStartedEvent` | `TicketingStartService` | Kafka `ticketing.started` |
-| `ScheduleInitializedEvent` | `ScheduleEventConsumer` | Quartz Job 3개 등록 + Redis cart count 초기화 |
+| `TicketingStartedEvent` | `TicketingStartService` | Redis 5개 키 설정 (stock/paying/seats/cookie/startTime) + Kafka `ticketing.started` |
+| `CartUpdatedEvent` | `CartService` | Redis `cart:count:schedule:{id}` INCR 또는 DECR |
+| `ScheduleInitializedEvent` | `ScheduleEventConsumer` | Quartz Job 5개 등록 (CartClose, TicketingStart, ReviewAuth, StreamingStart, StreamingFinish) + Redis cart count 초기화 |
 
 ---
 
@@ -104,6 +104,8 @@ public void handleTicketPaid(TicketPaidEvent event) {
 `@TransactionalEventListener(AFTER_COMMIT)` 메서드에서 예외가 발생해도
 **이미 커밋된 DB 트랜잭션은 롤백되지 않는다.**
 Kafka 발행 실패 시 메시지가 유실될 수 있으므로, 필요 시 별도 재시도/DLQ 전략을 적용해야 한다.
+
+`TicketEventListener.handleTicketRefunded()`는 쿠키 환불, stock 복구, Kafka 발행을 각각 try-catch로 감싸 하나가 실패해도 나머지가 실행되도록 한다.
 
 ### AFTER_COMMIT vs AFTER_COMPLETION
 
@@ -117,17 +119,29 @@ Kafka 발행 실패 시 메시지가 유실될 수 있으므로, 필요 시 별�
 
 현재 코드베이스는 전부 `AFTER_COMMIT`만 사용.
 
-### @Async와 조합
+### Kafka 기반 드레인 트리거
 
-`QueueAutoProcessService.checkAndProcess()`는 `@Async`라서
-리스너가 호출하면 별도 스레드에서 비동기 실행된다.
-호출 스레드(리스너)를 블로킹하지 않아 Kafka 발행 성능에 영향을 주지 않는다.
+`checkAndProcess()`는 이전에 `@Async`로 AFTER_COMMIT 리스너에서 직접 호출했으나,
+동시 결제 시 스레드 풀(TaskRejectedException) 고갈 문제로 Kafka 기반으로 전환됐다.
+
+현재: AFTER_COMMIT 리스너에서 Kafka `queue.drain` 토픽으로 메시지를 발행하면,
+`QueueDrainConsumer` (concurrency=4)가 별도 Kafka consumer 스레드에서 `checkAndProcess()`를 동기 호출한다.
+`key=scheduleId` 파티셔닝으로 동일 스케줄의 드레인은 단일 스레드에서 순차 처리된다.
 
 ```
 handleTicketPaid()
-  ├─ eventPublisherPort.publish(...)  ← 동기, 완료 후 리턴
-  └─ checkAndProcess()               ← @Async, 즉시 리턴 (별도 스레드에서 실행)
+  ├─ eventPublisherPort.publish("ticket.paid", ...)   ← 동기
+  └─ eventPublisherPort.publish("queue.drain", ...)   ← 동기 (Kafka fire-and-forget)
+                                                          ↓ (별도 Kafka consumer 스레드)
+                                                       QueueDrainConsumer.consume()
+                                                         └─ checkAndProcess(scheduleId)
 ```
+
+### CookieCompensationHelper
+
+HTTP로 쿠키를 차감한 후 DB 롤백이 발생하면 쿠키만 차감된 불일치 상태가 된다.
+`CookieCompensationHelper.registerRollbackRefund()`가 `TransactionSynchronization.afterCompletion()`을 등록하여,
+DB 롤백 시 자동으로 쿠키를 환불한다. `SelfPaymentService`, `QueuePurchaseProcessor`에서 공통 사용.
 
 ### setRollbackOnly()와 AFTER_COMMIT
 

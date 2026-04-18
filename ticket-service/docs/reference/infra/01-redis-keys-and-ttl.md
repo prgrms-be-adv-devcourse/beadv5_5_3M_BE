@@ -1,15 +1,17 @@
 # Redis 키 목록, 용도, 만료 시간
 
+키 문자열 상수는 `application/constants/RedisKeys.java`에 중앙 관리.
+
 ## 전체 요약
 
 | 키 패턴 | 타입 | TTL | 설정 위치 |
 |---------|------|-----|----------|
 | `cart:count:schedule:{id}` | String (Counter) | `ticketingTime - 24h - now` | ScheduleEventListener |
-| `stock:schedule:{id}` | String (Counter) | `startTime - 10min - now` | TicketingStartService |
-| `paying:schedule:{id}` | String (Counter) | `startTime - 10min - now` | TicketingStartService |
-| `seats:schedule:{id}` | String (Counter) | `startTime - 10min - now` | TicketingStartService |
-| `cookie:schedule:{id}` | String (Counter) | `startTime - 10min - now` | TicketingStartService |
-| `startTime:schedule:{id}` | String (ISO-8601) | `startTime - 10min - now` | TicketingStartService |
+| `stock:schedule:{id}` | String (Counter) | `startTime - 10min - now` | TicketEventListener.handleTicketingStarted (AFTER_COMMIT) |
+| `paying:schedule:{id}` | String (Counter) | `startTime - 10min - now` | TicketEventListener.handleTicketingStarted (AFTER_COMMIT) |
+| `seats:schedule:{id}` | String (Counter) | `startTime - 10min - now` | TicketEventListener.handleTicketingStarted (AFTER_COMMIT) |
+| `cookie:schedule:{id}` | String (Counter) | `startTime - 10min - now` | TicketEventListener.handleTicketingStarted (AFTER_COMMIT) |
+| `startTime:schedule:{id}` | String (ISO-8601) | `startTime - 10min - now` | TicketEventListener.handleTicketingStarted (AFTER_COMMIT) |
 | `queue:schedule:{id}` | ZSet | `startTime - 10min - now` | QueueService.enter() |
 
 ---
@@ -29,8 +31,8 @@ value: 장바구니에 담은 유저 수
   → cachePort.setCounter("cart:count:schedule:{id}", 0, ttl)
   → TTL = ticketingTime - 24h - now  ← 장바구니 마감 시점에 만료
 
-[INCR] CartService.addToCart()
-[DECR] CartService.removeFromCart()
+[INCR] CartService.addToCart() → CartUpdatedEvent(added=true) → TicketEventListener.handleCartUpdated (AFTER_COMMIT)
+[DECR] CartService.removeFromCart() → CartUpdatedEvent(added=false) → TicketEventListener.handleCartUpdated (AFTER_COMMIT)
 [GET]  CartService.getCartCount()  ← DB COUNT 쿼리 대신 사용
 
 [소멸] TTL 만료 (마감 시점) 또는 CartCloseService에서 명시적 삭제 없음
@@ -55,8 +57,8 @@ value: 현재 구매 가능한 잔여 좌석 수
 ### 생명주기
 
 ```
-[설정] TicketingStartService.execute()
-  → remaining = seats - count(CONFIRMED 티켓)
+[설정] TicketEventListener.handleTicketingStarted (AFTER_COMMIT)
+  → remaining = event.remaining()  ← TicketingStartService가 계산 후 이벤트에 전달
   → cachePort.setCounter("stock:schedule:{id}", remaining, ttl)
   → TTL = startTime - 10min - now  ← 공연 10분 전 티켓팅 마감
 
@@ -91,7 +93,7 @@ EXISTS stock:schedule:{id} == false  →  티켓팅 전 또는 마감됨
 ```java
 if (cachePort.exists(stockKey)) {
     cachePort.increment(stockKey);
-    queueAutoProcessService.checkAndProcess(scheduleId);
+    eventPublisherPort.publish("queue.drain", scheduleId.toString(), new QueueDrainMessage(scheduleId));
 }
 ```
 
@@ -108,7 +110,7 @@ value: 현재 tryPurchase 호출 중인 유저 수
 ### 생명주기
 
 ```
-[설정] TicketingStartService.execute()
+[설정] TicketEventListener.handleTicketingStarted (AFTER_COMMIT)
   → cachePort.setCounter("paying:schedule:{id}", 0, ttl)
   → TTL = startTime - 10min - now  ← stock 키와 동일
 
@@ -175,10 +177,10 @@ value: 공연 시작 시각 (schedule.startTime.toString())
 ### 생명주기
 
 ```
-[설정] TicketingStartService.execute()
-  → cachePort.setCounter("seats:schedule:{id}", schedule.getSeats(), ttl)
-  → cachePort.setCounter("cookie:schedule:{id}", schedule.getCookie(), ttl)
-  → cachePort.set("startTime:schedule:{id}", schedule.getStartTime().toString(), ttl)
+[설정] TicketEventListener.handleTicketingStarted (AFTER_COMMIT)
+  → cachePort.setCounter("seats:schedule:{id}", event.seats(), ttl)
+  → cachePort.setCounter("cookie:schedule:{id}", event.cookie(), ttl)
+  → cachePort.set("startTime:schedule:{id}", event.startTime().toString(), ttl)
   → TTL = startTime - 10min - now  ← stock 키와 동일
 
 [소멸] TTL 만료 (startTime - 10min)

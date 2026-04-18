@@ -8,7 +8,7 @@
 ```
 재고 있음  → 즉시 구매 (DECR → tryPurchase)
 재고 없음  → 대기열 진입 (ZADD queue)
-재고 복구  → 대기열 드레인 자동 실행 (@Async checkAndProcess)
+재고 복구  → Kafka queue.drain 발행 → QueueDrainConsumer → checkAndProcess
 ```
 
 ### 관련 Redis 키
@@ -26,13 +26,17 @@
 
 ```
 환불 발생
-  → stock INCR (재고 복구)
-  → @Async checkAndProcess() 호출
-      → drainQueue(): 대기 유저 구매 처리
-      → checkTermination(): 대기열 종료 여부 판단
+  → DB 커밋 (AFTER_COMMIT 리스너 실행)
+      → stock INCR (재고 복구)
+      → Kafka queue.drain 발행 (scheduleId를 key로)
+          → QueueDrainConsumer (concurrency=4, queue-drain-group)
+              → checkAndProcess(scheduleId) [동기 실행]
+                  → drainQueue(): 대기 유저 구매 처리
+                  → checkTermination(): 대기열 종료 여부 판단
 ```
 
-`@Async`이므로 환불 API 응답은 드레인 완료를 기다리지 않고 즉시 반환된다.
+Kafka consumer 스레드에서 동기 실행되므로 환불 API 응답은 드레인 완료를 기다리지 않고 즉시 반환된다.
+`key=scheduleId` 파티셔닝으로 동일 스케줄의 드레인 메시지는 동일 파티션에 쌓여 순차 처리된다.
 
 ---
 
@@ -115,7 +119,7 @@ t=~105ms 전체 완료 → 루프 종료
 | **stock=1일 때** | 차이 없음 | 차이 없음 |
 | **원자성 보장** | DECR-first 방식 | DECR-first 방식 동일 |
 | **실패 처리** | 다음 루프에서 재시도 | 같은 윈도우 내 병렬 실패 → stock 복구 → 다음 윈도우 |
-| **스레드** | @Async 1개 | @Async 1개 + ForkJoinPool N개 |
+| **스레드** | Kafka consumer 1개 | Kafka consumer 1개 + queueExecutor N개 |
 | **구현 복잡도** | 낮음 | 중간 |
 
 ---

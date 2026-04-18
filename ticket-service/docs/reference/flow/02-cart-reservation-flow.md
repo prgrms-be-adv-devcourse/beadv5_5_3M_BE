@@ -96,14 +96,15 @@ UserPort.deductTicketFee(ticketId, cookie, userId)
   → HTTP POST /internal/users/deduct/cookie
   │
   ├─ flag=false (쿠키 부족)
-  │    └─ stock 키 존재 시: INCR(stock) + checkAndProcess()
+  │    └─ stock 키 존재 시: INCR(stock) + Kafka `queue.drain` 발행
   │    └─ INSUFFICIENT_BALANCE 에러 반환
   │
   └─ flag=true (성공)
+       └─ CookieCompensationHelper.registerRollbackRefund() (DB 롤백 시 쿠키 보상)
        └─ ticket.pay() → RESERVED → CONFIRMED
        └─ TicketPaidEvent 발행 → AFTER_COMMIT:
             - Kafka: ticket.paid
-            - checkAndProcess() (대기열 종료 조건 체크)
+            - Kafka: queue.drain (대기열 드레인 트리거)
 ```
 
 ---

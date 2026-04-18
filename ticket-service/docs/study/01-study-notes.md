@@ -138,7 +138,7 @@ collectWindow (단일 스레드, 순차):
 
 processWindowParallel (병렬):
   tryPurchase(A) ┐
-  tryPurchase(B) ├─ 동시 실행 (ForkJoinPool)
+  tryPurchase(B) ├─ 동시 실행 (queueExecutor, core=4, max=8)
   tryPurchase(C) ┘
 ```
 
@@ -159,46 +159,40 @@ eventPublisherPort.publish("queue.terminated", ...);
 
 ---
 
-## 4. @Async — 논블로킹 비동기 처리
+## 4. @Async → Kafka 기반 비동기 분리
 
 ### 핵심 개념
 
 `@Async`가 붙은 메서드는 호출 즉시 리턴하고, 실제 실행은 별도 스레드풀에서 수행된다.
-`@EnableAsync`가 설정된 경우에만 동작한다.
+하지만 동시 이벤트가 대량 발생하면 스레드풀 고갈(`TaskRejectedException`) 문제가 있다.
 
-### 이 프로젝트에서 쓰는 이유
+### 이 프로젝트의 변천
 
-환불 API 응답 흐름:
+**초기 설계 (@Async):**
 ```
-유저 → POST /api/tickets/{id}/refund
-  │
-  ▼
-RefundService.refund()  [트랜잭션]
-  → ticketRepository.delete()
-  → eventPublisher.publishEvent(TicketRefundedEvent)
-  │
-  ▼ 커밋
 TicketEventListener.handleTicketRefunded()  [AFTER_COMMIT]
-  → cachePort.increment(stock)
-  → queueAutoProcessService.checkAndProcess()  ← @Async: 즉시 리턴
-  → eventPublisherPort.publish(Kafka)
-  │
-  ▼ 리스너 리턴
-유저에게 204 응답 ← 대기열 드레인을 기다리지 않음
+  → @Async("queueExecutor") checkAndProcess()
 ```
 
-`checkAndProcess()`가 동기라면 대기열에 100명이 있을 때
-100번의 HTTP 쿠키 차감 요청이 끝날 때까지 응답이 안 나간다.
+동시 결제 60~500건 → `queueCapacity=20` 초과 → `TaskRejectedException` → 드레인 유실.
+또한 `checkAndProcess()` 내부에서 동일 `queueExecutor`에 `CompletableFuture` 재제출 → 자기 교착(starvation).
 
-### 주의: @Async도 self-invocation 문제 있음
-
-```java
-// ❌ 같은 클래스에서 자기 자신 호출 → @Async 무시, 동기 실행
-this.checkAndProcess(scheduleId);
-
-// ✅ 외부에서 주입받은 Bean 호출
-queueAutoProcessService.checkAndProcess(scheduleId);
+**현재 설계 (Kafka 기반):**
 ```
+TicketEventListener.handleTicketRefunded()  [AFTER_COMMIT]
+  → Kafka "queue.drain" 발행 (동기, fire-and-forget)
+      ↓ (별도 Kafka consumer 스레드)
+  QueueDrainConsumer(concurrency=4) → checkAndProcess() 동기 실행
+```
+
+- `key=scheduleId` 파티셔닝 → 동일 스케줄은 단일 파티션에서 순차 처리
+- Kafka consumer 스레드가 `checkAndProcess()` 완료까지 블록 → 자연스러운 backpressure
+- `queueExecutor`는 `drainQueue()` 내부 `CompletableFuture` 병렬 처리 전용으로만 사용
+
+### 교훈
+
+AFTER_COMMIT 리스너에서 `@Async`로 무거운 작업을 직접 제출하면 이벤트 폭주 시 풀 고갈 위험이 있다.
+메시지 큐(Kafka)로 분리하면 consumer 수로 처리량을 제어할 수 있고, 자체 backpressure가 작동한다.
 
 ---
 
@@ -258,7 +252,7 @@ application → infrastructure ❌ (절대 금지 — 역방향 의존)
 
 ## 6. @TransactionalEventListener — DB 정합성 보장
 
-→ 자세한 내용은 [`08-transactional-event-listener-pattern.md`](./08-transactional-event-listener-pattern.md) 참고
+→ 자세한 내용은 [`transactional-event-listener-pattern`](../reference/infra/04-transactional-event-listener-pattern.md) 참고
 
 **한 줄 요약:** DB 커밋 후에만 Redis/Kafka 작업을 실행해
 트랜잭션 롤백 시 이벤트가 발행되지 않도록 보장하는 패턴.
@@ -272,6 +266,6 @@ application → infrastructure ❌ (절대 금지 — 역방향 의존)
 | AOP Self-Invocation | 프록시, 별도 Bean 분리 | `QueuePurchaseProcessor` |
 | setRollbackOnly | 예외 없는 롤백, 루프 유지 | `QueuePurchaseProcessor.tryPurchase()` |
 | Redis 원자적 연산 | DECR/ZPOPMIN/DEL 원자성 | `QueueAutoProcessService.drainQueue()` |
-| @Async | 비동기 스레드풀, 논블로킹 | `QueueAutoProcessService.checkAndProcess()` |
+| @Async → Kafka 전환 | 스레드풀 고갈 방지, backpressure | `QueueDrainConsumer`, `QueueAutoProcessService` |
 | 헥사고날 아키텍처 | Port/Adapter, 의존성 역전 | `CachePort`, `UserPort`, `EventPublisherPort` |
 | @TransactionalEventListener | AFTER_COMMIT, 정합성 | `TicketEventListener`, `ScheduleEventListener` |

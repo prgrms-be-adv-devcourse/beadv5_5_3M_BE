@@ -27,6 +27,8 @@ sequenceDiagram
     SEL->>QZ: scheduleCartCloseJob(ticketingTime - 24h)
     SEL->>QZ: scheduleTicketingStartJob(ticketingTime)
     SEL->>QZ: scheduleReviewAuthJob(startTime)
+    SEL->>QZ: scheduleStreamingStartJob(startTime)
+    SEL->>QZ: scheduleStreamingFinishJob(endTime)
     SEL->>RD: SET cart:count:schedule:{id} 0 (TTL: ticketingTime-24h)
 
     Note over QZ: ── ticketingTime - 24h ──────────────────────────────
@@ -78,6 +80,8 @@ payload: ScheduleConfirmedMessage {
 | `CartCloseQuartzJob` | `ticketingTime - 24h` | 장바구니 마감 |
 | `TicketingStartQuartzJob` | `ticketingTime` | 티켓팅 오픈 |
 | `ReviewAuthQuartzJob` | `startTime` | 리뷰 권한 발행 |
+| `StreamingStartQuartzJob` | `startTime` | TICKETING → STREAMING 전환 |
+| `StreamingFinishQuartzJob` | `endTime` | STREAMING → FINISH 전환 |
 
 Redis 장바구니 카운트 키도 이 시점에 초기화:
 ```
@@ -131,7 +135,7 @@ stateDiagram-v2
 
     IN_PROGRESSING --> TICKETING : TicketingStartQuartzJob\n(ticketingTime)
 
-    TICKETING --> STREAMING : 공연 시작\n(외부 관리)
+    TICKETING --> STREAMING : StreamingStartQuartzJob\n(startTime)
 
-    STREAMING --> FINISH : 공연 종료
+    STREAMING --> FINISH : StreamingFinishQuartzJob\n(endTime)
 ```
