@@ -52,36 +52,38 @@ rules:
 
   - id: TKT-004
     severity: HIGH
-    title: SelfPayment 쿠키 차감 실패 시 stock 복구 경로 오류
+    title: SelfPayment 쿠키 차감 실패 시 stock 복구 경로 회귀
     description: >
       SelfPaymentService.pay()에서 userPort.deductTicketFee() 결과 flag==false
-      (잔액 부족)일 때 아래 두 가지 오류 패턴:
-      (1) cachePort.exists(STOCK_KEY_PREFIX + scheduleId) 체크 없이 stock을 무조건 INCR.
-          TICKETING 단계가 아닐 때 존재하지 않는 stock 키가 생성되어 이후 QueueService에서
-          QUEUE_NOT_OPEN 체크를 우회하거나 잘못된 재고 값이 세팅됨.
-      (2) stock INCR 자체를 생략.
-          해당 RESERVED 티켓을 점유한 재고가 복구되지 않아 잔여 대기자가 구매 기회를 잃음.
-      두 경우 모두 queueAutoProcessService.checkAndProcess(scheduleId) 호출도 누락되면
-      대기열 드레인이 중단됨.
-      정상 패턴: if (cachePort.exists(STOCK_KEY_PREFIX + scheduleId)) {
-        cachePort.increment(STOCK_KEY_PREFIX + scheduleId);
-        queueAutoProcessService.checkAndProcess(scheduleId); }
+      (잔액 부족)일 때, 아래 두 단계가 모두 존재해야 함:
+      (1) cachePort.exists(stockKey) 가드 체크 후 stock INCR.
+          가드 없이 무조건 INCR하면 TICKETING 단계가 아닐 때 존재하지 않는 stock 키가
+          생성되어 QueueService에서 QUEUE_NOT_OPEN 체크를 우회하거나 잘못된 재고 값이 세팅됨.
+          가드 후 INCR을 아예 생략하면 RESERVED 티켓이 점유한 재고가 복구되지 않아
+          잔여 대기자가 구매 기회를 잃음.
+      (2) stock INCR 후 queue.drain Kafka 메시지 직접 발행
+          (eventPublisherPort.publish(QUEUE_DRAIN, scheduleId, QueueDrainMessage)).
+          이 경로는 @Transactional 롤백 경로이므로 AFTER_COMMIT 이벤트가 아닌
+          Kafka 직접 발행을 사용해야 함. 발행 누락 시 대기열 드레인이 중단됨.
+      정상 패턴: if (cachePort.exists(stockKey)) {
+        cachePort.increment(stockKey);
+        eventPublisherPort.publish(QUEUE_DRAIN, scheduleId, new QueueDrainMessage(scheduleId)); }
 
   - id: TKT-005
     severity: HIGH
-    title: StreamingStart/Finish Job 상태 전이 가드 누락
+    title: StreamingStart/Finish Job 상태 전이 가드 제거 또는 예외 throw 변경
     description: >
       StreamingStartService.execute() 또는 StreamingFinishService.execute()에서
-      schedule.startStreaming() / schedule.finishStreaming() 호출 전에
-      현재 scheduleStatus 검증(guard)이 없는 경우.
+      현재 구현된 상태 가드(schedule.getStatus() != 기대_상태 → early return)가
+      제거되거나, early return 대신 예외를 throw하도록 변경된 경우.
       Quartz Job은 @DisallowConcurrentExecution으로 중복 실행을 방지하지만,
       잡 재실행(misfire), 클러스터 페일오버, 수동 트리거 등 예외 상황에서
       이미 FINISH 상태인 스케줄에 startStreaming()을 호출하거나
       STREAMING 상태가 아닌데 finishStreaming()을 호출할 수 있음.
-      도메인 엔티티의 상태 전이 메서드에 가드가 있더라도 서비스 레이어에서
-      명시적 검증 없이 예외를 그냥 throw하면 Quartz Job이 FAILED로 기록되고
-      재시도 트리거에서 무한 루프 위험.
-      정상 패턴: execute() 진입 시 schedule.getStatus() == 기대_상태 아니면 early return.
+      예외를 throw하면 Quartz Job이 FAILED로 기록되고 재시도 트리거에서
+      무한 루프 위험이 있으므로, 반드시 early return으로 처리해야 함.
+      정상 패턴: execute() 진입 시 schedule.getStatus() == 기대_상태 아니면
+      log.warn 후 early return.
 
   - id: TKT-006
     severity: HIGH
@@ -98,20 +100,79 @@ rules:
       이벤트만 발행.
 
   - id: TKT-007
-    severity: HIGH
+    severity: CRITICAL
     title: DailyTicketFeeProvideScheduler 클러스터 중복 실행 방지 장치 없음
     description: >
       DailyTicketFeeProvideScheduler에 @Scheduled(cron = "0 0 1 * * *")만 사용하고
       ShedLock, Quartz Job Store 클러스터 모드, 또는 분산 락 등 중복 실행 방지 장치가
       없는 경우.
       @Scheduled는 모든 JVM 인스턴스에서 독립적으로 실행되므로, 다중 인스턴스 배포 시
-      같은 시각에 ticketProvideJob이 여러 번 실행됨.
+      같은 시각에 ProvideTicketFeeUseCase.provide()가 여러 번 실행됨.
       bulkMarkProvided는 멱등적(@Modifying UPDATE)이나 ticket.provide Kafka 이벤트는
-      중복 발행되어 settlement-service에서 이중 정산 처리 가능성 있음.
+      중복 발행되어 settlement-service에서 이중 정산 처리 → 크리에이터에게 중복 지급 발생.
       현재 단일 EC2이더라도 배포 전략(Rolling, Blue-Green) 전환 시 순간적으로
       두 인스턴스가 공존하면 동일 위험 발생.
       정상 패턴: Quartz 클러스터 모드(org.quartz.jobStore.isClustered=true) 활용
       또는 @SchedulerLock(ShedLock) 적용.
+
+  - id: TKT-008
+    severity: CRITICAL
+    title: removeFromCart 장바구니 미존재 시 Redis DECR → 음수 카운터 드리프트
+    description: >
+      CartService.removeFromCart()에서 cartRepository.deleteByUserIdAndScheduleId() 호출 후
+      삭제된 행 수를 확인하지 않고 무조건 CartUpdatedEvent(added=false)를 발행하는 경우.
+      deleteByUserIdAndScheduleId()는 JPA의 void 반환 메서드로, 해당 유저의 장바구니 항목이
+      존재하지 않아도 예외 없이 정상 종료됨.
+      이 경우 AFTER_COMMIT 핸들러에서 cart:count:schedule:{scheduleId} 키가 DECR되어
+      카운터가 음수로 드리프트됨.
+      CartCloseService에서 장바구니 수요 vs 좌석 수 비교(Case A/B 분기)에 이 카운터를
+      사용하면 수요가 실제보다 적게 집계되어 Case A(전원 예매)가 잘못 선택되거나
+      Case B에서 예매 인원이 부족하게 산정됨.
+      정상 패턴: deleteByUserIdAndScheduleId() 호출 전 existsByUserIdAndScheduleId()로
+      존재 여부를 확인하거나, 삭제된 행 수를 반환받아(long 반환 타입) 0이면 이벤트 발행 스킵.
+
+  - id: TKT-009
+    severity: CRITICAL
+    title: CookieCompensationHelper.registerRollbackRefund() 호출 위치 오류
+    description: >
+      SelfPaymentService.pay() 또는 QueuePurchaseProcessor.tryPurchase()에서
+      CookieCompensationHelper.registerRollbackRefund()가 아래 위치에 호출되는 경우:
+      (1) userPort.deductTicketFee() 호출 전에 등록 — HTTP 차감이 아직 성공하지 않은
+          상태에서 DB 롤백 시 환불 HTTP가 호출되어 차감하지 않은 쿠키를 환불 시도.
+          user-service에서 존재하지 않는 차감 건에 대한 환불로 잔액 오염.
+      (2) userPort.deductTicketFee() 성공 후 registerRollbackRefund() 호출 없이
+          ticket.pay() 등 DB 변경을 수행 — DB 롤백 시 차감된 쿠키가 복구되지 않아
+          유저 잔액 영구 손실.
+      정상 패턴(현재 구현): deductTicketFee() 성공 직후, ticket.pay() 직전에
+      registerRollbackRefund() 호출. 이 순서가 변경되면 쿠키-DB 정합성이 깨짐.
+
+  - id: TKT-010
+    severity: HIGH
+    title: ticketProvideStep 다중 페이지 처리 중 Kafka 발행 실패 시 DB-Kafka 불일치
+    description: >
+      TicketProvideBatchConfig.ticketProvideStep()의 Tasklet에서 다중 페이지를 순회하며
+      각 페이지마다 bulkMarkProvided() → Kafka 발행을 수행하는데, 페이지 N에서 Kafka 발행이
+      실패하여 예외가 throw되면 Tasklet 트랜잭션 전체가 롤백됨.
+      그러나 페이지 1~(N-1)에서 이미 발행된 Kafka 메시지는 회수 불가 →
+      settlement-service가 ticket.provide 이벤트를 처리하지만 DB에는 provideFlag=false인
+      티켓이 됨. 재실행 시 동일 티켓이 다시 발행되어 이중 정산 위험.
+      위험도는 단일 페이지(500건 미만) 환경에서는 낮지만, 대규모 운영에서는 발생 가능.
+      정상 패턴: 페이지 단위로 트랜잭션을 분리하거나, Kafka 발행 실패 시 해당 페이지의
+      bulkMarkProvided를 개별 롤백하거나, settlement-service 측에서 멱등성 보장.
+
+  - id: TKT-011
+    severity: HIGH
+    title: QueueDrainConsumer 일시적 오류 시 queue.drain 신호 유실 — 대기자 영구 대기
+    description: >
+      QueueDrainConsumer.consume()에서 모든 예외를 catch-log 후 정상 소비 처리하는 패턴.
+      Redis 일시적 타임아웃, DB 커넥션 풀 고갈 등 재시도 가능한 예외에서도
+      해당 queue.drain 메시지가 소비 완료(offset commit)되어 재시도되지 않음.
+      이후 추가 queue.drain 신호가 없으면(예: 마지막 환불 후 더 이상 결제/환불 없음)
+      대기열에 남은 유저들이 영구적으로 대기하고 queue.terminated 이벤트도 미발행.
+      현재 코드의 주석("다음 queue.drain 메시지에서 재트리거됨")은 추가 트리거가
+      보장되지 않는 시나리오를 고려하지 않음.
+      정상 패턴: 일시적 예외(Redis/DB timeout)는 rethrow하여 Kafka 재시도에 맡기고,
+      영구적 예외(역직렬화 실패 등)만 catch-log. 또는 실패 시 지연 재발행 메커니즘 도입.
 
   # ──────────────────────────────────────────────
   # RES: 리소스 (t3.large 단일 EC2 — 2 vCPU, 8GB RAM)
@@ -132,53 +193,16 @@ rules:
       정상 패턴: JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:InitialRAMPercentage=25.0"
       + docker-compose의 deploy.resources.limits.memory 또는 mem_limit 설정.
 
-  - id: RES-002
-    severity: CRITICAL
-    title: '@Async 전용 스레드풀 미설정 — SimpleAsyncTaskExecutor 스레드 무제한 생성'
-    description: >
-      QueueAutoProcessService.checkAndProcess()의 @Async가 Bean qualifier 없이
-      사용되고 @Bean ThreadPoolTaskExecutor가 별도 정의되지 않은 경우.
-      Spring Boot 기본값인 SimpleAsyncTaskExecutor는 매 @Async 호출마다 새 OS 스레드를
-      생성(스레드 풀링 없음). refund → stock INCR → checkAndProcess(), 결제 완료 →
-      checkAndProcess() 등 이벤트가 연속 발생하면 스레드가 무제한으로 생성됨.
-      2 vCPU(t3.large)에서 스레드 수백 개는 컨텍스트 스위칭 오버헤드로 CPU 버스트
-      크레딧을 급격히 소진시키고, 스택 메모리(기본 512KB~1MB/스레드) 누적으로
-      OOM까지 발생 가능.
-      정상 패턴:
-        @Bean("queueExecutor")
-        public ThreadPoolTaskExecutor queueExecutor() {
-          executor.setCorePoolSize(2); executor.setMaxPoolSize(4);
-          executor.setQueueCapacity(50); ... }
-        @Async("queueExecutor") public void checkAndProcess(...)
-
-  - id: RES-003
-    severity: HIGH
-    title: CompletableFuture.runAsync() 기본 commonPool 사용 — 2 vCPU 환경 직렬화
-    description: >
-      QueueAutoProcessService.processWindowParallel()에서
-      CompletableFuture.runAsync(task) 또는 supplyAsync(task)를
-      Executor 인자 없이 호출하는 경우.
-      Executor 미지정 시 ForkJoinPool.commonPool()을 사용하며,
-      commonPool 병렬도 = Runtime.availableProcessors() - 1.
-      Docker 컨테이너가 CPU 쿼터 미설정 상태로 t3.large(2 vCPU)에서 실행되면
-      병렬도 = 1 → 윈도우 내 병렬처리가 사실상 직렬 실행, 큐 드레인 지연.
-      또한 @Async 스레드(RES-002 참고)와 commonPool 스레드를 함께 사용하면
-      2 vCPU에서 스레드 경합이 심해지고, allOf().join()이 commonPool 스레드를
-      블록하는 경우 데드락 위험.
-      정상 패턴: 전용 ThreadPoolExecutor(또는 queueExecutor)를
-      runAsync() 두 번째 인자로 전달하여 스레드 수를 명시적으로 제어.
-
   - id: RES-004
     severity: HIGH
     title: HikariCP maximum-pool-size 인상 시 PostgreSQL max_connections 초과 위험
     description: >
-      ticket-service의 HikariCP maximum-pool-size를 현재(25)보다 높게 설정하거나,
-      다른 서비스의 풀 크기를 인상하여 전체 서비스 합산 커넥션 수가
+      서비스의 HikariCP maximum-pool-size를 인상하여 전체 서비스 합산 커넥션 수가
       PostgreSQL max_connections(기본값 100)를 초과하는 경우.
-      현황: ticket-service 25 × 1 + 나머지 7개 서비스의 풀 합산이 100을 초과하면
-      신규 커넥션 획득 실패(HikariCP connectionTimeout 30s 후 SQLException).
-      단일 EC2에서 PostgreSQL도 같은 머신에서 실행 중이므로 max_connections가
-      별도로 튜닝되지 않았을 가능성이 높음.
+      단일 EC2에서 모든 서비스 + PostgreSQL이 동일 머신에서 실행 중이므로
+      max_connections가 별도로 튜닝되지 않았을 가능성이 높음.
+      서비스별 풀 크기 합산이 max_connections를 초과하면 신규 커넥션 획득 실패
+      (HikariCP connectionTimeout 30s 후 SQLException).
       배치 실행 시 JPA가 다수의 커넥션을 동시에 점유하여 다른 서비스 요청이
       커넥션 대기 → 응답 지연 전파.
       정상 패턴: PostgreSQL max_connections 확인 후 (max_connections - 여유분) / 서비스수
