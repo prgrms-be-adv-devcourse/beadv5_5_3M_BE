@@ -8,6 +8,7 @@ import com.example.aiservice.infrastructure.embedding.EmbeddingClient;
 import com.example.aiservice.infrastructure.embedding.EmbeddingResult;
 import com.example.aiservice.infrastructure.kafka.dto.consume.MovieCreatedMessage;
 import com.example.aiservice.infrastructure.kafka.dto.consume.MovieDeletedMessage;
+import com.example.aiservice.infrastructure.kafka.dto.consume.MovieUpdatedMessage;
 import com.example.aiservice.infrastructure.redis.RedisRecommendationClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,6 +68,67 @@ public class MovieSyncService implements MovieSyncUseCase {
         movieStatisticsRepository.saveAll(stats);
 
         log.info("[Kafka] movie.created 처리 완료 - movieId: {}", msg.movieId());
+    }
+
+    @Override
+    @Transactional
+    public void handleMovieUpdated(MovieUpdatedMessage msg) {
+        if (!movieEmbeddedRepository.existsById(msg.movieId())) {
+            log.warn("[Kafka] movie.updated - 존재하지 않는 movieId skip: {}", msg.movieId());
+            return;
+        }
+
+        boolean hasEmbeddingChange = msg.changedFields() != null &&
+                (msg.changedFields().contains("category") || msg.changedFields().contains("description"));
+        boolean hasVisibilityChange = msg.changedFields() != null &&
+                msg.changedFields().contains("visibility");
+
+        // [embedding] category 또는 description 변경 — 동시 변경 시 임베딩 재생성 1회만
+        if (hasEmbeddingChange) {
+            updateEmbedding(msg.movieId(), msg.description(), msg.category());
+        }
+
+        // [visibility] public→private 또는 private→public
+        if (hasVisibilityChange) {
+            updateVisibility(msg.movieId(), msg.visibility());
+        }
+
+        log.info("[Kafka] movie.updated 처리 완료 - movieId: {}, changedFields: {}", msg.movieId(), msg.changedFields());
+    }
+
+    private void updateEmbedding(Long movieId, String description, String[] category) {
+        // activeContext: vector 타입 JPQL 바인딩 불안정 → load + rebuild + save 방식 사용 (publishedAt 보존 필수)
+        MovieEmbedded existing = movieEmbeddedRepository.findById(movieId);
+        EmbeddingResult result = embeddingClient.embed(description, category);
+        movieEmbeddedRepository.save(MovieEmbedded.builder()
+                .movieId(existing.getMovieId())
+                .embedding(result.embedding())
+                .summary(result.summary())
+                .category(result.categoriesEn())
+                .isPublic(existing.isPublic())
+                .publishedAt(existing.getPublishedAt())
+                .build());
+        log.info("[Embedding] 임베딩 재생성 완료 - movieId: {}", movieId);
+    }
+
+    private void updateVisibility(Long movieId, String visibility) {
+        if ("PRIVATE".equals(visibility)) {
+            // public→private: DB 트랜잭션 내 is_public=false + recommended_movie DELETE
+            List<UUID> affectedUserIds = recommendedMovieRepository.findUserIdsByMovieId(movieId);
+            movieEmbeddedRepository.unpublishMovie(movieId);
+            recommendedMovieRepository.deleteByMovieId(movieId);
+
+            // 트랜잭션 커밋 후 Redis 삭제 (best effort — 실패 시 TTL 24h 자연 만료)
+            affectedUserIds.forEach(redisRecommendationClient::deleteCache);
+            log.info("[Visibility] public→private 처리 완료 - movieId: {}, 캐시 삭제 유저 수: {}", movieId, affectedUserIds.size());
+
+        } else if ("PUBLIC".equals(visibility)) {
+            // private→public: is_public=true, published_at = NOW() WHERE published_at IS NULL (최초 공개 시각 고정)
+            movieEmbeddedRepository.publishMovie(movieId);
+            log.info("[Visibility] private→public 처리 완료 - movieId: {}", movieId);
+        } else {
+            log.warn("[Visibility] 알 수 없는 visibility 값 skip - movieId: {}, visibility: {}", movieId, visibility);
+        }
     }
 
     @Override
