@@ -15,6 +15,11 @@ public class UserInteractionHistoryRepositoryImpl implements UserInteractionHist
     private final UserInteractionHistoryJpaRepository userInteractionHistoryJpaRepository;
 
     @Override
+    public boolean existsById(UserInteractionHistoryId id) {
+        return userInteractionHistoryJpaRepository.existsById(id);
+    }
+
+    @Override
     public void insertOnConflictDoNothing(UUID userId, Long movieId, String interactionType, LocalDateTime createdAt) {
         userInteractionHistoryJpaRepository.insertOnConflictDoNothing(userId, movieId, interactionType, createdAt);
     }

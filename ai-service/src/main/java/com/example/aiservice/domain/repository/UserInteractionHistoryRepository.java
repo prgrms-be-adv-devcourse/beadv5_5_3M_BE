@@ -7,6 +7,8 @@ import java.util.UUID;
 
 public interface UserInteractionHistoryRepository {
 
+    boolean existsById(UserInteractionHistoryId id);
+
     void insertOnConflictDoNothing(UUID userId, Long movieId, String interactionType, LocalDateTime createdAt);
 
     void deleteById(UserInteractionHistoryId id);

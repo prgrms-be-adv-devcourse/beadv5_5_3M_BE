@@ -49,6 +49,10 @@ public class UserPreferenceService implements UserPreferenceUseCase {
     @Override
     @Transactional
     public void handleUserDeleted(UserDeletedMessage msg) {
+        if (!userPreferenceRepository.existsById(msg.userId())) {
+            log.warn("[Kafka] user.deleted - 존재하지 않는 userId skip: {}", msg.userId());
+            return;
+        }
         // TODO(recommendation-api): recommended_log DELETE WHERE user_id = ?
         userInteractionHistoryRepository.deleteByUserId(msg.userId());
         recommendedMovieRepository.deleteByUserId(msg.userId());
