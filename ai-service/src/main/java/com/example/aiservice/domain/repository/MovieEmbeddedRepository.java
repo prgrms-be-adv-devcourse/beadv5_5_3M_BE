@@ -6,7 +6,13 @@ public interface MovieEmbeddedRepository {
 
     boolean existsById(Long movieId);
 
+    MovieEmbedded findById(Long movieId);
+
     MovieEmbedded save(MovieEmbedded movieEmbedded);
 
     void deleteById(Long movieId);
+
+    void publishMovie(Long movieId);
+
+    void unpublishMovie(Long movieId);
 }

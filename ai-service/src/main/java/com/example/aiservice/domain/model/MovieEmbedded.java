@@ -5,6 +5,8 @@ import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "movies_embedded")
 @Getter
@@ -30,4 +32,7 @@ public class MovieEmbedded {
 
     @Column(name = "is_public", nullable = false)
     private boolean isPublic;
+
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
 }

@@ -17,6 +17,11 @@ public class MovieEmbeddedRepositoryImpl implements MovieEmbeddedRepository {
     }
 
     @Override
+    public MovieEmbedded findById(Long movieId) {
+        return movieEmbeddedJpaRepository.findById(movieId).orElse(null);
+    }
+
+    @Override
     public MovieEmbedded save(MovieEmbedded movieEmbedded) {
         return movieEmbeddedJpaRepository.save(movieEmbedded);
     }
@@ -24,5 +29,16 @@ public class MovieEmbeddedRepositoryImpl implements MovieEmbeddedRepository {
     @Override
     public void deleteById(Long movieId) {
         movieEmbeddedJpaRepository.deleteById(movieId);
+    }
+
+    @Override
+    public void publishMovie(Long movieId) {
+        movieEmbeddedJpaRepository.setPublic(movieId);
+        movieEmbeddedJpaRepository.setPublishedAtIfAbsent(movieId);
+    }
+
+    @Override
+    public void unpublishMovie(Long movieId) {
+        movieEmbeddedJpaRepository.unpublishMovie(movieId);
     }
 }

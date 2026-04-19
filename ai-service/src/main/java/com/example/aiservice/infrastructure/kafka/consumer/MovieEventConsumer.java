@@ -5,6 +5,7 @@ import com.example.aiservice.application.usecase.MovieSyncUseCase;
 import com.example.aiservice.infrastructure.kafka.dto.consume.MovieCreatedMessage;
 import com.example.aiservice.infrastructure.kafka.dto.consume.MovieDeletedMessage;
 import com.example.aiservice.infrastructure.kafka.dto.consume.MovieLikedMessage;
+import com.example.aiservice.infrastructure.kafka.dto.consume.MovieUpdatedMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -31,7 +32,16 @@ public class MovieEventConsumer {
         }
     }
 
-    // todo : movie.updated 도 해야 함
+    @KafkaListener(topics = "movie.updated", groupId = "ai-service")
+    public void consumeMovieUpdated(String message) {
+        log.info("[Kafka] movie.updated 수신 - payload: {}", message);
+        try {
+            MovieUpdatedMessage msg = objectMapper.readValue(message, MovieUpdatedMessage.class);
+            movieSyncUseCase.handleMovieUpdated(msg);
+        } catch (Exception e) {
+            log.warn("[Kafka] movie.updated 처리 실패, 메시지 skip - payload: {}, error: {}", message, e.getMessage());
+        }
+    }
 
     @KafkaListener(topics = "movie.deleted", groupId = "ai-service")
     public void consumeMovieDeleted(String message) {
