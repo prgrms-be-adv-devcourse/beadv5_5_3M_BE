@@ -4,6 +4,7 @@ import java.util.UUID;
 
 public record MovieLikedMessage(
         UUID userId,
-        Long movieId
+        Long movieId,
+        String action  // "LIKED" | "UNLIKED"
 ) {
 }

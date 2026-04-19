@@ -5,7 +5,6 @@ import com.example.aiservice.application.usecase.MovieSyncUseCase;
 import com.example.aiservice.infrastructure.kafka.dto.consume.MovieCreatedMessage;
 import com.example.aiservice.infrastructure.kafka.dto.consume.MovieDeletedMessage;
 import com.example.aiservice.infrastructure.kafka.dto.consume.MovieLikedMessage;
-import com.example.aiservice.infrastructure.kafka.dto.consume.MovieUnlikedMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -24,8 +23,12 @@ public class MovieEventConsumer {
     @KafkaListener(topics = "movie.created", groupId = "ai-service")
     public void consumeMovieCreated(String message) {
         log.info("[Kafka] movie.created 수신 - payload: {}", message);
-        MovieCreatedMessage msg = objectMapper.readValue(message, MovieCreatedMessage.class);
-        movieSyncUseCase.handleMovieCreated(msg);
+        try {
+            MovieCreatedMessage msg = objectMapper.readValue(message, MovieCreatedMessage.class);
+            movieSyncUseCase.handleMovieCreated(msg);
+        } catch (Exception e) {
+            log.warn("[Kafka] movie.created 처리 실패, 메시지 skip - payload: {}, error: {}", message, e.getMessage());
+        }
     }
 
     // todo : movie.updated 도 해야 함
@@ -33,21 +36,22 @@ public class MovieEventConsumer {
     @KafkaListener(topics = "movie.deleted", groupId = "ai-service")
     public void consumeMovieDeleted(String message) {
         log.info("[Kafka] movie.deleted 수신 - payload: {}", message);
-        MovieDeletedMessage msg = objectMapper.readValue(message, MovieDeletedMessage.class);
-        movieSyncUseCase.handleMovieDeleted(msg);
+        try {
+            MovieDeletedMessage msg = objectMapper.readValue(message, MovieDeletedMessage.class);
+            movieSyncUseCase.handleMovieDeleted(msg);
+        } catch (Exception e) {
+            log.warn("[Kafka] movie.deleted 처리 실패, 메시지 skip - payload: {}, error: {}", message, e.getMessage());
+        }
     }
 
     @KafkaListener(topics = "movie.liked", groupId = "ai-service")
     public void consumeMovieLiked(String message) {
         log.info("[Kafka] movie.liked 수신 - payload: {}", message);
-        MovieLikedMessage msg = objectMapper.readValue(message, MovieLikedMessage.class);
-        interactionUseCase.handleMovieLiked(msg);
-    }
-
-    @KafkaListener(topics = "movie.unliked", groupId = "ai-service")
-    public void consumeMovieUnliked(String message) {
-        log.info("[Kafka] movie.unliked 수신 - payload: {}", message);
-        MovieUnlikedMessage msg = objectMapper.readValue(message, MovieUnlikedMessage.class);
-        interactionUseCase.handleMovieUnliked(msg);
+        try {
+            MovieLikedMessage msg = objectMapper.readValue(message, MovieLikedMessage.class);
+            interactionUseCase.handleMovieLiked(msg);
+        } catch (Exception e) {
+            log.warn("[Kafka] movie.liked 처리 실패, 메시지 skip - payload: {}, error: {}", message, e.getMessage());
+        }
     }
 }
