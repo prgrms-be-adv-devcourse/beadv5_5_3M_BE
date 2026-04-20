@@ -113,6 +113,7 @@ public class UserService implements UserUseCase {
 
         String accessToken = jwtProvider.generateAccessToken(user.getUserId());
         String rawRefreshToken = jwtProvider.generateRefreshToken(user.getUserId());
+
         redisPort.saveAccessToken(
                 user.getUserId().toString(),
                 accessToken,
