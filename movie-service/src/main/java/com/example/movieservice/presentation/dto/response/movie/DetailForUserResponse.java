@@ -32,7 +32,13 @@ public record DetailForUserResponse(
 
         @Schema(description = "총 쿠키 수 (기본 + 추가)", example = "15")
         Integer cookie,
-//        String imageUrl,
+
+        @Schema(description = "포스터 이미지 URL")
+        String imageUrl,
+
+        @Schema(description = "좋아요 수", example = "42")
+        Integer likeCount,
+
         @Schema(description = "상영 일정 목록")
         List<ScheduleForUserResponse> schedules,
 

@@ -5,6 +5,7 @@ import com.example.movieservice.domain.repository.MovieRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,6 +43,11 @@ public class MovieRepositoryImpl implements MovieRepository {
     @Override
     public List<Long> findAllMovieIds() {
         return movieJpaRepository.findAllMovieIds();
+    }
+
+    @Override
+    public List<Movie> findAllByMovieIds(Collection<Long> movieIds) {
+        return movieJpaRepository.findAllById(movieIds);
     }
 
     @Override
