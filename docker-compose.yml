@@ -25,7 +25,6 @@ services:
       TICKET_PORT: ${TICKET_PORT}
       USER_PORT: ${USER_PORT}
       MOVIE_PORT: ${MOVIE_PORT}
-      REVIEW_PORT: ${REVIEW_PORT}
     restart: unless-stopped
     networks: [app-network]
 
@@ -40,6 +39,8 @@ services:
     container_name: creator-service
     ports:
       - "${CREATOR_PORT}:${CREATOR_PORT}"
+    volumes:
+      - /home/ubuntu/uploads:/root/uploads
     environment:
       SERVER_PORT: ${CREATOR_PORT}
       SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:5432/creator_db
@@ -54,6 +55,9 @@ services:
       JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY}
       JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY}
       DDL_AUTO: ${DDL_AUTO}
+      FILE_UPLOAD_BASE_PATH: /root/uploads
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 500MB
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 500MB
     restart: unless-stopped
     networks: [app-network]
 
@@ -164,27 +168,6 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       MINIO_BUCKET: ${MINIO_BUCKET}
-      DDL_AUTO: ${DDL_AUTO}
-    restart: unless-stopped
-    networks: [app-network]
-
-  # ──────────────────────────────────────────
-  # Review Service (포트 8087)
-  # - 리뷰 작성/수정/삭제
-  # ──────────────────────────────────────────
-  reivew-service:
-    profiles: [reivew-service]
-    image: ${DOCKERHUB_USERNAME}/reivew-service:latest
-    container_name: reivew-service
-    ports:
-      - "${REVIEW_PORT}:${REVIEW_PORT}"
-    environment:
-      SERVER_PORT: ${REVIEW_PORT}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:5432/review_db
-      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
-      SPRING_PROFILES_ACTIVE: prod
       DDL_AUTO: ${DDL_AUTO}
     restart: unless-stopped
     networks: [app-network]
