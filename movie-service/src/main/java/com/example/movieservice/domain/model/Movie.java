@@ -23,10 +23,10 @@ public class Movie {
     @Column(name = "movie_id")
     private Long movieId;
 
-    @Column(name = "creator_id")
+    @Column(name = "creator_id", nullable = false)
     private UUID creatorId;
 
-    @Column(name = "title", length = 100)
+    @Column(name = "title", length = 100, nullable = false)
     private String title;
 
     @Column(name = "description", columnDefinition = "TEXT")
@@ -47,23 +47,29 @@ public class Movie {
     private String videoUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "visibility", length = 10)
+    @Column(name = "visibility", length = 10, nullable = false)
     private Visibility visibility;
 
-    @Column(name = "running_time")
+    @Column(name = "running_time", nullable = false)
     private Integer runningTime; // sec 단위
 
-    @Column(name = "base_cookie")
+    @Column(name = "base_cookie", nullable = false)
     private Integer baseCookie;
 
-    @Column(name = "additional_cookie")
+    @Column(name = "additional_cookie", nullable = false)
     private Integer additionalCookie;
 
     @Column(name = "average_rating")
-    private Float averageRating;
+    @Builder.Default
+    private Float averageRating = 0f;
 
     @Column(name = "review_count")
-    private Integer reviewCount;
+    @Builder.Default
+    private Integer reviewCount = 0;
+
+    @Column(name = "like_count", nullable = false)
+    @Builder.Default
+    private Integer likeCount = 0;
 
     @ManyToMany
     @JoinTable(
@@ -94,6 +100,14 @@ public class Movie {
 
     // review.written 수신 시
     public void applyReviewCreated(Integer rating) {
+        if (rating == null || rating < 1 || rating > 5) {
+            throw new IllegalArgumentException("rating은 1~5 사이여야 합니다: " + rating);
+        }
+        if (reviewCount == 0) {
+            this.averageRating = (float) rating;
+            this.reviewCount = 1;
+            return;
+        }
         this.averageRating = (averageRating * reviewCount + rating) / (reviewCount + 1);
         this.reviewCount++;
     }
@@ -113,5 +127,13 @@ public class Movie {
     public void recalculateRating(int reviewCount, float averageRating) {
         this.reviewCount = reviewCount;
         this.averageRating = averageRating;
+    }
+
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) this.likeCount--;
     }
 }
