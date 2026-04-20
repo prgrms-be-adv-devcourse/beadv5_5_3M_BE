@@ -34,6 +34,7 @@ public class JwtProvider {
 
     public String generateAccessToken(UUID userId) {
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(userId.toString())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessTokenExpiry))
@@ -43,11 +44,16 @@ public class JwtProvider {
 
     public String generateRefreshToken(UUID userId) {
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(userId.toString())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + refreshTokenExpiry))
                 .signWith(loadPrivateKey())
                 .compact();
+    }
+
+    public long getAccessTokenExpirySeconds() {
+        return accessTokenExpiry / 1000;
     }
 
     public long getRefreshTokenExpirySeconds() {

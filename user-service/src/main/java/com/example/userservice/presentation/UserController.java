@@ -42,8 +42,12 @@ public class UserController {
     public ResponseEntity<Boolean> check(
             @ModelAttribute AuthorizationRequest request,
             @Parameter(description = "유저 ID (게이트웨이에서 주입)", required = true, example = "550e8400-e29b-41d4-a716-446655440000")
-            @RequestHeader("X-User-Id") String userId) {
-        return ResponseEntity.ok(userUseCase.checkAuthorization(request, userId));
+            @RequestHeader("X-User-Id") String userId,
+            @Parameter(description = "액세스 토큰 (게이트웨이에서 주입)")
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        String accessToken = authorization != null && authorization.startsWith("Bearer ")
+                ? authorization.substring(7) : null;
+        return ResponseEntity.ok(userUseCase.checkAuthorization(request, userId, accessToken));
     }
 
     @Operation(summary = "이메일 중복 확인", description = "이메일 중복 여부를 확인합니다.")
