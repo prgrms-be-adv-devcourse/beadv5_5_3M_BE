@@ -16,6 +16,7 @@ import com.example.userservice.application.exception.DuplicateEmailException;
 import com.example.userservice.application.exception.DuplicateNicknameException;
 import com.example.userservice.application.exception.InvalidEmailOrPasswordException;
 import com.example.userservice.application.exception.InvalidRefreshTokenException;
+import com.example.userservice.application.exception.SessionExpiredException;
 
 import com.example.userservice.application.port.RedisPort;
 import com.example.userservice.presentation.dto.req.AuthorizationRequest;
@@ -38,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -56,7 +58,12 @@ public class UserService implements UserUseCase {
     private final CookieLogRepository cookieLogRepository;
 
     @Override
-    public boolean checkAuthorization(AuthorizationRequest request, String userId) {
+    public boolean checkAuthorization(AuthorizationRequest request, String userId, String accessToken) {
+        Optional<String> storedToken = redisPort.findAccessToken(userId);
+        if (storedToken.isEmpty() || !storedToken.get().equals(accessToken)) {
+            throw new SessionExpiredException();
+        }
+
         User findUser = userRepository.findById(toUUID(userId));
         List<Permission> permissions = permissionRepository.findByRole(findUser.getRole());
 
@@ -85,7 +92,7 @@ public class UserService implements UserUseCase {
         checkEmailDuplicate(request.email());
         checkNicknameDuplicate(request.nickname());
 
-        User user = User.create(request.email(), request.password(), request.nickname());
+        User user = User.create(request.email(), request.password(), request.nickname(), request.ageGroup(), request.gender());
         userRepository.save(user);
         walletRepository.save(Wallet.create(user));
 
@@ -106,6 +113,12 @@ public class UserService implements UserUseCase {
 
         String accessToken = jwtProvider.generateAccessToken(user.getUserId());
         String rawRefreshToken = jwtProvider.generateRefreshToken(user.getUserId());
+
+        redisPort.saveAccessToken(
+                user.getUserId().toString(),
+                accessToken,
+                jwtProvider.getAccessTokenExpirySeconds()
+        );
         redisPort.saveRefreshToken(
                 user.getUserId().toString(),
                 rawRefreshToken,
@@ -134,6 +147,11 @@ public class UserService implements UserUseCase {
         String accessToken = jwtProvider.generateAccessToken(userId);
         String newRefreshToken = jwtProvider.generateRefreshToken(userId);
 
+        redisPort.saveAccessToken(
+                userId.toString(),
+                accessToken,
+                jwtProvider.getAccessTokenExpirySeconds()
+        );
         redisPort.saveRefreshToken(
                 userId.toString(),
                 newRefreshToken,

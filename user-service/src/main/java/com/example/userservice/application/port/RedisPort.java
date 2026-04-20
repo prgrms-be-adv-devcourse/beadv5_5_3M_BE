@@ -10,6 +10,10 @@ public interface RedisPort {
 
     void deleteRefreshToken(String userId);
 
+    void saveAccessToken(String userId, String token, long expirySeconds);
+
+    Optional<String> findAccessToken(String userId);
+
     void saveProfileImageUrl(String userId, String url);
 
     Optional<String> findProfileImageUrl(String userId);

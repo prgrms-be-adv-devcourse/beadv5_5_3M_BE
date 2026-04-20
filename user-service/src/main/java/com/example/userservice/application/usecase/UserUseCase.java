@@ -14,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.UUID;
 
 public interface UserUseCase {
-    boolean checkAuthorization(AuthorizationRequest request, String userId);
+    boolean checkAuthorization(AuthorizationRequest request, String userId, String accessToken);
     void checkEmailDuplicate(String email);
     void checkNicknameDuplicate(String nickname);
     UUID join(JoinRequest request);
