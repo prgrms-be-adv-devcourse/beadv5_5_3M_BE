@@ -4,11 +4,17 @@ import com.example.aiservice.domain.model.enums.ExplorationSource;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
-@Table(name = "recommended_log")
+@Table(
+    name = "recommended_log",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uq_recommended_log_user_movie_date",
+        columnNames = {"user_id", "movie_id", "recommended_at"}
+    )
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -37,5 +43,5 @@ public class RecommendedLog {
     private ExplorationSource explorationSource;
 
     @Column(name = "recommended_at", nullable = false)
-    private LocalDateTime recommendedAt;
+    private LocalDate recommendedAt;
 }
