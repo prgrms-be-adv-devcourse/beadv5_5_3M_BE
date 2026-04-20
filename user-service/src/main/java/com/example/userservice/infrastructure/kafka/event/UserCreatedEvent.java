@@ -7,10 +7,18 @@ import java.util.UUID;
 public record UserCreatedEvent(
         UUID userId,
         String nickname,
-        String profileUrl
+        String profileUrl,
+        int ageGroup,
+        String gender
 ) {
 
     public static UserCreatedEvent from(User user) {
-        return new UserCreatedEvent(user.getUserId(), user.getNickname(), user.getProfileUrl());
+        return new UserCreatedEvent(
+                user.getUserId(),
+                user.getNickname(),
+                user.getProfileUrl(),
+                user.getAgeGroup(),
+                user.getGender().name()
+        );
     }
 }

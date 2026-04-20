@@ -54,6 +54,13 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    @Schema(description = "연령대", example = "20")
+    private Integer ageGroup;
+
+    @Schema(description = "성별", example = "MALE")
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Wallet wallet;
 
@@ -63,12 +70,14 @@ public class User {
     @Schema(description = "수정일시")
     private LocalDateTime updateAt;
 
-    public static User create(String email, String rawPassword, String nickname) {
+    public static User create(String email, String rawPassword, String nickname, Integer ageGroup, Gender gender) {
         User user = new User();
         user.userId = UUID.randomUUID();
         user.email = email;
         user.nickname = nickname;
         user.role = Role.USER;
+        user.ageGroup = ageGroup;
+        user.gender = gender;
         user.saltKey = generateSalt();
         user.password = new BCryptPasswordEncoder().encode(rawPassword + user.saltKey);
         return user;
