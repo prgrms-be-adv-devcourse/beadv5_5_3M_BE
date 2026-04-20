@@ -41,15 +41,13 @@ if [[ ! -f "$PROMPT_FILE" ]]; then
   exit 1
 fi
 
-SYSTEM_PROMPT=$(cat "$SYSTEM_PROMPT_FILE")
-USER_PROMPT=$(cat "$PROMPT_FILE")
-OUTPUT_SCHEMA=$(cat "$OUTPUT_SCHEMA_FILE")
-
 # Gemini API 요청 JSON 조립
-REQUEST_JSON=$(jq -n \
-  --arg system_prompt "$SYSTEM_PROMPT" \
-  --arg user_prompt "$USER_PROMPT" \
-  --argjson output_schema "$OUTPUT_SCHEMA" \
+# --rawfile: 파일 내용을 문자열로 읽음 (--arg와 달리 셸 인자를 거치지 않아 ARG_MAX 제한 없음)
+# --slurpfile: 파일 내용을 JSON 배열로 파싱 ($output_schema[0]으로 접근)
+jq -n \
+  --rawfile system_prompt "$SYSTEM_PROMPT_FILE" \
+  --rawfile user_prompt "$PROMPT_FILE" \
+  --slurpfile output_schema "$OUTPUT_SCHEMA_FILE" \
   --argjson max_tokens "$MAX_OUTPUT_TOKENS" \
   '{
     "system_instruction": {
@@ -65,9 +63,9 @@ REQUEST_JSON=$(jq -n \
       "temperature": 0.2,
       "maxOutputTokens": $max_tokens,
       "responseMimeType": "application/json",
-      "responseSchema": $output_schema
+      "responseSchema": $output_schema[0]
     }
-  }')
+  }' > /tmp/gemini_request.json
 
 API_URL="https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}"
 
@@ -81,7 +79,7 @@ while [[ $attempt -le $MAX_RETRIES ]]; do
     -D /tmp/gemini_headers.txt \
     -X POST "$API_URL" \
     -H "Content-Type: application/json" \
-    -d "$REQUEST_JSON" \
+    -d @/tmp/gemini_request.json \
     --max-time 120)
 
   if [[ "$HTTP_CODE" == "200" ]]; then
