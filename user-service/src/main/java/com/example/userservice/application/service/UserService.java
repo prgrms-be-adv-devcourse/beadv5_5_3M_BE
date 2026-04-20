@@ -10,6 +10,7 @@ import com.example.userservice.domain.repository.PermissionRepository;
 import com.example.userservice.domain.repository.UserRepository;
 import com.example.userservice.domain.repository.WalletRepository;
 
+import com.example.userservice.application.port.KafkaPort;
 import com.example.userservice.infrastructure.kafka.event.UserCreatedEvent;
 import com.example.userservice.infrastructure.kafka.event.UserUpdatedEvent;
 import com.example.userservice.application.exception.DuplicateEmailException;
@@ -17,8 +18,7 @@ import com.example.userservice.application.exception.DuplicateNicknameException;
 import com.example.userservice.application.exception.InvalidEmailOrPasswordException;
 import com.example.userservice.application.exception.InvalidRefreshTokenException;
 
-import java.util.concurrent.TimeUnit;
-
+import com.example.userservice.application.port.RedisPort;
 import com.example.userservice.presentation.dto.req.AuthorizationRequest;
 import com.example.userservice.presentation.dto.req.DeductCookieRequest;
 import com.example.userservice.presentation.dto.req.JoinRequest;
@@ -32,13 +32,10 @@ import com.example.userservice.presentation.dto.res.UserInfoResponse;
 import com.example.userservice.global.util.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.UUID;
@@ -54,8 +51,8 @@ public class UserService implements UserUseCase {
     private final PermissionRepository permissionRepository;
     private final JwtProvider jwtProvider;
     private final StorageService storageService;
-    private final RedisTemplate<String, String> redisTemplate;
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final RedisPort redisPort;
+    private final KafkaPort kafkaPort;
     private final CookieLogRepository cookieLogRepository;
 
     @Override
@@ -92,8 +89,7 @@ public class UserService implements UserUseCase {
         userRepository.save(user);
         walletRepository.save(Wallet.create(user));
 
-//        UserCreatedEvent userCreatedEvent = UserCreatedEvent.from(user);
-        kafkaTemplate.send("user.created", toJsonString(UserCreatedEvent.from(user)));
+        kafkaPort.publish("user.created", user.getUserId().toString(), UserCreatedEvent.from(user));
 
         return user.getUserId();
     }
@@ -110,11 +106,10 @@ public class UserService implements UserUseCase {
 
         String accessToken = jwtProvider.generateAccessToken(user.getUserId());
         String rawRefreshToken = jwtProvider.generateRefreshToken(user.getUserId());
-        redisTemplate.opsForValue().set(
-                "refresh:token:" + user.getUserId(),
+        redisPort.saveRefreshToken(
+                user.getUserId().toString(),
                 rawRefreshToken,
-                jwtProvider.getRefreshTokenExpirySeconds(),
-                TimeUnit.SECONDS
+                jwtProvider.getRefreshTokenExpirySeconds()
         );
 
         return new TokenResponse(accessToken, rawRefreshToken);
@@ -131,7 +126,7 @@ public class UserService implements UserUseCase {
             throw new InvalidRefreshTokenException();
         }
 
-        String storedToken = redisTemplate.opsForValue().get("refresh:token:" + userId);
+        String storedToken = redisPort.findRefreshToken(userId.toString()).orElse(null);
         if (storedToken == null || !storedToken.equals(refreshToken)) {
             throw new InvalidRefreshTokenException();
         }
@@ -139,11 +134,10 @@ public class UserService implements UserUseCase {
         String accessToken = jwtProvider.generateAccessToken(userId);
         String newRefreshToken = jwtProvider.generateRefreshToken(userId);
 
-        redisTemplate.opsForValue().set(
-                "refresh:token:" + userId,
+        redisPort.saveRefreshToken(
+                userId.toString(),
                 newRefreshToken,
-                jwtProvider.getRefreshTokenExpirySeconds(),
-                TimeUnit.SECONDS
+                jwtProvider.getRefreshTokenExpirySeconds()
         );
 
         return new TokenResponse(accessToken, newRefreshToken);
@@ -152,10 +146,7 @@ public class UserService implements UserUseCase {
     @Override
     public UserInfoResponse me(String userId) {
         User user = userRepository.findById(toUUID(userId));
-        String profileUrl = redisTemplate.opsForValue().get("profile:image:" + userId);
-        if (profileUrl == null) {
-            profileUrl = user.getProfileUrl();
-        }
+        String profileUrl = redisPort.findProfileImageUrl(userId).orElse(user.getProfileUrl());
         return new UserInfoResponse(user.getNickname(), user.getBalance(), user.getEmail(), profileUrl, user.getPhone());
     }
 
@@ -169,12 +160,11 @@ public class UserService implements UserUseCase {
         String profileUrl = null;
         if (profileImage != null && !profileImage.isEmpty()) {
             profileUrl = storageService.upload(profileImage, userId);
-            redisTemplate.opsForValue().set("profile:image:" + userId, profileUrl);
+            redisPort.saveProfileImageUrl(userId, profileUrl);
         }
         user.updateProfile(nickname, phone, profileUrl);
 
-        UserUpdatedEvent userUpdatedEvent = UserUpdatedEvent.from(user);
-        kafkaTemplate.send("user.updated", toJsonString(userUpdatedEvent));
+        kafkaPort.publish("user.updated", user.getUserId().toString(), UserUpdatedEvent.from(user));
     }
 
     @Override
@@ -203,15 +193,6 @@ public class UserService implements UserUseCase {
 
     @Override
     public void logout(String userId) {
-        redisTemplate.delete("refresh:token:" + userId);
-    }
-
-    private String toJsonString(Object object) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        try {
-            return objectMapper.writeValueAsString(object);
-        } catch (Exception e) {
-            throw new RuntimeException("Json 직렬화 실패");
-        }
+        redisPort.deleteRefreshToken(userId);
     }
 }

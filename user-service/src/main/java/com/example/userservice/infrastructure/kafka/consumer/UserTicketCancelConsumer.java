@@ -1,5 +1,6 @@
 package com.example.userservice.infrastructure.kafka.consumer;
 
+import com.example.userservice.infrastructure.kafka.KafkaUtil;
 import com.example.userservice.infrastructure.kafka.consumer.dto.TicketCancelRequest;
 import com.example.userservice.domain.model.CookieLog;
 import com.example.userservice.domain.model.Wallet;
@@ -22,6 +23,7 @@ public class UserTicketCancelConsumer {
 
     private final WalletRepository walletRepository;
     private final CookieLogRepository cookieLogRepository;
+    private final KafkaUtil kafkaUtil;
 
     @RetryableTopic(
             attempts = "3",
@@ -34,7 +36,7 @@ public class UserTicketCancelConsumer {
     )
     @Transactional
     public void consume(String message) {
-        TicketCancelRequest ticketCancelRequest = TicketCancelRequest.fromJson(message);
+        TicketCancelRequest ticketCancelRequest = kafkaUtil.deserialize(message, TicketCancelRequest.class);
         Wallet wallet = walletRepository.findByUserId(ticketCancelRequest.userId());
         wallet.add(ticketCancelRequest.cookieAmount());
 
