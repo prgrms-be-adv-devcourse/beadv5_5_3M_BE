@@ -10,7 +10,6 @@ import com.example.userservice.domain.repository.PermissionRepository;
 import com.example.userservice.domain.repository.UserRepository;
 import com.example.userservice.domain.repository.WalletRepository;
 
-import com.example.userservice.application.port.KafkaPort;
 import com.example.userservice.infrastructure.kafka.event.UserCreatedEvent;
 import com.example.userservice.infrastructure.kafka.event.UserUpdatedEvent;
 import com.example.userservice.application.exception.DuplicateEmailException;
@@ -32,6 +31,7 @@ import com.example.userservice.presentation.dto.res.UserInfoResponse;
 import com.example.userservice.global.util.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,7 +52,7 @@ public class UserService implements UserUseCase {
     private final JwtProvider jwtProvider;
     private final StorageService storageService;
     private final RedisPort redisPort;
-    private final KafkaPort kafkaPort;
+    private final ApplicationEventPublisher eventPublisher;
     private final CookieLogRepository cookieLogRepository;
 
     @Override
@@ -89,7 +89,7 @@ public class UserService implements UserUseCase {
         userRepository.save(user);
         walletRepository.save(Wallet.create(user));
 
-        kafkaPort.publish("user.created", user.getUserId().toString(), UserCreatedEvent.from(user));
+        eventPublisher.publishEvent(UserCreatedEvent.from(user));
 
         return user.getUserId();
     }
@@ -164,7 +164,7 @@ public class UserService implements UserUseCase {
         }
         user.updateProfile(nickname, phone, profileUrl);
 
-        kafkaPort.publish("user.updated", user.getUserId().toString(), UserUpdatedEvent.from(user));
+        eventPublisher.publishEvent(UserUpdatedEvent.from(user));
     }
 
     @Override
