@@ -12,6 +12,9 @@ import java.util.UUID;
 
 public interface RecommendedMovieJpaRepository extends JpaRepository<RecommendedMovie, RecommendedMovieId> {
 
+    @Query("SELECT r FROM RecommendedMovie r WHERE r.id.userId = :userId ORDER BY r.rank ASC LIMIT 10")
+    List<RecommendedMovie> findTop10ByUserIdOrderByRank(@Param("userId") UUID userId);
+
     @Query("SELECT r.id.userId FROM RecommendedMovie r WHERE r.id.movieId = :movieId")
     List<UUID> findUserIdsByMovieId(@Param("movieId") Long movieId);
 

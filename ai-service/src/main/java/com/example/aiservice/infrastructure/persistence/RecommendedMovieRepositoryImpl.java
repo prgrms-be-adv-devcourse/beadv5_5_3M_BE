@@ -1,5 +1,6 @@
 package com.example.aiservice.infrastructure.persistence;
 
+import com.example.aiservice.domain.model.RecommendedMovie;
 import com.example.aiservice.domain.repository.RecommendedMovieRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -12,6 +13,11 @@ import java.util.UUID;
 public class RecommendedMovieRepositoryImpl implements RecommendedMovieRepository {
 
     private final RecommendedMovieJpaRepository recommendedMovieJpaRepository;
+
+    @Override
+    public List<RecommendedMovie> findTop10ByUserIdOrderByRank(UUID userId) {
+        return recommendedMovieJpaRepository.findTop10ByUserIdOrderByRank(userId);
+    }
 
     @Override
     public List<UUID> findUserIdsByMovieId(Long movieId) {

@@ -3,6 +3,7 @@ package com.example.aiservice.application.service;
 import com.example.aiservice.application.usecase.UserPreferenceUseCase;
 import com.example.aiservice.domain.model.UserPreference;
 import com.example.aiservice.domain.model.enums.Gender;
+import com.example.aiservice.domain.repository.RecommendedLogRepository;
 import com.example.aiservice.domain.repository.RecommendedMovieRepository;
 import com.example.aiservice.domain.repository.UserInteractionHistoryRepository;
 import com.example.aiservice.domain.repository.UserPreferenceRepository;
@@ -24,6 +25,7 @@ public class UserPreferenceService implements UserPreferenceUseCase {
     private final UserPreferenceRepository userPreferenceRepository;
     private final UserInteractionHistoryRepository userInteractionHistoryRepository;
     private final RecommendedMovieRepository recommendedMovieRepository;
+    private final RecommendedLogRepository recommendedLogRepository;
 
     @Override
     @Transactional
@@ -53,7 +55,7 @@ public class UserPreferenceService implements UserPreferenceUseCase {
             log.warn("[Kafka] user.deleted - 존재하지 않는 userId skip: {}", msg.userId());
             return;
         }
-        // TODO(recommendation-api): recommended_log DELETE WHERE user_id = ?
+        recommendedLogRepository.deleteByUserId(msg.userId());
         userInteractionHistoryRepository.deleteByUserId(msg.userId());
         recommendedMovieRepository.deleteByUserId(msg.userId());
         userPreferenceRepository.deleteById(msg.userId());

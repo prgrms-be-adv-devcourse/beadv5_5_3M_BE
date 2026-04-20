@@ -21,7 +21,7 @@ public class MovieEventConsumer {
     private final MovieSyncUseCase movieSyncUseCase;
     private final InteractionUseCase interactionUseCase;
 
-    @KafkaListener(topics = "movie.created", groupId = "ai-service")
+    @KafkaListener(topics = "movie.ai.created", groupId = "ai-service")
     public void consumeMovieCreated(String message) {
         log.info("[Kafka] movie.created 수신 - payload: {}", message);
         try {
@@ -32,7 +32,7 @@ public class MovieEventConsumer {
         }
     }
 
-    @KafkaListener(topics = "movie.updated", groupId = "ai-service")
+    @KafkaListener(topics = "movie.ai.updated", groupId = "ai-service")
     public void consumeMovieUpdated(String message) {
         log.info("[Kafka] movie.updated 수신 - payload: {}", message);
         try {
