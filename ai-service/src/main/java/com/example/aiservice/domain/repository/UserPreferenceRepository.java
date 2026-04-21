@@ -9,7 +9,11 @@ public interface UserPreferenceRepository {
 
     boolean existsById(UUID userId);
 
+    Optional<UserPreference> findById(UUID userId);
+
     UserPreference save(UserPreference userPreference);
 
     void deleteById(UUID userId);
+
+    void incrementWatchCount(UUID userId);
 }
