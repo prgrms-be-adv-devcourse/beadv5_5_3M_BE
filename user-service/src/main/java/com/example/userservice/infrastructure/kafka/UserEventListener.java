@@ -3,6 +3,7 @@ package com.example.userservice.infrastructure.kafka;
 import com.example.userservice.application.port.KafkaPort;
 import com.example.userservice.application.port.RedisPort;
 import com.example.userservice.infrastructure.kafka.event.UserCreatedEvent;
+import com.example.userservice.infrastructure.kafka.event.UserDeletedEvent;
 import com.example.userservice.infrastructure.kafka.event.UserUpdatedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -27,5 +28,11 @@ public class UserEventListener {
             redisPort.saveProfileImageUrl(event.userId().toString(), event.profileUrl());
         }
         kafkaPort.publish("user.updated", event.userId().toString(), event);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleUserDeleted(UserDeletedEvent event) {
+        redisPort.deleteRefreshToken(event.userId().toString());
+        kafkaPort.publish("user.deleted", event.userId().toString(), event);
     }
 }

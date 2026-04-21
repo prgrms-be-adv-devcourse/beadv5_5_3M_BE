@@ -14,6 +14,7 @@ import com.example.userservice.domain.repository.UserRepository;
 import com.example.userservice.domain.repository.WalletRepository;
 
 import com.example.userservice.infrastructure.kafka.event.UserCreatedEvent;
+import com.example.userservice.infrastructure.kafka.event.UserDeletedEvent;
 import com.example.userservice.infrastructure.kafka.event.UserUpdatedEvent;
 import com.example.userservice.application.exception.DuplicateEmailException;
 import com.example.userservice.application.exception.DuplicateNicknameException;
@@ -259,6 +260,6 @@ public class UserService implements UserUseCase {
         User user = userRepository.findById(uuid);
         deletedUserRepository.save(DeletedUser.create(uuid));
         userRepository.delete(user);
-        redisPort.deleteRefreshToken(userId);
+        eventPublisher.publishEvent(UserDeletedEvent.from(uuid));
     }
 }
