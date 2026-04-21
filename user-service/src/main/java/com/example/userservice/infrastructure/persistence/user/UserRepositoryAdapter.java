@@ -35,4 +35,9 @@ public class UserRepositoryAdapter implements UserRepository {
     public void save(User user) {
         userJpaRepository.save(user);
     }
+
+    @Override
+    public void delete(User user) {
+        userJpaRepository.delete(user);
+    }
 }

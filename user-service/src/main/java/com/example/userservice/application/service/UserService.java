@@ -6,7 +6,9 @@ import com.example.userservice.domain.model.CookieLog;
 import com.example.userservice.domain.model.Permission;
 import com.example.userservice.domain.model.User;
 import com.example.userservice.domain.model.Wallet;
+import com.example.userservice.domain.model.DeletedUser;
 import com.example.userservice.domain.repository.CookieLogRepository;
+import com.example.userservice.domain.repository.DeletedUserRepository;
 import com.example.userservice.domain.repository.PermissionRepository;
 import com.example.userservice.domain.repository.UserRepository;
 import com.example.userservice.domain.repository.WalletRepository;
@@ -57,6 +59,7 @@ public class UserService implements UserUseCase {
     private final RedisPort redisPort;
     private final ApplicationEventPublisher eventPublisher;
     private final CookieLogRepository cookieLogRepository;
+    private final DeletedUserRepository deletedUserRepository;
     private final GoogleOAuthService googleOAuthService;
 
     @Override
@@ -104,7 +107,6 @@ public class UserService implements UserUseCase {
     }
 
     @Override
-    @Transactional
     public TokenResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email());
 
@@ -247,6 +249,16 @@ public class UserService implements UserUseCase {
 
     @Override
     public void logout(String userId) {
+        redisPort.deleteRefreshToken(userId);
+    }
+
+    @Override
+    @Transactional
+    public void withdraw(String userId) {
+        UUID uuid = toUUID(userId);
+        User user = userRepository.findById(uuid);
+        deletedUserRepository.save(DeletedUser.create(uuid));
+        userRepository.delete(user);
         redisPort.deleteRefreshToken(userId);
     }
 }
