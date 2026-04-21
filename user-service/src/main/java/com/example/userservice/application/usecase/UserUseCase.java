@@ -26,4 +26,5 @@ public interface UserUseCase {
     DeductCookieResponse deductCookie(DeductCookieRequest request);
     RefundCookieResponse refundCookie(RefundCookieRequest request);
     void logout(String userId);
+    TokenResponse oauthLogin(String code);
 }
