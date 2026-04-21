@@ -41,7 +41,13 @@ public class LikeService {
             throw e;
         }
         movie.increaseLikeCount();
-        eventPublisher.publish("movie.liked", movieId.toString(), new MovieLikedMessage(userId, movieId, "LIKED"));
+
+        // TODO: Outbox 패턴 적용 필요 — 현재는 DB 커밋 후 Kafka 발행 실패 시 이벤트 유실 가능
+        try {
+            eventPublisher.publish("movie.liked", movieId.toString(), new MovieLikedMessage(userId, movieId, "LIKED"));
+        } catch (Exception e) {
+            log.error("[Kafka] movie.liked 발행 실패 - userId: {}, movieId: {}", userId, movieId, e);
+        }
 
         log.info("[Like] 좋아요 추가 - userId: {}, movieId: {}", userId, movieId);
     }
@@ -56,7 +62,13 @@ public class LikeService {
 
         movieLikeRepository.delete(like);
         movie.decreaseLikeCount();
-        eventPublisher.publish("movie.liked", movieId.toString(), new MovieLikedMessage(userId, movieId, "UNLIKED"));
+
+        // TODO: Outbox 패턴 적용 필요 — 현재는 DB 커밋 후 Kafka 발행 실패 시 이벤트 유실 가능
+        try {
+            eventPublisher.publish("movie.liked", movieId.toString(), new MovieLikedMessage(userId, movieId, "UNLIKED"));
+        } catch (Exception e) {
+            log.error("[Kafka] movie.liked 발행 실패 - userId: {}, movieId: {}", userId, movieId, e);
+        }
 
         log.info("[Like] 좋아요 취소 - userId: {}, movieId: {}", userId, movieId);
     }
