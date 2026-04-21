@@ -92,7 +92,8 @@ public class MovieService implements MovieUseCase {
                     List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
                     return new MovieCardResponse(movie.getMovieId(), movie.getCreatorId(),
                             nicknameMap.getOrDefault(movie.getCreatorId(), "알 수 없음"),
-                            movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds);
+                            movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds,
+                            null, null);
                 })
                 .toList();
     }
@@ -123,7 +124,8 @@ public class MovieService implements MovieUseCase {
                     List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
                     return new MovieCardResponse(movie.getMovieId(), movie.getCreatorId(),
                             nicknameMap.getOrDefault(movie.getCreatorId(), "알 수 없음"),
-                            movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds);
+                            movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds,
+                            null, null);
                 })
                 .toList();
     }
@@ -141,7 +143,8 @@ public class MovieService implements MovieUseCase {
                     List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
                     return new MovieCardResponse(movie.getMovieId(), movie.getCreatorId(),
                             nicknameMap.getOrDefault(movie.getCreatorId(), "알 수 없음"),
-                            movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds);
+                            movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds,
+                            null, null);
                 })
                 .toList();
     }
@@ -156,7 +159,8 @@ public class MovieService implements MovieUseCase {
                     List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
                     return new MovieCardResponse(movie.getMovieId(), movie.getCreatorId(),
                             nicknameMap.getOrDefault(movie.getCreatorId(), "알 수 없음"),
-                            movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds);
+                            movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds,
+                            null, null);
                 })
                 .toList();
     }
