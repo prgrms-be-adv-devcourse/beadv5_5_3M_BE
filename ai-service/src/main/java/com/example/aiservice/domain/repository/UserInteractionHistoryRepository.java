@@ -1,17 +1,19 @@
 package com.example.aiservice.domain.repository;
 
-import com.example.aiservice.domain.model.UserInteractionHistoryId;
+import com.example.aiservice.domain.model.UserInteractionHistory;
+import com.example.aiservice.domain.model.enums.InteractionType;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 public interface UserInteractionHistoryRepository {
 
-    boolean existsById(UserInteractionHistoryId id);
+    boolean existsByUserIdAndMovieIdAndInteractionType(UUID userId, Long movieId, InteractionType interactionType);
 
-    void insertOnConflictDoNothing(UUID userId, Long movieId, String interactionType, LocalDateTime createdAt);
+    boolean existsByUserIdAndMovieIdAndInteractionTypeAndScheduleId(UUID userId, Long movieId, InteractionType interactionType, Long scheduleId);
 
-    void deleteById(UserInteractionHistoryId id);
+    void save(UserInteractionHistory history);
+
+    void deleteByUserIdAndMovieIdAndInteractionType(UUID userId, Long movieId, InteractionType interactionType);
 
     void deleteByUserId(UUID userId);
 }
