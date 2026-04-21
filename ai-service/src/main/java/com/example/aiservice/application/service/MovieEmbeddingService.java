@@ -1,6 +1,6 @@
 package com.example.aiservice.application.service;
 
-import com.example.aiservice.application.usecase.MovieSyncUseCase;
+import com.example.aiservice.application.usecase.MovieEmbeddingUseCase;
 import com.example.aiservice.domain.model.*;
 import com.example.aiservice.domain.model.enums.Gender;
 import com.example.aiservice.domain.repository.*;
@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class MovieSyncService implements MovieSyncUseCase {
+public class MovieEmbeddingService implements MovieEmbeddingUseCase {
 
     // movie_statistics 초기화 기준: 0세~100세 이상, 10세 단위
     private static final List<Integer> AGE_GROUPS = List.of(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100);
@@ -62,7 +62,6 @@ public class MovieSyncService implements MovieSyncUseCase {
                         .map(gender -> MovieStatistics.builder()
                                 .id(new MovieStatisticsId(msg.movieId(), ageGroup, gender))
                                 .watchCount(0)
-                                .totalCount(0)
                                 .build()))
                 .collect(Collectors.toList());
         movieStatisticsRepository.saveAll(stats);

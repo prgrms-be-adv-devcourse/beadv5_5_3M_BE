@@ -4,7 +4,7 @@ import com.example.aiservice.infrastructure.kafka.dto.consume.MovieCreatedMessag
 import com.example.aiservice.infrastructure.kafka.dto.consume.MovieDeletedMessage;
 import com.example.aiservice.infrastructure.kafka.dto.consume.MovieUpdatedMessage;
 
-public interface MovieSyncUseCase {
+public interface MovieEmbeddingUseCase {
 
     void handleMovieCreated(MovieCreatedMessage message);
 

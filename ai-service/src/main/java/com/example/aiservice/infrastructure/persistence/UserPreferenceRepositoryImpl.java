@@ -20,6 +20,11 @@ public class UserPreferenceRepositoryImpl implements UserPreferenceRepository {
     }
 
     @Override
+    public Optional<UserPreference> findById(UUID userId) {
+        return userPreferenceJpaRepository.findById(userId);
+    }
+
+    @Override
     public UserPreference save(UserPreference userPreference) {
         return userPreferenceJpaRepository.save(userPreference);
     }
@@ -27,5 +32,10 @@ public class UserPreferenceRepositoryImpl implements UserPreferenceRepository {
     @Override
     public void deleteById(UUID userId) {
         userPreferenceJpaRepository.deleteById(userId);
+    }
+
+    @Override
+    public void incrementWatchCount(UUID userId) {
+        userPreferenceJpaRepository.incrementWatchCount(userId);
     }
 }

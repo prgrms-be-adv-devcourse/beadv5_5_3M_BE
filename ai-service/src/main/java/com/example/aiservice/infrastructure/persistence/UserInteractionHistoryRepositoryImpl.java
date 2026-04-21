@@ -1,11 +1,11 @@
 package com.example.aiservice.infrastructure.persistence;
 
-import com.example.aiservice.domain.model.UserInteractionHistoryId;
+import com.example.aiservice.domain.model.UserInteractionHistory;
+import com.example.aiservice.domain.model.enums.InteractionType;
 import com.example.aiservice.domain.repository.UserInteractionHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Repository
@@ -15,18 +15,23 @@ public class UserInteractionHistoryRepositoryImpl implements UserInteractionHist
     private final UserInteractionHistoryJpaRepository userInteractionHistoryJpaRepository;
 
     @Override
-    public boolean existsById(UserInteractionHistoryId id) {
-        return userInteractionHistoryJpaRepository.existsById(id);
+    public boolean existsByUserIdAndMovieIdAndInteractionType(UUID userId, Long movieId, InteractionType interactionType) {
+        return userInteractionHistoryJpaRepository.existsByUserIdAndMovieIdAndInteractionType(userId, movieId, interactionType);
     }
 
     @Override
-    public void insertOnConflictDoNothing(UUID userId, Long movieId, String interactionType, LocalDateTime createdAt) {
-        userInteractionHistoryJpaRepository.insertOnConflictDoNothing(userId, movieId, interactionType, createdAt);
+    public boolean existsByUserIdAndMovieIdAndInteractionTypeAndScheduleId(UUID userId, Long movieId, InteractionType interactionType, Long scheduleId) {
+        return userInteractionHistoryJpaRepository.existsByUserIdAndMovieIdAndInteractionTypeAndScheduleId(userId, movieId, interactionType, scheduleId);
     }
 
     @Override
-    public void deleteById(UserInteractionHistoryId id) {
-        userInteractionHistoryJpaRepository.deleteById(id);
+    public void save(UserInteractionHistory history) {
+        userInteractionHistoryJpaRepository.save(history);
+    }
+
+    @Override
+    public void deleteByUserIdAndMovieIdAndInteractionType(UUID userId, Long movieId, InteractionType interactionType) {
+        userInteractionHistoryJpaRepository.deleteByUserIdAndMovieIdAndInteractionType(userId, movieId, interactionType);
     }
 
     @Override

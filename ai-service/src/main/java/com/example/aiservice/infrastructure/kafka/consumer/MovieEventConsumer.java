@@ -1,7 +1,7 @@
 package com.example.aiservice.infrastructure.kafka.consumer;
 
 import com.example.aiservice.application.usecase.InteractionUseCase;
-import com.example.aiservice.application.usecase.MovieSyncUseCase;
+import com.example.aiservice.application.usecase.MovieEmbeddingUseCase;
 import com.example.aiservice.infrastructure.kafka.dto.consume.MovieCreatedMessage;
 import com.example.aiservice.infrastructure.kafka.dto.consume.MovieDeletedMessage;
 import com.example.aiservice.infrastructure.kafka.dto.consume.MovieLikedMessage;
@@ -18,7 +18,7 @@ import tools.jackson.databind.ObjectMapper;
 public class MovieEventConsumer {
 
     private final ObjectMapper objectMapper;
-    private final MovieSyncUseCase movieSyncUseCase;
+    private final MovieEmbeddingUseCase movieEmbeddingUseCase;
     private final InteractionUseCase interactionUseCase;
 
     @KafkaListener(topics = "movie.ai.created", groupId = "ai-service")
@@ -26,7 +26,7 @@ public class MovieEventConsumer {
         log.info("[Kafka] movie.created 수신 - payload: {}", message);
         try {
             MovieCreatedMessage msg = objectMapper.readValue(message, MovieCreatedMessage.class);
-            movieSyncUseCase.handleMovieCreated(msg);
+            movieEmbeddingUseCase.handleMovieCreated(msg);
         } catch (Exception e) {
             log.warn("[Kafka] movie.created 처리 실패, 메시지 skip - payload: {}, error: {}", message, e.getMessage());
         }
@@ -37,7 +37,7 @@ public class MovieEventConsumer {
         log.info("[Kafka] movie.updated 수신 - payload: {}", message);
         try {
             MovieUpdatedMessage msg = objectMapper.readValue(message, MovieUpdatedMessage.class);
-            movieSyncUseCase.handleMovieUpdated(msg);
+            movieEmbeddingUseCase.handleMovieUpdated(msg);
         } catch (Exception e) {
             log.warn("[Kafka] movie.updated 처리 실패, 메시지 skip - payload: {}, error: {}", message, e.getMessage());
         }
@@ -48,7 +48,7 @@ public class MovieEventConsumer {
         log.info("[Kafka] movie.deleted 수신 - payload: {}", message);
         try {
             MovieDeletedMessage msg = objectMapper.readValue(message, MovieDeletedMessage.class);
-            movieSyncUseCase.handleMovieDeleted(msg);
+            movieEmbeddingUseCase.handleMovieDeleted(msg);
         } catch (Exception e) {
             log.warn("[Kafka] movie.deleted 처리 실패, 메시지 skip - payload: {}, error: {}", message, e.getMessage());
         }
