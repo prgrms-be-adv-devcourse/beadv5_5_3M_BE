@@ -127,6 +127,19 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "회원 탈퇴", description = "회원 탈퇴 처리합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "탈퇴 성공"),
+            @ApiResponse(responseCode = "401", description = "인증 정보 없음", content = @Content)
+    })
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> withdraw(
+            @Parameter(description = "유저 ID (게이트웨이에서 주입)", required = true)
+            @RequestHeader("X-User-Id") String userId) {
+        userUseCase.withdraw(userId);
+        return ResponseEntity.ok().build();
+    }
+
     @Operation(summary = "내 정보 조회", description = "현재 로그인된 유저의 정보를 조회합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공",

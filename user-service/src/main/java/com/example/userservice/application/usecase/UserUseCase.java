@@ -27,4 +27,5 @@ public interface UserUseCase {
     RefundCookieResponse refundCookie(RefundCookieRequest request);
     void logout(String userId);
     TokenResponse oauthLogin(String code);
+    void withdraw(String userId);
 }
