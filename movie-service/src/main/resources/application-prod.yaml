@@ -5,7 +5,7 @@
 
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST}:5432/movie_db
+    url: jdbc:postgresql://${DB_HOST}:5432/creator_db
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
