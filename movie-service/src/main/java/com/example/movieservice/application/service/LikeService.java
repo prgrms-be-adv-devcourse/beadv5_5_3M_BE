@@ -1,11 +1,13 @@
 package com.example.movieservice.application.service;
 
+import com.example.movieservice.application.event.EventPublisher;
 import com.example.movieservice.domain.model.Movie;
 import com.example.movieservice.domain.model.MovieLike;
 import com.example.movieservice.domain.repository.MovieLikeRepository;
 import com.example.movieservice.domain.repository.MovieRepository;
 import com.example.movieservice.global.exception.ErrorStatus;
 import com.example.movieservice.global.exception.GeneralException;
+import com.example.movieservice.infrastructure.kafka.dto.publish.MovieLikedMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.ConstraintViolationException;
@@ -22,6 +24,7 @@ public class LikeService {
 
     private final MovieRepository movieRepository;
     private final MovieLikeRepository movieLikeRepository;
+    private final EventPublisher eventPublisher;
 
     @Transactional
     public void like(UUID userId, Long movieId) {
@@ -38,6 +41,7 @@ public class LikeService {
             throw e;
         }
         movie.increaseLikeCount();
+        eventPublisher.publish("movie.liked", movieId.toString(), new MovieLikedMessage(userId, movieId, "LIKED"));
 
         log.info("[Like] 좋아요 추가 - userId: {}, movieId: {}", userId, movieId);
     }
@@ -52,6 +56,7 @@ public class LikeService {
 
         movieLikeRepository.delete(like);
         movie.decreaseLikeCount();
+        eventPublisher.publish("movie.liked", movieId.toString(), new MovieLikedMessage(userId, movieId, "UNLIKED"));
 
         log.info("[Like] 좋아요 취소 - userId: {}, movieId: {}", userId, movieId);
     }
