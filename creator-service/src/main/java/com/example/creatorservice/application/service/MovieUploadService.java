@@ -9,10 +9,14 @@ import com.example.creatorservice.domain.repository.CategoryRepository;
 import com.example.creatorservice.domain.repository.CreatorRepository;
 import com.example.creatorservice.domain.repository.MovieRepository;
 import com.example.creatorservice.infrastructure.kafka.MovieEventPublisher;
+import com.example.creatorservice.infrastructure.kafka.dto.MovieAiCreatedMessage;
+import com.example.creatorservice.infrastructure.kafka.dto.MovieAiUpdatedMessage;
 import com.example.creatorservice.infrastructure.kafka.dto.MovieDeletedMessage;
 import com.example.creatorservice.infrastructure.kafka.dto.MovieUpdatedMessage;
 import com.example.creatorservice.infrastructure.kafka.dto.MovieUploadedMessage;
 import com.example.creatorservice.infrastructure.kafka.dto.MovieVisibilityChangedMessage;
+import com.example.creatorservice.infrastructure.kafka.event.MovieAiCreatedEvent;
+import com.example.creatorservice.infrastructure.kafka.event.MovieAiUpdatedEvent;
 import com.example.creatorservice.infrastructure.storage.FfprobeResult;
 import com.example.creatorservice.infrastructure.storage.FfprobeVideoValidator;
 import com.example.creatorservice.infrastructure.storage.FileStorageService;
@@ -29,7 +33,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.context.ApplicationEventPublisher;
+
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -47,6 +56,7 @@ public class MovieUploadService implements MovieUploadUseCase {
     private final VideoProcessingService videoProcessingService;
     private final FfprobeVideoValidator ffprobeVideoValidator;
     private final MovieEventPublisher movieEventPublisher;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Override
     @Transactional
@@ -92,6 +102,14 @@ public class MovieUploadService implements MovieUploadUseCase {
 
             Movie saved = movieRepository.save(movie);
             log.info("[Movie] 영화 등록 완료 - movieId: {}, creatorId: {}", saved.getMovieId(), creatorId);
+
+            applicationEventPublisher.publishEvent(new MovieAiCreatedEvent(
+                    new MovieAiCreatedMessage(
+                            saved.getMovieId(),
+                            saved.getCategories().stream().map(Category::getName).toArray(String[]::new),
+                            saved.getDescription()
+                    )
+            ));
             return saved.getMovieId();
 
         } catch (Exception e) {
@@ -134,6 +152,16 @@ public class MovieUploadService implements MovieUploadUseCase {
                     new MovieVisibilityChangedMessage(movie.getMovieId(), after.name())
             );
         }
+
+        applicationEventPublisher.publishEvent(new MovieAiUpdatedEvent(
+                new MovieAiUpdatedMessage(
+                        movieId,
+                        List.of("visibility"),
+                        null,
+                        null,
+                        after.name()
+                )
+        ));
     }
 
     @Override
@@ -144,6 +172,14 @@ public class MovieUploadService implements MovieUploadUseCase {
         if (movieRepository.existsConfirmedScheduleByMovieId(movieId)) {
             throw MovieException.alreadyScheduled();
         }
+
+        // replaceCategories() 호출 전에 비교 (트랜잭션 안 — lazy loading 안전)
+        boolean descriptionChanged = !movie.getDescription().equals(request.description());
+        Set<Long> beforeCategoryIds = movie.getCategories().stream()
+                .map(Category::getCategoryId)
+                .collect(java.util.stream.Collectors.toSet());
+        Set<Long> afterCategoryIds = new HashSet<>(request.categoryIds());
+        boolean categoryChanged = !beforeCategoryIds.equals(afterCategoryIds);
 
         movie.updateDetail(request.title(), request.description(), request.additionalCookie());
 
@@ -160,6 +196,23 @@ public class MovieUploadService implements MovieUploadUseCase {
             movieEventPublisher.publishMovieUpdated(
                     new MovieUpdatedMessage(movie.getMovieId(), movie.getTitle(), movie.getDescription(), categories)
             );
+        }
+
+        // 실제 변경된 필드가 있을 때만 발행
+        if (descriptionChanged || categoryChanged) {
+            List<String> aiChangedFields = new ArrayList<>();
+            if (descriptionChanged) aiChangedFields.add("description");
+            if (categoryChanged) aiChangedFields.add("category");
+
+            applicationEventPublisher.publishEvent(new MovieAiUpdatedEvent(
+                    new MovieAiUpdatedMessage(
+                            movieId,
+                            aiChangedFields,
+                            movie.getDescription(),
+                            movie.getCategories().stream().map(Category::getName).toArray(String[]::new),
+                            null
+                    )
+            ));
         }
     }
 
@@ -181,9 +234,7 @@ public class MovieUploadService implements MovieUploadUseCase {
         if (imageUrl != null) fileStorageService.delete(imageUrl);
         if (videoUrl != null) fileStorageService.delete(videoUrl);
 
-        if (wasPublic) {
-            movieEventPublisher.publishMovieDeleted(new MovieDeletedMessage(movie.getMovieId()));
-        }
+        movieEventPublisher.publishMovieDeleted(new MovieDeletedMessage(movie.getMovieId()));
 
         log.info("[Movie] 영화 삭제 완료 - movieId: {}, creatorId: {}", movieId, creatorId);
     }
