@@ -16,7 +16,4 @@ public class MovieStatistics {
 
     @Column(name = "watch_count", nullable = false)
     private int watchCount;
-
-    @Column(name = "total_count", nullable = false)
-    private int totalCount;
 }

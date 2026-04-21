@@ -62,7 +62,6 @@ public class MovieEmbeddingService implements MovieEmbeddingUseCase {
                         .map(gender -> MovieStatistics.builder()
                                 .id(new MovieStatisticsId(msg.movieId(), ageGroup, gender))
                                 .watchCount(0)
-                                .totalCount(0)
                                 .build()))
                 .collect(Collectors.toList());
         movieStatisticsRepository.saveAll(stats);
