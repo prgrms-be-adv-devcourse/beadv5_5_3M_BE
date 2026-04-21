@@ -40,7 +40,7 @@ services:
     ports:
       - "${CREATOR_PORT}:${CREATOR_PORT}"
     volumes:
-      - /home/ubuntu/uploads:/root/uploads
+      - /home/ubuntu/s3-bucket:/root/uploads
     environment:
       SERVER_PORT: ${CREATOR_PORT}
       SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:5432/creator_db
@@ -184,7 +184,7 @@ services:
       - "${MOVIE_PORT}:${MOVIE_PORT}"
     environment:
       SERVER_PORT: ${MOVIE_PORT}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:5432/movie_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:5432/creator_db
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}

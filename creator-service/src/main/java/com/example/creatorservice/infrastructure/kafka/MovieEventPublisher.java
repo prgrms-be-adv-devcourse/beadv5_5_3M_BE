@@ -35,6 +35,14 @@ public class MovieEventPublisher {
         publish("movie.schedule.confirmed", message.scheduleId().toString(), message);
     }
 
+    public void publishMovieAiCreated(MovieAiCreatedMessage message) {
+        publish("movie.ai.created", message.movieId().toString(), message);
+    }
+
+    public void publishMovieAiUpdated(MovieAiUpdatedMessage message) {
+        publish("movie.ai.updated", message.movieId().toString(), message);
+    }
+
     private void publish(String topic, String key, Object payload) {
         try {
             String json = objectMapper.writeValueAsString(payload);
