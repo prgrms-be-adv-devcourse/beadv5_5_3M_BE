@@ -22,6 +22,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.example.userservice.presentation.dto.req.OAuthLoginRequest;
 import java.util.UUID;
 
 @Tag(name = "User", description = "유저 API")
@@ -137,6 +138,18 @@ public class UserController {
             @Parameter(description = "유저 ID (게이트웨이에서 주입)", required = true, example = "550e8400-e29b-41d4-a716-446655440000")
             @RequestHeader("X-User-Id") String userId) {
         return ResponseEntity.ok(userUseCase.me(userId));
+    }
+
+    @Operation(summary = "Google OAuth 로그인", description = "Google 인가 코드로 로그인하여 JWT 토큰을 발급받습니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "로그인 성공",
+                    content = @Content(schema = @Schema(implementation = TokenResponse.class))),
+            @ApiResponse(responseCode = "500", description = "Google OAuth 처리 실패", content = @Content)
+    })
+    @PostMapping("/oauth2/google")
+    public ResponseEntity<TokenResponse> oauthGoogle(@Valid @RequestBody OAuthLoginRequest request) {
+        TokenResponse response = userUseCase.oauthLogin(request.code());
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "프로필 수정", description = "닉네임, 전화번호, 프로필 이미지를 수정합니다.")

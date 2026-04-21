@@ -1,5 +1,6 @@
 package com.example.userservice.application.service;
 
+import com.example.userservice.application.dto.GoogleUserInfo;
 import com.example.userservice.application.usecase.UserUseCase;
 import com.example.userservice.domain.model.CookieLog;
 import com.example.userservice.domain.model.Permission;
@@ -56,6 +57,7 @@ public class UserService implements UserUseCase {
     private final RedisPort redisPort;
     private final ApplicationEventPublisher eventPublisher;
     private final CookieLogRepository cookieLogRepository;
+    private final GoogleOAuthService googleOAuthService;
 
     @Override
     public boolean checkAuthorization(AuthorizationRequest request, String userId, String accessToken) {
@@ -93,8 +95,8 @@ public class UserService implements UserUseCase {
         checkNicknameDuplicate(request.nickname());
 
         User user = User.create(request.email(), request.password(), request.nickname(), request.ageGroup(), request.gender());
+        user.initWallet();
         userRepository.save(user);
-        walletRepository.save(Wallet.create(user));
 
         eventPublisher.publishEvent(UserCreatedEvent.from(user));
 
@@ -203,6 +205,38 @@ public class UserService implements UserUseCase {
         CookieLog cookieLog = CookieLog.create(request.userId(), request.amount(), request.ticketId());
         cookieLogRepository.save(cookieLog);
         return new RefundCookieResponse(request.userId(), request.ticketId(), request.amount(), true);
+    }
+
+    @Override
+    @Transactional
+    public TokenResponse oauthLogin(String code) {
+        GoogleUserInfo googleUser = googleOAuthService.exchangeCodeForUserInfo(code);
+
+        User user;
+        if (userRepository.existsByEmail(googleUser.email())) {
+            user = userRepository.findByEmail(googleUser.email());
+        } else {
+            user = User.create(googleUser.email(), UUID.randomUUID().toString(), googleUser.name(), null, null);
+            user.initWallet();
+            userRepository.save(user);
+            log.info("Google OAuth new user created: email={}", googleUser.email());
+        }
+
+        String accessToken = jwtProvider.generateAccessToken(user.getUserId());
+        String rawRefreshToken = jwtProvider.generateRefreshToken(user.getUserId());
+
+        redisPort.saveAccessToken(
+                user.getUserId().toString(),
+                accessToken,
+                jwtProvider.getAccessTokenExpirySeconds()
+        );
+        redisPort.saveRefreshToken(
+                user.getUserId().toString(),
+                rawRefreshToken,
+                jwtProvider.getRefreshTokenExpirySeconds()
+        );
+
+        return new TokenResponse(accessToken, rawRefreshToken);
     }
 
     private UUID toUUID(String userId) {

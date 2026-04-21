@@ -95,6 +95,10 @@ public class User {
         if (profileUrl != null) this.profileUrl = profileUrl;
     }
 
+    public void initWallet() {
+        this.wallet = Wallet.create(this);
+    }
+
     public Integer getBalance() {
         return wallet != null ? wallet.getBalance() : 0;
     }
