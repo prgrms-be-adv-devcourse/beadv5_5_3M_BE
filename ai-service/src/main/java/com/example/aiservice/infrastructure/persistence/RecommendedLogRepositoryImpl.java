@@ -34,4 +34,9 @@ public class RecommendedLogRepositoryImpl implements RecommendedLogRepository {
     public void deleteByUserId(UUID userId) {
         recommendedLogJpaRepository.deleteByUserId(userId);
     }
+
+    @Override
+    public void deleteOlderThan(LocalDate cutoff) {
+        recommendedLogJpaRepository.deleteOlderThan(cutoff);
+    }
 }

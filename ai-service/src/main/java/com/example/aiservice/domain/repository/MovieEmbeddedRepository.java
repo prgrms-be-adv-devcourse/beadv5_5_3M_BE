@@ -4,6 +4,8 @@ import com.example.aiservice.domain.model.MovieEmbedded;
 
 public interface MovieEmbeddedRepository {
 
+    long count();
+
     boolean existsById(Long movieId);
 
     MovieEmbedded findById(Long movieId);

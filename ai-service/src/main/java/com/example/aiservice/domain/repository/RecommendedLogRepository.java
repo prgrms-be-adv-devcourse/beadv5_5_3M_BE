@@ -15,4 +15,6 @@ public interface RecommendedLogRepository {
     int markAsClicked(Long logId, UUID userId);
 
     void deleteByUserId(UUID userId);
+
+    void deleteOlderThan(LocalDate cutoff);
 }

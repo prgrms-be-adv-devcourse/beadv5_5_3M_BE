@@ -41,4 +41,8 @@ public interface RecommendedLogJpaRepository extends JpaRepository<RecommendedLo
     @Modifying
     @Query("DELETE FROM RecommendedLog l WHERE l.userId = :userId")
     void deleteByUserId(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query("DELETE FROM RecommendedLog l WHERE l.recommendedAt < :cutoff")
+    void deleteOlderThan(@Param("cutoff") LocalDate cutoff);
 }

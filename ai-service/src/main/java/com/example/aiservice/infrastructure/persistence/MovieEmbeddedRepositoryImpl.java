@@ -12,6 +12,11 @@ public class MovieEmbeddedRepositoryImpl implements MovieEmbeddedRepository {
     private final MovieEmbeddedJpaRepository movieEmbeddedJpaRepository;
 
     @Override
+    public long count() {
+        return movieEmbeddedJpaRepository.count();
+    }
+
+    @Override
     public boolean existsById(Long movieId) {
         return movieEmbeddedJpaRepository.existsById(movieId);
     }
