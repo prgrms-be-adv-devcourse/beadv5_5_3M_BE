@@ -8,6 +8,6 @@ import java.util.UUID;
 public interface MovieLikeRepository {
     void save(MovieLike movieLike);
     Optional<MovieLike> findByUserIdAndMovieId(UUID userId, Long movieId);
-    void delete(MovieLike movieLike);
+    int deleteByUserIdAndMovieId(UUID userId, Long movieId);
     boolean existsByUserIdAndMovieId(UUID userId, Long movieId);
 }
