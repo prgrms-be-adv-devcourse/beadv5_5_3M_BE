@@ -6,7 +6,7 @@ import com.example.ticketservice.infrastructure.persistence.ScheduleJpaRepositor
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,12 +26,12 @@ public class ScheduleRepositoryImpl implements ScheduleRepository {
     }
 
     @Override
-    public boolean existsById(Long id) {
-        return scheduleJpaRepository.existsById(id);
+    public List<Schedule> findAllById(Collection<Long> ids) {
+        return scheduleJpaRepository.findAllById(ids);
     }
 
     @Override
-    public List<Schedule> findAllByStartTimeBetween(LocalDateTime from, LocalDateTime to) {
-        return scheduleJpaRepository.findAllByStartTimeBetween(from, to);
+    public boolean existsById(Long id) {
+        return scheduleJpaRepository.existsById(id);
     }
 }

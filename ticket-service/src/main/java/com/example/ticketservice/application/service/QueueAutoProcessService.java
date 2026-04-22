@@ -1,0 +1,168 @@
+package com.example.ticketservice.application.service;
+
+import com.example.ticketservice.application.constants.RedisKeys;
+import com.example.ticketservice.application.port.out.CachePort;
+import com.example.ticketservice.application.port.out.EventPublisherPort;
+import com.example.ticketservice.domain.repository.ScheduleRepository;
+import com.example.ticketservice.infrastructure.messaging.KafkaTopics;
+import com.example.ticketservice.infrastructure.messaging.dto.event.QueueTerminatedMessage;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+
+@Slf4j
+@Service
+public class QueueAutoProcessService {
+
+    private final CachePort cachePort;
+    private final ScheduleRepository scheduleRepository;
+    private final QueuePurchaseProcessor purchaseProcessor;
+    private final EventPublisherPort eventPublisherPort;
+    private final Executor queueExecutor;
+
+    public QueueAutoProcessService(CachePort cachePort,
+                                   ScheduleRepository scheduleRepository,
+                                   QueuePurchaseProcessor purchaseProcessor,
+                                   EventPublisherPort eventPublisherPort,
+                                   @Qualifier("queueExecutor") Executor queueExecutor) {
+        this.cachePort = cachePort;
+        this.scheduleRepository = scheduleRepository;
+        this.purchaseProcessor = purchaseProcessor;
+        this.eventPublisherPort = eventPublisherPort;
+        this.queueExecutor = queueExecutor;
+    }
+
+    /**
+     * 재고 복구 시 or 결제 완료 후 대기열을 드레인하고 종료 조건을 체크한다.
+     * Kafka queue.drain 컨슈머 스레드에서 호출 → HTTP 요청 스레드와 완전 분리.
+     * 컨슈머 스레드가 완료까지 블록하므로 소비 속도가 드레인 처리 속도에 맞춰 자동 조절.
+     */
+    public void checkAndProcess(Long scheduleId) {
+        Long queueSize = cachePort.getZSetSize(RedisKeys.QUEUE + scheduleId);
+        if (queueSize == null || queueSize == 0) {
+            return; // 대기열 비어있음
+        }
+
+        drainQueue(scheduleId);
+        checkTermination(scheduleId);
+    }
+
+    private static final int MAX_DRAIN_ITERATIONS = 500;
+
+    private void drainQueue(Long scheduleId) {
+        for (int i = 0; i < MAX_DRAIN_ITERATIONS; i++) {
+            Long stock = cachePort.getCounter(RedisKeys.STOCK + scheduleId);
+            Long queueSize = cachePort.getZSetSize(RedisKeys.QUEUE + scheduleId);
+
+            if (stock == null || stock <= 0 || queueSize == null || queueSize == 0) {
+                break;
+            }
+
+            int window = (int) Math.min(stock, queueSize);
+            List<PurchaseTask> tasks = collectWindow(scheduleId, window);
+
+            if (tasks.isEmpty()) {
+                break;
+            }
+
+            processWindowParallel(scheduleId, tasks);
+            // 실패한 유저는 tryPurchase 내에서 stock INCR 복구됨
+            // 다음 루프에서 새 window 재계산
+        }
+    }
+
+    /**
+     * window 크기만큼 DECR + ZPOPMIN 순차 수집.
+     * DECR-first 방식으로 원자성 및 초과 선점 방지 유지.
+     * 수집 성공한 task마다 paying INCR (processWindowParallel에서 finally로 DECR).
+     */
+    private List<PurchaseTask> collectWindow(Long scheduleId, int window) {
+        List<PurchaseTask> tasks = new ArrayList<>(window);
+        String stockKey = RedisKeys.STOCK + scheduleId;
+        String queueKey = RedisKeys.QUEUE + scheduleId;
+        String payingKey = RedisKeys.PAYING + scheduleId;
+
+        for (int i = 0; i < window; i++) {
+            Long stockAfterDecr = cachePort.decrement(stockKey);
+            if (stockAfterDecr == null || stockAfterDecr < 0) {
+                if (stockAfterDecr != null) cachePort.increment(stockKey);
+                break;
+            }
+            String userIdStr = cachePort.popMinFromZSet(queueKey);
+            if (userIdStr == null) {
+                cachePort.increment(stockKey);
+                break;
+            }
+            try {
+                tasks.add(new PurchaseTask(UUID.fromString(userIdStr), computeTicketNum(scheduleId, stockAfterDecr)));
+                cachePort.increment(payingKey);
+            } catch (IllegalArgumentException e) {
+                log.error("대기열 UUID 파싱 실패 - scheduleId={}, value='{}', stock 복구", scheduleId, userIdStr);
+                cachePort.increment(stockKey);
+            }
+        }
+        return tasks;
+    }
+
+    /**
+     * 수집된 tasks를 CompletableFuture로 병렬 실행 후 전체 완료 대기.
+     * queueExecutor 전용 스레드풀 사용 → commonPool 경합 제거, 스레드 수 명시적 제어.
+     * 각 task는 완료(성공/실패/예외) 후 paying DECR.
+     */
+    private void processWindowParallel(Long scheduleId, List<PurchaseTask> tasks) {
+        String stockKey = RedisKeys.STOCK + scheduleId;
+        String payingKey = RedisKeys.PAYING + scheduleId;
+        List<CompletableFuture<Void>> futures = tasks.stream()
+                .map(task -> CompletableFuture.runAsync(() -> {
+                    try {
+                        purchaseProcessor.tryPurchase(scheduleId, task.userId(), task.ticketNum());
+                    } catch (Exception e) {
+                        log.error("tryPurchase 예외 - scheduleId={}, userId={}, stock 복구", scheduleId, task.userId(), e);
+                        cachePort.increment(stockKey);
+                    } finally {
+                        cachePort.decrement(payingKey);
+                    }
+                }, queueExecutor))
+                .toList();
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+    }
+
+    private record PurchaseTask(UUID userId, int ticketNum) {}
+
+    private void checkTermination(Long scheduleId) {
+        Long stockLeft = cachePort.getCounter(RedisKeys.STOCK + scheduleId);
+        Long payingCount = cachePort.getCounter(RedisKeys.PAYING + scheduleId);
+        Long queueSize = cachePort.getZSetSize(RedisKeys.QUEUE + scheduleId);
+
+        boolean noStock = stockLeft == null || stockLeft <= 0;
+        boolean noPaying = payingCount == null || payingCount <= 0;
+        boolean queueHasWaiters = queueSize != null && queueSize > 0;
+
+        if (noStock && noPaying && queueHasWaiters) {
+            terminateQueue(scheduleId);
+        }
+    }
+
+    private void terminateQueue(Long scheduleId) {
+        // atomic DEL: 첫 번째 스레드만 true 반환 → 중복 Kafka 발행 방지
+        boolean deleted = cachePort.delete(RedisKeys.QUEUE + scheduleId);
+        if (!deleted) {
+            return;
+        }
+        log.info("대기열 종료 - scheduleId={}", scheduleId);
+        eventPublisherPort.publish(KafkaTopics.QUEUE_TERMINATED, scheduleId.toString(),
+                new QueueTerminatedMessage(scheduleId));
+    }
+
+    private int computeTicketNum(Long scheduleId, long stockAfterDecr) {
+        return scheduleRepository.findById(scheduleId)
+                .map(s -> (int) (s.getSeats() - stockAfterDecr))
+                .orElse(0);
+    }
+}
