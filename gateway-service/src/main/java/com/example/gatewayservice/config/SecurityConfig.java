@@ -29,6 +29,7 @@ public class SecurityConfig {
     private final static String[] PERMITALL_ANTPATTERNS = {
             "/", "/csrf",
             "/api/users/login", "/api/users/email/check", "/api/users/nickname/check", "/api/users/refresh",
+            "/api/users/email/verification/send", "/api/users/email/verification/verify",
             "/api/creators/login", "/api/creators/email/check", "/api/creators/nickname/check", "/api/creators/refresh",
             "/api/users/oauth2/google",
             "/?*-service/actuator/?*", "/actuator/?*",
