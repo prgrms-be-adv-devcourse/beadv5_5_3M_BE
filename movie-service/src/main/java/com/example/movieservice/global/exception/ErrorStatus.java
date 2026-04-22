@@ -30,13 +30,26 @@ public enum ErrorStatus implements BaseErrorCode {
     SCHEDULE_INVALID_CREATOR(HttpStatus.FORBIDDEN, "SCHEDULE_INVALID_CREATOR", "해당 스케줄에 대한 권한이 없습니다"),
     SCHEDULE_ALREADY_CONFIRMED(HttpStatus.BAD_REQUEST, "SCHEDULE_ALREADY_CONFIRMED", "이미 확정된 스케줄은 수정하거나 삭제할 수 없습니다"),
     SCHEDULE_NO_REMAINING_SEATS(HttpStatus.BAD_REQUEST, "SCHEDULE_NO_REMAINING_SEATS", "남은 좌석이 없습니다"),
+    SCHEDULE_EXCEEDS_TOTAL_SEATS(HttpStatus.BAD_REQUEST, "SCHEDULE_EXCEEDS_TOTAL_SEATS", "총 좌석 수를 초과할 수 없습니다"),
     REQUEST_TIME_CONFLICT(HttpStatus.CONFLICT, "REQUEST_TIME_CONFLICT", "요청한 스케줄들의 일정이 겹칩니다"),
     SCHEDULE_TIME_CONFLICT(HttpStatus.CONFLICT, "SCHEDULE_TIME_CONFLICT", "해당 시간에 이미 편성된 일정이 있습니다"),
     INVALID_SCHEDULE_TIME(HttpStatus.BAD_REQUEST, "INVALID_SCHEDULE_TIME", "상영 시간은 정각이어야 합니다"),
 
     // Kafka
     KAFKA_PUBLISH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "KAFKA_PUBLISH_FAILED", "Kafka 메시지 발행에 실패했습니다"),
+
+    // Review
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "REVIEW_NOT_FOUND", "리뷰를 찾을 수 없습니다"),
+    REVIEW_FORBIDDEN(HttpStatus.FORBIDDEN, "REVIEW_FORBIDDEN", "해당 리뷰에 대한 권한이 없습니다"),
+    REVIEW_NOT_AUTHORIZED(HttpStatus.FORBIDDEN, "REVIEW_NOT_AUTHORIZED", "리뷰 작성 권한이 없습니다. 해당 영화의 티켓을 구매한 사용자만 리뷰를 작성할 수 있습니다"),
+    REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "REVIEW_ALREADY_EXISTS", "이미 해당 영화에 리뷰를 작성하셨습니다"),
+
+    // User
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다"),
+
+    // Like
+    LIKE_ALREADY_EXISTS(HttpStatus.CONFLICT, "LIKE_ALREADY_EXISTS", "이미 좋아요를 누른 영화입니다"),
+    LIKE_NOT_FOUND(HttpStatus.NOT_FOUND, "LIKE_NOT_FOUND", "좋아요 정보를 찾을 수 없습니다"),
     ;
 
     private final HttpStatus httpStatus;
