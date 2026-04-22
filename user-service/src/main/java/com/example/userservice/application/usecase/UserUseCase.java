@@ -17,6 +17,8 @@ public interface UserUseCase {
     boolean checkAuthorization(AuthorizationRequest request, String userId, String accessToken);
     void checkEmailDuplicate(String email);
     void checkNicknameDuplicate(String nickname);
+    void sendVerificationCode(String email);
+    void verifyEmailCode(String email, String code);
     UUID join(JoinRequest request);
     TokenResponse login(LoginRequest request);
     TokenResponse refresh(String refreshToken);

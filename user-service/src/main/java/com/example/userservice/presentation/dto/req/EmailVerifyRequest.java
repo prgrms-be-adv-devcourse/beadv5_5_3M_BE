@@ -1,0 +1,18 @@
+package com.example.userservice.presentation.dto.req;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
+@Schema(description = "이메일 인증 코드 확인 요청")
+public record EmailVerifyRequest(
+        @Schema(description = "인증할 이메일 주소", example = "user@example.com", requiredMode = Schema.RequiredMode.REQUIRED)
+        @NotBlank
+        @Email
+        String email,
+
+        @Schema(description = "발송된 6자리 인증 코드", example = "123456", requiredMode = Schema.RequiredMode.REQUIRED)
+        @NotBlank
+        String code
+) {
+}

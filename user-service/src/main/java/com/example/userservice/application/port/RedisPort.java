@@ -17,4 +17,16 @@ public interface RedisPort {
     void saveProfileImageUrl(String userId, String url);
 
     Optional<String> findProfileImageUrl(String userId);
+
+    void saveEmailVerificationCode(String email, String code);
+
+    Optional<String> findEmailVerificationCode(String email);
+
+    void deleteEmailVerificationCode(String email);
+
+    void saveEmailVerified(String email);
+
+    boolean isEmailVerified(String email);
+
+    void deleteEmailVerified(String email);
 }

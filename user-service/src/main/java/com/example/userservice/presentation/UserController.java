@@ -2,6 +2,8 @@ package com.example.userservice.presentation;
 
 import com.example.userservice.application.usecase.UserUseCase;
 import com.example.userservice.presentation.dto.req.AuthorizationRequest;
+import com.example.userservice.presentation.dto.req.EmailSendRequest;
+import com.example.userservice.presentation.dto.req.EmailVerifyRequest;
 import com.example.userservice.presentation.dto.req.JoinRequest;
 import com.example.userservice.presentation.dto.req.LoginRequest;
 import com.example.userservice.presentation.dto.req.UpdateProfileRequest;
@@ -74,6 +76,28 @@ public class UserController {
             @Parameter(description = "확인할 닉네임", example = "멋진유저", required = true)
             @RequestParam String nickname) {
         userUseCase.checkNicknameDuplicate(nickname);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "이메일 인증 코드 발송", description = "입력한 이메일로 6자리 인증 코드를 발송합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "인증 코드 발송 성공"),
+            @ApiResponse(responseCode = "409", description = "이미 사용 중인 이메일", content = @Content)
+    })
+    @PostMapping("/email/verification/send")
+    public ResponseEntity<Void> sendVerificationCode(@Valid @RequestBody EmailSendRequest request) {
+        userUseCase.sendVerificationCode(request.email());
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "이메일 인증 코드 확인", description = "발송된 인증 코드를 검증합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "인증 성공"),
+            @ApiResponse(responseCode = "400", description = "유효하지 않거나 만료된 인증 코드", content = @Content)
+    })
+    @PostMapping("/email/verification/verify")
+    public ResponseEntity<Void> verifyEmailCode(@Valid @RequestBody EmailVerifyRequest request) {
+        userUseCase.verifyEmailCode(request.email(), request.code());
         return ResponseEntity.ok().build();
     }
 
