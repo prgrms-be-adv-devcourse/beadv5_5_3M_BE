@@ -10,8 +10,8 @@ import java.util.UUID;
 @Table(
     name = "review",
     uniqueConstraints = @UniqueConstraint(
-        name = "uk_review_user_movie",
-        columnNames = {"user_id", "movie_id"}
+        name = "uk_review_user_schedule",
+        columnNames = {"user_id", "schedule_id"}
     )
 )
 @Getter

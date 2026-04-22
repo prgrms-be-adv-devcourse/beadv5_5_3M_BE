@@ -14,7 +14,7 @@ public interface ReviewJpaRepository extends JpaRepository<Review, Long> {
     List<Review> findTop5ByMovieIdOrderByUpdatedAtDesc(Long movieId);
     Page<Review> findByMovieId(Long movieId, Pageable pageable);
     Page<Review> findByUserId(UUID userId, Pageable pageable);
-    boolean existsByUserIdAndMovieId(UUID userId, Long movieId);
+    boolean existsByUserIdAndScheduleId(UUID userId, Long scheduleId);
 
     @Query("SELECT r.movieId AS movieId, COUNT(r) AS reviewCount, AVG(r.rating) AS averageRating FROM Review r GROUP BY r.movieId")
     List<MovieRatingStats> findRatingStatsByMovieId();

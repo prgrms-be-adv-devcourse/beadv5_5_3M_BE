@@ -9,6 +9,6 @@ import java.util.UUID;
 public interface ReviewAuthorizationJpaRepository extends JpaRepository<ReviewAuthorization, Long> {
     boolean existsByTicketId(Long ticketId);
     boolean existsByUserIdAndMovieId(UUID userId, Long movieId);
-    Optional<ReviewAuthorization> findByUserIdAndMovieId(UUID userId, Long movieId);
+    Optional<ReviewAuthorization> findByUserIdAndScheduleId(UUID userId, Long scheduleId);
     void deleteByUserId(UUID userId);
 }

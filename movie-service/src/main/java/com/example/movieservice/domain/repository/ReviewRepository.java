@@ -17,5 +17,5 @@ public interface ReviewRepository {
     List<MovieRatingStats> findAllRatingStats();
     Page<Review> findByMovieId(Long movieId, Pageable pageable);
     Page<Review> findByUserId(UUID userId, Pageable pageable);
-    boolean existsByUserIdAndMovieId(UUID userId, Long movieId);
+    boolean existsByUserIdAndScheduleId(UUID userId, Long scheduleId);
 }
