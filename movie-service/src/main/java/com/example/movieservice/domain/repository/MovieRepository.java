@@ -14,6 +14,8 @@ public interface MovieRepository {
 
     Optional<Movie> findByMovieId(Long movieId);
 
+    Optional<Movie> findByMovieIdForUpdate(Long movieId);
+
     void delete(Movie movie);
 
     List<Movie> findMoviesByCreatorId(UUID creatorId);

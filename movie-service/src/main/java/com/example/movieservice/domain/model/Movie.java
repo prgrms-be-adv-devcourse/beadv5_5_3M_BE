@@ -2,6 +2,7 @@ package com.example.movieservice.domain.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Entity
 @Table(name = "movie")
 @Getter
@@ -114,11 +116,23 @@ public class Movie {
 
     // review.updated 수신 시
     public void applyReviewUpdated(Integer oldRating, Integer newRating) {
+        if (newRating == null || newRating < 1 || newRating > 5) {
+            log.warn("[Movie] applyReviewUpdated 스킵 - 유효하지 않은 rating: {}", newRating);
+            return;
+        }
+        if (reviewCount <= 0) {
+            log.warn("[Movie] applyReviewUpdated 스킵 - reviewCount가 0 이하: movieId={}", movieId);
+            return;
+        }
         this.averageRating = (averageRating * reviewCount - oldRating + newRating) / reviewCount;
     }
 
     // review.deleted 수신 시
     public void applyReviewDeleted(Integer rating) {
+        if (reviewCount <= 0) {
+            log.warn("[Movie] applyReviewDeleted 스킵 - reviewCount가 0 이하: movieId={}", movieId);
+            return;
+        }
         this.averageRating = reviewCount == 1 ? 0 : (averageRating * reviewCount - rating) / (reviewCount - 1);
         this.reviewCount--;
     }

@@ -7,7 +7,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "review")
+@Table(
+    name = "review",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_review_user_movie",
+        columnNames = {"user_id", "movie_id"}
+    )
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
