@@ -25,8 +25,8 @@ public class MovieLikeRepositoryAdapter implements MovieLikeRepository {
     }
 
     @Override
-    public void delete(MovieLike movieLike) {
-        jpaRepository.delete(movieLike);
+    public int deleteByUserIdAndMovieId(UUID userId, Long movieId) {
+        return jpaRepository.deleteByUserIdAndMovieId(userId, movieId);
     }
 
     @Override

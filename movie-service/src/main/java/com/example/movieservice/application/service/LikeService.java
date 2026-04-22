@@ -47,13 +47,13 @@ public class LikeService {
 
     @Transactional
     public void unlike(UUID userId, Long movieId) {
-        MovieLike like = movieLikeRepository.findByUserIdAndMovieId(userId, movieId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.LIKE_NOT_FOUND));
-
         Movie movie = movieRepository.findByMovieIdForUpdate(movieId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
 
-        movieLikeRepository.delete(like);
+        int deleted = movieLikeRepository.deleteByUserIdAndMovieId(userId, movieId);
+        if (deleted == 0) {
+            throw new GeneralException(ErrorStatus.LIKE_NOT_FOUND);
+        }
         movie.decreaseLikeCount();
         applicationEventPublisher.publishEvent(new MovieLikedEvent(userId, movieId, "UNLIKED"));
         log.info("[Like] 좋아요 취소 - userId: {}, movieId: {}", userId, movieId);

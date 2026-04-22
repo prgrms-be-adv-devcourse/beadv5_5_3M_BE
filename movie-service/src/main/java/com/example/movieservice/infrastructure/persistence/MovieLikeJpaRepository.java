@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface MovieLikeJpaRepository extends JpaRepository<MovieLike, Long> {
     Optional<MovieLike> findByUserIdAndMovieId(UUID userId, Long movieId);
     boolean existsByUserIdAndMovieId(UUID userId, Long movieId);
+    int deleteByUserIdAndMovieId(UUID userId, Long movieId);
 }
