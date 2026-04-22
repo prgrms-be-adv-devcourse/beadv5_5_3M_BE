@@ -1,16 +1,16 @@
 package com.example.movieservice.application.service;
 
-import com.example.movieservice.application.event.EventPublisher;
+import com.example.movieservice.application.event.MovieLikedEvent;
 import com.example.movieservice.domain.model.Movie;
 import com.example.movieservice.domain.model.MovieLike;
 import com.example.movieservice.domain.repository.MovieLikeRepository;
 import com.example.movieservice.domain.repository.MovieRepository;
 import com.example.movieservice.global.exception.ErrorStatus;
 import com.example.movieservice.global.exception.GeneralException;
-import com.example.movieservice.infrastructure.kafka.dto.publish.MovieLikedMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +24,7 @@ public class LikeService {
 
     private final MovieRepository movieRepository;
     private final MovieLikeRepository movieLikeRepository;
-    private final EventPublisher eventPublisher;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
     public void like(UUID userId, Long movieId) {
@@ -41,14 +41,7 @@ public class LikeService {
             throw e;
         }
         movie.increaseLikeCount();
-
-        // TODO: Outbox 패턴 적용 필요 — 현재는 DB 커밋 후 Kafka 발행 실패 시 이벤트 유실 가능
-        try {
-            eventPublisher.publish("movie.liked", movieId.toString(), new MovieLikedMessage(userId, movieId, "LIKED"));
-        } catch (Exception e) {
-            log.error("[Kafka] movie.liked 발행 실패 - userId: {}, movieId: {}", userId, movieId, e);
-        }
-
+        applicationEventPublisher.publishEvent(new MovieLikedEvent(userId, movieId, "LIKED"));
         log.info("[Like] 좋아요 추가 - userId: {}, movieId: {}", userId, movieId);
     }
 
@@ -62,14 +55,7 @@ public class LikeService {
 
         movieLikeRepository.delete(like);
         movie.decreaseLikeCount();
-
-        // TODO: Outbox 패턴 적용 필요 — 현재는 DB 커밋 후 Kafka 발행 실패 시 이벤트 유실 가능
-        try {
-            eventPublisher.publish("movie.liked", movieId.toString(), new MovieLikedMessage(userId, movieId, "UNLIKED"));
-        } catch (Exception e) {
-            log.error("[Kafka] movie.liked 발행 실패 - userId: {}, movieId: {}", userId, movieId, e);
-        }
-
+        applicationEventPublisher.publishEvent(new MovieLikedEvent(userId, movieId, "UNLIKED"));
         log.info("[Like] 좋아요 취소 - userId: {}, movieId: {}", userId, movieId);
     }
 }
