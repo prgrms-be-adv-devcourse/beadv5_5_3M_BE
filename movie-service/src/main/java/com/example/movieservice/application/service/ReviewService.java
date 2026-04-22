@@ -16,6 +16,7 @@ import com.example.movieservice.presentation.dto.request.review.WriteReviewReque
 import com.example.movieservice.presentation.dto.response.review.ReviewResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -50,7 +51,7 @@ public class ReviewService implements ReviewUseCase {
             throw new GeneralException(ErrorStatus.REVIEW_ALREADY_EXISTS);
         }
 
-        Movie movie = movieRepository.findByMovieId(request.movieId())
+        Movie movie = movieRepository.findByMovieIdForUpdate(request.movieId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
 
         UserSync userSync = userSyncRepository.findById(userId)
@@ -69,7 +70,13 @@ public class ReviewService implements ReviewUseCase {
                 .status(Review.ReviewStatus.CREATE)
                 .build();
 
-        Review saved = reviewRepository.save(review);
+        Review saved;
+        try {
+            saved = reviewRepository.save(review);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("[Review] 중복 리뷰 skip (UNIQUE 위반) - userId: {}, movieId: {}", userId, request.movieId());
+            throw new GeneralException(ErrorStatus.REVIEW_ALREADY_EXISTS);
+        }
         movie.applyReviewCreated(request.rating());
 
         log.info("[Review] 작성 완료 - reviewId: {}, userId: {}, movieId: {}", saved.getReviewId(), userId, request.movieId());
@@ -86,7 +93,7 @@ public class ReviewService implements ReviewUseCase {
             throw new GeneralException(ErrorStatus.REVIEW_FORBIDDEN);
         }
 
-        Movie movie = movieRepository.findByMovieId(review.getMovieId())
+        Movie movie = movieRepository.findByMovieIdForUpdate(review.getMovieId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
 
         int oldRating = review.getRating();
@@ -111,7 +118,7 @@ public class ReviewService implements ReviewUseCase {
             throw new GeneralException(ErrorStatus.REVIEW_FORBIDDEN);
         }
 
-        Movie movie = movieRepository.findByMovieId(review.getMovieId())
+        Movie movie = movieRepository.findByMovieIdForUpdate(review.getMovieId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
         reviewRepository.delete(review);
         movie.applyReviewDeleted(review.getRating());

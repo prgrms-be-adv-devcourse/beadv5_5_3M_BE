@@ -31,6 +31,11 @@ public class MovieRepositoryImpl implements MovieRepository {
     }
 
     @Override
+    public Optional<Movie> findByMovieIdForUpdate(Long movieId) {
+        return movieJpaRepository.findByMovieIdForUpdate(movieId);
+    }
+
+    @Override
     public void delete(Movie movie) {
         movieJpaRepository.delete(movie);
     }
