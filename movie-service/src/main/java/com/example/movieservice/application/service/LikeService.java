@@ -28,7 +28,7 @@ public class LikeService {
 
     @Transactional
     public void like(UUID userId, Long movieId) {
-        Movie movie = movieRepository.findByMovieId(movieId)
+        Movie movie = movieRepository.findByMovieIdForUpdate(movieId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
 
         try {
@@ -50,7 +50,7 @@ public class LikeService {
         MovieLike like = movieLikeRepository.findByUserIdAndMovieId(userId, movieId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.LIKE_NOT_FOUND));
 
-        Movie movie = movieRepository.findByMovieId(movieId)
+        Movie movie = movieRepository.findByMovieIdForUpdate(movieId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
 
         movieLikeRepository.delete(like);
