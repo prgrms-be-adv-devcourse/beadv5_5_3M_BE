@@ -2,14 +2,19 @@ package com.example.aiservice.infrastructure.persistence;
 
 import com.example.aiservice.domain.model.UserInteractionHistory;
 import com.example.aiservice.domain.model.enums.InteractionType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface UserInteractionHistoryJpaRepository extends JpaRepository<UserInteractionHistory, Long> {
+
+    @Query("SELECT h FROM UserInteractionHistory h WHERE h.userId = :userId ORDER BY h.createdAt DESC")
+    List<UserInteractionHistory> findRecentByUserId(@Param("userId") UUID userId, Pageable pageable);
 
     boolean existsByUserIdAndMovieIdAndInteractionType(UUID userId, Long movieId, InteractionType interactionType);
 

@@ -49,4 +49,5 @@ public class UserPreferenceRepositoryImpl implements UserPreferenceRepository {
     public void updateEpsilonAndCtr(UUID userId, double epsilon, double explorationClickRate) {
         userPreferenceJpaRepository.updateEpsilonAndCtr(userId, epsilon, explorationClickRate);
     }
+
 }

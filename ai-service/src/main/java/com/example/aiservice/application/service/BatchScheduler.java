@@ -41,12 +41,13 @@ public class BatchScheduler {
     private final MovieEmbeddedRepository movieEmbeddedRepository;
     private final RecommendedLogRepository recommendedLogRepository;
     private final UserPreferenceRepository userPreferenceRepository;
+    private final KMeansClusteringService kMeansClusteringService;
 
     @Scheduled(cron = "0 0 0 * * *")
     public void runDailyBatch() {
         cleanupRecommendedLog();
         updateEpsilon();
-        // 2번: K-Means 클러스터 재계산
+        kMeansClusteringService.recalculateClusters();
         // 4번: 추천 계산
     }
 

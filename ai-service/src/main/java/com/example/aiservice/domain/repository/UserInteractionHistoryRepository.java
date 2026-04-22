@@ -3,9 +3,12 @@ package com.example.aiservice.domain.repository;
 import com.example.aiservice.domain.model.UserInteractionHistory;
 import com.example.aiservice.domain.model.enums.InteractionType;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface UserInteractionHistoryRepository {
+
+    List<UserInteractionHistory> findRecentByUserId(UUID userId, int limit);
 
     boolean existsByUserIdAndMovieIdAndInteractionType(UUID userId, Long movieId, InteractionType interactionType);
 

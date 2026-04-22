@@ -2,9 +2,14 @@ package com.example.aiservice.domain.repository;
 
 import com.example.aiservice.domain.model.MovieEmbedded;
 
+import java.util.Collection;
+import java.util.List;
+
 public interface MovieEmbeddedRepository {
 
     long count();
+
+    List<MovieEmbedded> findAllByIds(Collection<Long> movieIds);
 
     boolean existsById(Long movieId);
 

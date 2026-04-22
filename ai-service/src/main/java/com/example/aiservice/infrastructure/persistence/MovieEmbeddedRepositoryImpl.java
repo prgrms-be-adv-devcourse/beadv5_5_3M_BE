@@ -5,6 +5,9 @@ import com.example.aiservice.domain.repository.MovieEmbeddedRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
+
 @Repository
 @RequiredArgsConstructor
 public class MovieEmbeddedRepositoryImpl implements MovieEmbeddedRepository {
@@ -14,6 +17,11 @@ public class MovieEmbeddedRepositoryImpl implements MovieEmbeddedRepository {
     @Override
     public long count() {
         return movieEmbeddedJpaRepository.count();
+    }
+
+    @Override
+    public List<MovieEmbedded> findAllByIds(Collection<Long> movieIds) {
+        return movieEmbeddedJpaRepository.findAllById(movieIds);
     }
 
     @Override
