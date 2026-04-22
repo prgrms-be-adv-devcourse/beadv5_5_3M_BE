@@ -1,6 +1,7 @@
 package com.example.userservice.application.service;
 
 import com.example.userservice.application.dto.GoogleUserInfo;
+import com.example.userservice.application.exception.*;
 import com.example.userservice.application.usecase.UserUseCase;
 import com.example.userservice.domain.model.CookieLog;
 import com.example.userservice.domain.model.Permission;
@@ -15,14 +16,11 @@ import com.example.userservice.domain.repository.WalletRepository;
 
 import com.example.userservice.infrastructure.kafka.event.UserCreatedEvent;
 import com.example.userservice.infrastructure.kafka.event.UserDeletedEvent;
-import com.example.userservice.infrastructure.kafka.event.UserUpdatedEvent;
-import com.example.userservice.application.exception.DuplicateEmailException;
-import com.example.userservice.application.exception.DuplicateNicknameException;
-import com.example.userservice.application.exception.InvalidEmailOrPasswordException;
-import com.example.userservice.application.exception.InvalidRefreshTokenException;
-import com.example.userservice.application.exception.SessionExpiredException;
 
 import com.example.userservice.application.port.RedisPort;
+import java.security.SecureRandom;
+
+import com.example.userservice.infrastructure.kafka.event.UserUpdatedEvent;
 import com.example.userservice.presentation.dto.req.AuthorizationRequest;
 import com.example.userservice.presentation.dto.req.DeductCookieRequest;
 import com.example.userservice.presentation.dto.req.JoinRequest;
@@ -37,6 +35,8 @@ import com.example.userservice.global.util.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,6 +62,7 @@ public class UserService implements UserUseCase {
     private final CookieLogRepository cookieLogRepository;
     private final DeletedUserRepository deletedUserRepository;
     private final GoogleOAuthService googleOAuthService;
+    private final JavaMailSender mailSender;
 
     @Override
     public boolean checkAuthorization(AuthorizationRequest request, String userId, String accessToken) {
@@ -93,8 +94,36 @@ public class UserService implements UserUseCase {
     }
 
     @Override
+    public void sendVerificationCode(String email) {
+        checkEmailDuplicate(email);
+
+        String code = String.format("%06d", new SecureRandom().nextInt(1_000_000));
+        redisPort.saveEmailVerificationCode(email, code);
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("[BEAD] 이메일 인증 코드");
+        message.setText("인증 코드: " + code + "\n\n해당 코드는 5분간 유효합니다.");
+        mailSender.send(message);
+    }
+
+    @Override
+    public void verifyEmailCode(String email, String code) {
+        String stored = redisPort.findEmailVerificationCode(email).orElse(null);
+        if (stored == null || !stored.equals(code)) {
+            throw new InvalidVerificationCodeException();
+        }
+        redisPort.deleteEmailVerificationCode(email);
+        redisPort.saveEmailVerified(email);
+    }
+
+    @Override
     @Transactional
     public UUID join(JoinRequest request) {
+        if (!redisPort.isEmailVerified(request.email())) {
+            throw new EmailNotVerifiedException();
+        }
+
         checkEmailDuplicate(request.email());
         checkNicknameDuplicate(request.nickname());
 

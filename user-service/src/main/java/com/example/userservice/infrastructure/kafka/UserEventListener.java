@@ -19,6 +19,7 @@ public class UserEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleUserCreated(UserCreatedEvent event) {
+        redisPort.deleteEmailVerified(event.email());
         kafkaPort.publish("user.created", event.userId().toString(), event);
     }
 

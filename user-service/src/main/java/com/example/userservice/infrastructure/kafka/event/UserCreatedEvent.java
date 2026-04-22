@@ -6,6 +6,7 @@ import java.util.UUID;
 
 public record UserCreatedEvent(
         UUID userId,
+        String email,
         String nickname,
         String profileUrl,
         int ageGroup,
@@ -15,6 +16,7 @@ public record UserCreatedEvent(
     public static UserCreatedEvent from(User user) {
         return new UserCreatedEvent(
                 user.getUserId(),
+                user.getEmail(),
                 user.getNickname(),
                 user.getProfileUrl(),
                 user.getAgeGroup(),
