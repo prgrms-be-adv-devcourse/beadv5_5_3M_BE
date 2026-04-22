@@ -109,8 +109,22 @@ jobs:
             echo "🔍 $SERVICE 리뷰 시작"
 
             # 서비스별 diff 추출 (awk로 해당 서비스 경로 diff 블록만 정확히 추출)
+            # 리뷰 대상이 아닌 파일(*.md, *.txt, .gitignore, .gitattributes, LICENSE)은 제외
             awk -v svc="$SERVICE/" '
-              /^diff --git / { in_svc = ($0 ~ svc) }
+              /^diff --git / {
+                in_svc = 0
+                if ($0 ~ svc) {
+                  # "diff --git a/path b/path" 에서 b/ 경로 추출
+                  if (match($0, /b\/[^ ]+$/)) {
+                    file = substr($0, RSTART+2, RLENGTH-2)
+                    if (file ~ /\.(md|txt)$/) next
+                    if (file ~ /(\/|^)\.gitignore$/) next
+                    if (file ~ /(\/|^)\.gitattributes$/) next
+                    if (file ~ /(\/|^)LICENSE$/) next
+                  }
+                  in_svc = 1
+                }
+              }
               in_svc { print }
             ' /tmp/full_pr.diff > /tmp/service_diff.txt || true
 
