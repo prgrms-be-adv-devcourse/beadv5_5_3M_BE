@@ -1,5 +1,6 @@
 package com.example.ticketservice.presentation.exception;
 
+import com.example.ticketservice.common.exception.QueueException;
 import com.example.ticketservice.common.exception.ScheduleException;
 import com.example.ticketservice.common.exception.TicketException;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ScheduleException.class)
     public ResponseEntity<Map<String, Object>> handleScheduleException(ScheduleException e) {
+        return buildResponse(e.getErrorCode().getStatus().value(), e.getMessage());
+    }
+
+    @ExceptionHandler(QueueException.class)
+    public ResponseEntity<Map<String, Object>> handleQueueException(QueueException e) {
         return buildResponse(e.getErrorCode().getStatus().value(), e.getMessage());
     }
 
