@@ -44,10 +44,10 @@ public class ReviewService implements ReviewUseCase {
     @Override
     @Transactional
     public ReviewResponse write(UUID userId, WriteReviewRequest request) {
-        ReviewAuthorization authorization = reviewAuthorizationRepository.findByUserIdAndMovieId(userId, request.movieId())
+        ReviewAuthorization authorization = reviewAuthorizationRepository.findByUserIdAndScheduleId(userId, request.scheduleId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.REVIEW_NOT_AUTHORIZED));
 
-        if (reviewRepository.existsByUserIdAndMovieId(userId, request.movieId())) {
+        if (reviewRepository.existsByUserIdAndScheduleId(userId, request.scheduleId())) {
             throw new GeneralException(ErrorStatus.REVIEW_ALREADY_EXISTS);
         }
 

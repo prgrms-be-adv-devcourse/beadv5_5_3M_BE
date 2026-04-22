@@ -30,8 +30,8 @@ public class ReviewAuthorizationRepositoryAdapter implements ReviewAuthorization
     }
 
     @Override
-    public Optional<ReviewAuthorization> findByUserIdAndMovieId(UUID userId, Long movieId) {
-        return jpaRepository.findByUserIdAndMovieId(userId, movieId);
+    public Optional<ReviewAuthorization> findByUserIdAndScheduleId(UUID userId, Long scheduleId) {
+        return jpaRepository.findByUserIdAndScheduleId(userId, scheduleId);
     }
 
     @Override

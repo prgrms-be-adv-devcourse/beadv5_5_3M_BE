@@ -59,7 +59,7 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     }
 
     @Override
-    public boolean existsByUserIdAndMovieId(UUID userId, Long movieId) {
-        return reviewJpaRepository.existsByUserIdAndMovieId(userId, movieId);
+    public boolean existsByUserIdAndScheduleId(UUID userId, Long scheduleId) {
+        return reviewJpaRepository.existsByUserIdAndScheduleId(userId, scheduleId);
     }
 }
