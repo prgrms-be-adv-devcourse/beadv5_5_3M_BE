@@ -109,14 +109,25 @@ jobs:
             echo "🔍 $SERVICE 리뷰 시작"
 
             # 서비스별 diff 추출 (awk로 해당 서비스 경로 diff 블록만 추출)
-            # 제외: 문서·테스트·빌드·스크립트 등 리뷰 불필요 파일
+            # 제외: 문서·테스트·빌드·스크립트·인프라 설정 등 리뷰 불필요 파일
+            #   - 문서/설정 확장자: md / sql / py / gradle / json / sh / txt / properties
+            #   - 메타 파일: .gitignore / .gitattributes / .dockerignore / .claudeignore / *.iml / *.lock / *.log / *.jar / *.class
+            #   - 인프라: Dockerfile / gradlew / gradle/wrapper/
+            #   - 테스트: *Test.java / *Tests.java / src/test/
+            #   - 서비스 외곽 디렉토리: e2e/ local/ docs/ (ticket-service, streaming-service 참조)
+            #   - 빌드/IDE 산출물: build/ out/ bin/ .gradle/ .idea/ .vscode/
+            #   - 정적 리소스: src/main/resources/static/ templates/ public/
             awk -v svc="$SERVICE/" '
               /^diff --git / {
-                excluded = ($0 ~ /\.(md|sql|py|gradle|json|sh|txt|gitignore)"?$/) ||
+                excluded = ($0 ~ /\.(md|sql|py|gradle|json|sh|txt|properties|gitignore|gitattributes|dockerignore|claudeignore|iml|lock|log|jar|class)"?$/) ||
+                           ($0 ~ /(^|\/)Dockerfile"?$/) ||
                            ($0 ~ /gradlew(\.bat)?"?$/) ||
+                           ($0 ~ /\/gradle\/wrapper\//) ||
                            ($0 ~ /(Test|Tests)\.java"?$/) ||
-                           ($0 ~ /\/e2e\//) ||
-                           ($0 ~ /\/local\//)
+                           ($0 ~ /\/src\/test\//) ||
+                           ($0 ~ /\/(e2e|local|docs)\//) ||
+                           ($0 ~ /\/(build|out|bin|\.gradle|\.idea|\.vscode)\//) ||
+                           ($0 ~ /\/src\/main\/resources\/(static|templates|public)\//)
                 in_svc = ($0 ~ svc) && !excluded
               }
               in_svc { print }
