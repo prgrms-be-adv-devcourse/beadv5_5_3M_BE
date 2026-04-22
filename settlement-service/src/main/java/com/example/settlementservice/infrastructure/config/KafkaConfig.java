@@ -23,4 +23,22 @@ public class KafkaConfig {
 
         return factory;
     }
+
+    /**
+     * @RetryableTopic 전용 factory.
+     * - 비배치 (RetryableTopic은 배치 리스너 미지원)
+     * - MANUAL ack 미사용 (@RetryableTopic이 offset commit 직접 관리)
+     */
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, String> retryableKafkaListenerContainerFactory(
+            ConsumerFactory<String, String> consumerFactory) {
+
+        ConcurrentKafkaListenerContainerFactory<String, String> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+
+        factory.setConsumerFactory(consumerFactory);
+        factory.setBatchListener(false);
+
+        return factory;
+    }
 }
