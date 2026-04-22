@@ -4,10 +4,13 @@ import com.example.movieservice.domain.model.Review;
 import com.example.movieservice.domain.repository.MovieRatingStats;
 import com.example.movieservice.domain.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 @RequiredArgsConstructor
@@ -26,8 +29,8 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     }
 
     @Override
-    public void save(Review review) {
-        reviewJpaRepository.save(review);
+    public Review save(Review review) {
+        return reviewJpaRepository.save(review);
     }
 
     @Override
@@ -43,5 +46,20 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     @Override
     public List<MovieRatingStats> findAllRatingStats() {
         return reviewJpaRepository.findRatingStatsByMovieId();
+    }
+
+    @Override
+    public Page<Review> findByMovieId(Long movieId, Pageable pageable) {
+        return reviewJpaRepository.findByMovieId(movieId, pageable);
+    }
+
+    @Override
+    public Page<Review> findByUserId(UUID userId, Pageable pageable) {
+        return reviewJpaRepository.findByUserId(userId, pageable);
+    }
+
+    @Override
+    public boolean existsByUserIdAndScheduleId(UUID userId, Long scheduleId) {
+        return reviewJpaRepository.existsByUserIdAndScheduleId(userId, scheduleId);
     }
 }

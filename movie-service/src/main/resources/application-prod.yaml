@@ -5,7 +5,7 @@
 
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST}:5432/movie_db
+    url: jdbc:postgresql://${DB_HOST}:5432/creator_db
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -38,6 +38,23 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  # Elasticsearch (검색 + 자동완성 + 하이라이트)
+  elasticsearch:
+    uris: ${ES_URIS:http://localhost:9200}
+    connection-timeout: 5s
+    socket-timeout: 30s
+
+  # Redis (인기 검색어 Sorted Set)
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+# ES 기반 검색 기능 on/off 스위치 (false 면 JPA LIKE 로 동작)
+movie:
+  elasticsearch:
+    enabled: ${MOVIE_ES_ENABLED:true}
 
 server:
   port: ${SERVER_PORT:8086}

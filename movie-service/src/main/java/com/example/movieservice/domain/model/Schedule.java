@@ -19,29 +19,32 @@ public class Schedule {
     @Column(name = "schedule_id")
     private Long scheduleId;
 
-    @Column(name = "start_time")
+    @Column(name = "ticketing_time", nullable = false)
+    private LocalDateTime ticketingTime;
+
+    @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;
 
-    @Column(name = "end_time")
+    @Column(name = "end_time", nullable = false)
     private LocalDateTime endTime;
 
-    @Column(name = "is_confirmed")
+    @Column(name = "is_confirmed", nullable = false)
     private Boolean isConfirmed;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     @Builder.Default
     private ScheduleStatus status = ScheduleStatus.NOT_CONFIRMED;
 
-    @Column(name = "total_seats")
+    @Column(name = "total_seats", nullable = false)
     @Builder.Default
     private Integer totalSeats = 100;
 
-    @Column(name = "remaining_seats")
+    @Column(name = "remaining_seats", nullable = false)
     private Integer remainingSeats;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "movie_id")
+    @JoinColumn(name = "movie_id", nullable = false)
     private Movie movie;
 
     public enum ScheduleStatus {
@@ -76,7 +79,9 @@ public class Schedule {
         this.remainingSeats--;
     }
 
+    // 반드시 PESSIMISTIC_WRITE 락 하에서 호출되어야 함 — 락 없이 호출 시 동시성 안전 보장 불가
     public void increaseRemainingSeats() {
+        if (remainingSeats >= totalSeats) throw new GeneralException(ErrorStatus.SCHEDULE_EXCEEDS_TOTAL_SEATS);
         this.remainingSeats++;
     }
 }

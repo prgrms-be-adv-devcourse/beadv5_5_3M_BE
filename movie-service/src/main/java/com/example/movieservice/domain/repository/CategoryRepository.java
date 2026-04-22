@@ -9,10 +9,4 @@ public interface CategoryRepository {
     Optional<Category> findById(Long categoryId);
 
     List<Category> findAll();
-
-    Category save(Category category);
-
-    boolean existsById(Long categoryId);
-
-    boolean existsByNameIgnoreCase(String name);
 }

@@ -1,0 +1,14 @@
+services:
+  elasticsearch:
+    build: .                                  # Dockerfile에서 nori 플러그인 포함 빌드
+    container_name: elasticsearch
+    ports:
+      - "9200:9200"       # REST API 포트 (Spring Data Elasticsearch 연결용)
+      - "9300:9300"       # 노드 간 통신 포트 (클러스터링용, 로컬에서는 안 씀)
+    environment:
+      discovery.type: single-node          # 단일 노드 모드 (클러스터 X)
+      xpack.security.enabled: "false"      # 보안 비활성화 (로컬 개발용)
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"   # JVM 메모리 제한 (로컬이니까 512MB)
+    volumes:
+      - ./es_data:/usr/share/elasticsearch/data
+    restart: always
