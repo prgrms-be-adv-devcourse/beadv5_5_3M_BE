@@ -30,6 +30,7 @@ public class SecurityConfig {
             "/", "/csrf",
             "/api/users/login", "/api/users/email/check", "/api/users/nickname/check", "/api/users/refresh",
             "/api/creators/login", "/api/creators/email/check", "/api/creators/nickname/check", "/api/creators/refresh",
+            "/api/users/oauth2/google",
             "/?*-service/actuator/?*", "/actuator/?*",
             "/actuator/gateway/**",
             "/v3/api-docs/**", "/?*-service/v3/api-docs", "/swagger*/**", "/webjars/**"

@@ -31,7 +31,8 @@ public class ReactiveAuthorization implements ReactiveAuthorizationManager<Autho
     private final List<String> CREATOR_REQUEST_PATH = List.of(
             "/api/settlements",
             "/api/movies/creator", "/api/movies/schedules/creator", "/api/movies/categories",
-            "/api/wallets"
+            "/api/wallets",
+            "/api/creators"
     );
 
     @Value("${user-service.host:http://localhost:8085}")
