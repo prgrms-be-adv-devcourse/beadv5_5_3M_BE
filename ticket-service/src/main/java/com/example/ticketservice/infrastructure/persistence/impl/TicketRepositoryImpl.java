@@ -1,13 +1,13 @@
 package com.example.ticketservice.infrastructure.persistence.impl;
 
 import com.example.ticketservice.domain.enums.TicketStatus;
-import com.example.ticketservice.domain.model.Schedule;
 import com.example.ticketservice.domain.model.Ticket;
 import com.example.ticketservice.domain.repository.TicketRepository;
 import com.example.ticketservice.infrastructure.persistence.TicketJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -35,22 +35,37 @@ public class TicketRepositoryImpl implements TicketRepository{
     }
 
     @Override
-    public Optional<Ticket> findFirstAvailableBySchedule(Schedule schedule) {
-        return jpaRepository.findFirstByScheduleAndStatusOrderByTicketNumAsc(schedule, TicketStatus.AVAILABLE);
-    }
-
-    @Override
     public Page<Ticket> findAllByUserId(UUID userId, int page, int size) {
         return jpaRepository.findAllByUserId(userId, PageRequest.of(page, size));
     }
 
     @Override
-    public List<Ticket> findAllBySchedule(Schedule schedule) {
-        return  jpaRepository.findAllBySchedule(schedule);
+    public List<Ticket> findAllByStatusAndProvideFlag(TicketStatus status, boolean provideFlag) {
+        return jpaRepository.findAllByStatusAndProvideFlag(status, provideFlag);
     }
 
     @Override
-    public List<Ticket> findAllByStatusAndProvideFlag(TicketStatus status, boolean provideFlag) {
-        return jpaRepository.findAllByStatusAndProvideFlag(status, provideFlag);
+    public List<Ticket> findAllByScheduleIdAndStatus(Long scheduleId, TicketStatus status) {
+        return jpaRepository.findAllByScheduleIdAndStatus(scheduleId, status);
+    }
+
+    @Override
+    public Slice<Ticket> findByScheduleIdAndStatus(Long scheduleId, TicketStatus status, int page, int size) {
+        return jpaRepository.findByScheduleIdAndStatus(scheduleId, status, PageRequest.of(page, size));
+    }
+
+    @Override
+    public int deleteAllByScheduleIdAndStatus(Long scheduleId, TicketStatus status) {
+        return jpaRepository.deleteAllByScheduleIdAndStatus(scheduleId, status);
+    }
+
+    @Override
+    public long countByScheduleIdAndStatus(Long scheduleId, TicketStatus status) {
+        return jpaRepository.countByScheduleIdAndStatus(scheduleId, status);
+    }
+
+    @Override
+    public void delete(Ticket ticket) {
+        jpaRepository.delete(ticket);
     }
 }
