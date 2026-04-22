@@ -7,7 +7,9 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -38,5 +40,16 @@ public class RecommendedLogRepositoryImpl implements RecommendedLogRepository {
     @Override
     public void deleteOlderThan(LocalDate cutoff) {
         recommendedLogJpaRepository.deleteOlderThan(cutoff);
+    }
+
+    @Override
+    public Map<UUID, Double> findExplorationCtrPerUser(LocalDate cutoff) {
+        return recommendedLogJpaRepository.findExplorationCtrPerUser(cutoff)
+                .stream()
+                .filter(p -> p.getExplorationClickRate() != null)
+                .collect(Collectors.toMap(
+                        p -> UUID.fromString(p.getUserId()),
+                        ExplorationCtrProjection::getExplorationClickRate
+                ));
     }
 }

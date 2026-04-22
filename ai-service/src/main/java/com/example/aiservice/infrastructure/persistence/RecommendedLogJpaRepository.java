@@ -45,4 +45,14 @@ public interface RecommendedLogJpaRepository extends JpaRepository<RecommendedLo
     @Modifying
     @Query("DELETE FROM RecommendedLog l WHERE l.recommendedAt < :cutoff")
     void deleteOlderThan(@Param("cutoff") LocalDate cutoff);
+
+    @Query(value = """
+            SELECT user_id::text AS userId,
+                   COUNT(*) FILTER (WHERE is_clicked = true AND is_exploration = true)::float
+                   / NULLIF(COUNT(*) FILTER (WHERE is_exploration = true), 0) AS explorationClickRate
+            FROM recommended_log
+            WHERE recommended_at >= :cutoff
+            GROUP BY user_id
+            """, nativeQuery = true)
+    List<ExplorationCtrProjection> findExplorationCtrPerUser(@Param("cutoff") LocalDate cutoff);
 }

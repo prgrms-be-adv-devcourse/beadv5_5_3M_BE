@@ -4,6 +4,7 @@ import com.example.aiservice.domain.model.RecommendedLog;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public interface RecommendedLogRepository {
@@ -17,4 +18,6 @@ public interface RecommendedLogRepository {
     void deleteByUserId(UUID userId);
 
     void deleteOlderThan(LocalDate cutoff);
+
+    Map<UUID, Double> findExplorationCtrPerUser(LocalDate cutoff);
 }
