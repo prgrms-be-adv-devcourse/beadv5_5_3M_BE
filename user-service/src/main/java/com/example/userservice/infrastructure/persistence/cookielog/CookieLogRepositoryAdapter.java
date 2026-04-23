@@ -15,4 +15,19 @@ public class CookieLogRepositoryAdapter implements CookieLogRepository {
     public void save(CookieLog cookieLog) {
         cookieLogJpaRepository.save(cookieLog);
     }
+
+    @Override
+    public boolean existsByPaymentId(Long paymentId) {
+        return cookieLogJpaRepository.existsByPaymentId(paymentId);
+    }
+
+    @Override
+    public boolean existsByRefundId(Long refundId) {
+        return cookieLogJpaRepository.existsByRefundId(refundId);
+    }
+
+    @Override
+    public boolean existsByTicketId(Long ticketId) {
+        return cookieLogJpaRepository.existsByTicketId(ticketId);
+    }
 }

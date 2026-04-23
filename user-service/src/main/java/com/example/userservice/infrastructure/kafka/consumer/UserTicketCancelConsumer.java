@@ -37,6 +37,10 @@ public class UserTicketCancelConsumer {
     @Transactional
     public void consume(String message) {
         TicketCancelRequest ticketCancelRequest = kafkaUtil.deserialize(message, TicketCancelRequest.class);
+        if (cookieLogRepository.existsByTicketId(ticketCancelRequest.ticketId())) {
+            log.warn("[ticket.cancelled] 중복 처리 방지 - ticketId: {}", ticketCancelRequest.ticketId());
+            return;
+        }
         Wallet wallet = walletRepository.findByUserId(ticketCancelRequest.userId());
         wallet.add(ticketCancelRequest.cookieAmount());
 

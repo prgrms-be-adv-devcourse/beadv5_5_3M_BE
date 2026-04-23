@@ -38,12 +38,16 @@ public class UserPaymentConsumer {
     @Transactional
     public void paymentConfirmConsumer(String message) {
         PaymentConfirmRequest paymentConfirmRequest = kafkaUtil.deserialize(message, PaymentConfirmRequest.class);
+        if (cookieLogRepository.existsByPaymentId(paymentConfirmRequest.paymentId())) {
+            log.warn("[payment.confirmed] 중복 처리 방지 - paymentId: {}", paymentConfirmRequest.paymentId());
+            return;
+        }
         Wallet wallet = walletRepository.findByUserId(paymentConfirmRequest.userId());
         wallet.add(paymentConfirmRequest.cookieAmount());
-        CookieLog cookieLog = CookieLog.create(
+        CookieLog cookieLog = CookieLog.createForPayment(
                 paymentConfirmRequest.userId(),
                 paymentConfirmRequest.cookieAmount(),
-                null);
+                paymentConfirmRequest.paymentId());
         cookieLogRepository.save(cookieLog);
     }
 
@@ -59,12 +63,16 @@ public class UserPaymentConsumer {
     @Transactional
     public void paymentRefundConsumer(String message) {
         PaymentRefundRequest paymentRefundRequest = kafkaUtil.deserialize(message, PaymentRefundRequest.class);
+        if (cookieLogRepository.existsByRefundId(paymentRefundRequest.refundId())) {
+            log.warn("[payment.refunded] 중복 처리 방지 - refundId: {}", paymentRefundRequest.refundId());
+            return;
+        }
         Wallet wallet = walletRepository.findByUserId(paymentRefundRequest.userId());
         wallet.deduct(paymentRefundRequest.cookieAmount());
-        CookieLog cookieLog = CookieLog.create(
+        CookieLog cookieLog = CookieLog.createForRefund(
                 paymentRefundRequest.userId(),
                 -paymentRefundRequest.cookieAmount(),
-                null);
+                paymentRefundRequest.refundId());
         cookieLogRepository.save(cookieLog);
     }
 
