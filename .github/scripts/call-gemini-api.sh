@@ -7,7 +7,7 @@
 #
 # Environment variables:
 #   GEMINI_API_KEY      (required) Google AI Studio API key
-#   GEMINI_MODEL        (optional) default: gemini-3-flash
+#   GEMINI_MODEL        (optional) default: gemini-3-flash-preview
 #   MAX_OUTPUT_TOKENS   (optional) default: 4096
 #
 # Output:
@@ -20,7 +20,7 @@ PROMPT_FILE="${1:?prompt_file is required}"
 OUTPUT_FILE="${2:?output_file is required}"
 
 GEMINI_API_KEY="${GEMINI_API_KEY:?GEMINI_API_KEY environment variable is required}"
-GEMINI_MODEL="${GEMINI_MODEL:-gemini-3-flash}"
+GEMINI_MODEL="${GEMINI_MODEL:-gemini-3-flash-preview}"
 MAX_OUTPUT_TOKENS="${MAX_OUTPUT_TOKENS:-4096}"
 MAX_RETRIES=3
 RETRY_DELAY=1
