@@ -74,13 +74,13 @@ attempt=1
 while [[ $attempt -le $MAX_RETRIES ]]; do
   echo "::debug::Gemini API 호출 시도 $attempt/$MAX_RETRIES (model: $GEMINI_MODEL)" >&2
 
-  HTTP_CODE=$(curl -s -w "%{http_code}" \
+  HTTP_CODE=$(curl -sS -w "%{http_code}" \
     -o /tmp/gemini_raw_response.json \
     -D /tmp/gemini_headers.txt \
     -X POST "$API_URL" \
     -H "Content-Type: application/json" \
     -d @/tmp/gemini_request.json \
-    --max-time 120)
+    --max-time 180 2>/tmp/gemini_curl_err.txt) || true
 
   if [[ "$HTTP_CODE" == "200" ]]; then
     # 응답에서 실제 텍스트 콘텐츠 추출
@@ -126,9 +126,17 @@ while [[ $attempt -le $MAX_RETRIES ]]; do
     sleep "$WAIT_TIME"
     attempt=$((attempt + 1))
 
+  elif [[ -z "$HTTP_CODE" ]] || [[ "$HTTP_CODE" == "000" ]] || [[ "${HTTP_CODE:0:1}" == "5" ]]; then
+    # curl timeout / 네트워크 오류 (000) / 5xx 서버 오류 → 재시도
+    CURL_ERR=$(cat /tmp/gemini_curl_err.txt 2>/dev/null | tr '\n' ' ' || true)
+    WAIT_TIME=$((RETRY_DELAY * (2 ** (attempt - 1))))
+    echo "::warning::HTTP '${HTTP_CODE}' (curl: ${CURL_ERR:-no error msg}) — ${WAIT_TIME}초 후 재시도 ($attempt/$MAX_RETRIES)" >&2
+    sleep "$WAIT_TIME"
+    attempt=$((attempt + 1))
+
   else
     echo "::error::Gemini API 오류 (HTTP $HTTP_CODE)" >&2
-    cat /tmp/gemini_raw_response.json >&2
+    cat /tmp/gemini_raw_response.json >&2 || true
     exit 1
   fi
 done

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Job Test (dev only)", description = "Quartz Job 수동 트리거 — dev 환경 전용")
-@Profile("dev")
+@Profile({"dev", "prod"})
 @RestController
 @RequestMapping("/internal/test/jobs")
 @RequiredArgsConstructor
