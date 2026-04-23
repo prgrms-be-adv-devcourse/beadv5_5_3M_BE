@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -41,9 +42,11 @@ public class Schedule {
 	@Column(name = "title", nullable = false, length = 255)
 	private String title;
 
+	@Setter
 	@Column(name = "start_time", nullable = false)
 	private Instant startTime;
 
+	@Setter
 	@Column(name = "end_time", nullable = false)
 	private Instant endTime;
 
