@@ -1,4 +1,4 @@
-package com.example.aiservice.application.service;
+package com.example.aiservice.application.batch;
 
 import com.example.aiservice.domain.model.ClusterCenter;
 import com.example.aiservice.domain.model.MovieEmbedded;
@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.Collection;
 
 @Slf4j
 @Service
@@ -37,6 +38,7 @@ public class KMeansClusteringService {
     @Value("${batch.kmeans.like-weight}")
     private int likeWeight;
 
+    private static final int CHUNK_SIZE = 100;
     private static final double ELBOW_THRESHOLD = 0.3; // 감소폭이 이전 단계의 몇 % 미만이면 엘보우로 판단할지를 결정하는 임계값 (실데이터 기반으로 검증 필요, 임의 설정)
     private static final int MAX_ITERATIONS = 100; //K-Means가 수렴하지 않을 때 강제로 종료하는 안전장치 (표준 관행)
     private static final double CONVERGENCE_TOLERANCE = 1e-4; //중심점이 얼마나 조금 움직이면 "수렴했다"고 판단할 거리² 기준 (표준 관향)
@@ -45,65 +47,91 @@ public class KMeansClusteringService {
     private final UserInteractionHistoryRepository userInteractionHistoryRepository;
     private final MovieEmbeddedRepository movieEmbeddedRepository;
 
-    @Transactional
-    public void recalculateClusters() {
-        List<UserPreference> users = userPreferenceRepository.findAll();
+    public void recalculateClusters(List<UUID> targetUserIds) {
+        List<UserPreference> users = userPreferenceRepository.findAllByIds(targetUserIds);
         int updated = 0;
 
-        for (UserPreference user : users) {
+        for (int i = 0; i < users.size(); i += CHUNK_SIZE) {
+            List<UserPreference> chunk = users.subList(i, Math.min(i + CHUNK_SIZE, users.size()));
+            updated += processChunk(chunk);
+        }
+        log.info("[Batch] K-Means 클러스터 재계산 완료 - 처리 유저: {}명", updated);
+    }
+
+    private int processChunk(List<UserPreference> chunk) {
+        List<UUID> userIds = chunk.stream().map(UserPreference::getUserId).toList();
+
+        // 청크 내 전체 유저 interaction 한 번에 조회
+        Map<UUID, List<UserInteractionHistory>> interactionsByUser =
+                userInteractionHistoryRepository.findRecentByUserIds(userIds, windowSize);
+
+        // cold start 아닌 유저의 movieId만 수집해서 임베딩 조회
+        Set<Long> allMovieIds = interactionsByUser.entrySet().stream()
+                .filter(e -> !isColdStart(e.getValue()))
+                .flatMap(e -> e.getValue().stream())
+                .map(UserInteractionHistory::getMovieId)
+                .collect(Collectors.toSet());
+
+        Map<Long, float[]> embeddingCache = movieEmbeddedRepository.findAllByIds(allMovieIds).stream()
+                .filter(m -> m.getEmbedding() != null)
+                .collect(Collectors.toMap(MovieEmbedded::getMovieId, MovieEmbedded::getEmbedding));
+
+        int updated = 0;
+        for (UserPreference user : chunk) {
             try {
-                processUser(user);
+                List<UserInteractionHistory> interactions =
+                        interactionsByUser.getOrDefault(user.getUserId(), List.of());
+                processUser(user, interactions, embeddingCache);
                 updated++;
             } catch (Exception e) {
                 log.warn("[K-Means] 유저 {} 처리 실패: {}", user.getUserId(), e.getMessage());
             }
         }
-        log.info("[Batch] K-Means 클러스터 재계산 완료 - 처리 유저: {}명", updated);
+        return updated;
     }
 
-    private void processUser(UserPreference user) {
-        List<UserInteractionHistory> interactions =
-                userInteractionHistoryRepository.findRecentByUserId(user.getUserId(), windowSize);
-
-        if (interactions.isEmpty()) {
-            return;
-        }
-
-        // cold start: SUM(WATCH×watchWeight + LIKE×likeWeight) < coldStartThreshold
+    /** 청크 레벨 pre-filter용 — embeddingCache 없이 interaction 존재 여부만 판단 */
+    private boolean isColdStart(List<UserInteractionHistory> interactions) {
+        if (interactions.isEmpty()) return true;
         double totalScore = interactions.stream()
                 .mapToDouble(h -> h.getInteractionType() == InteractionType.WATCH ? watchWeight : likeWeight)
                 .sum();
+        return totalScore < coldStartThreshold;
+    }
 
-        if (totalScore < coldStartThreshold) {
+    /** embedding-aware cold-start 판단 — 삭제된 영화(embedding 없음)의 interaction은 score에서 제외 */
+    private boolean isColdStart(List<UserInteractionHistory> interactions, Map<Long, float[]> embeddingCache) {
+        if (interactions.isEmpty()) return true;
+        double totalScore = interactions.stream()
+                .filter(h -> embeddingCache.containsKey(h.getMovieId()))
+                .mapToDouble(h -> h.getInteractionType() == InteractionType.WATCH ? watchWeight : likeWeight)
+                .sum();
+        return totalScore < coldStartThreshold;
+    }
+
+    private void processUser(UserPreference user,
+                             List<UserInteractionHistory> interactions,
+                             Map<Long, float[]> embeddingCache) {
+        if (isColdStart(interactions, embeddingCache)) {
             if (user.getCluster() != null) {
                 userPreferenceRepository.save(user.withCluster(null));
             }
             return;
         }
 
-        List<float[]> dataPoints = buildDataPoints(interactions);
-
-        if (dataPoints.isEmpty()) {
-            return;
-        }
+        List<float[]> dataPoints = buildDataPoints(interactions, embeddingCache);
+        if (dataPoints.isEmpty()) return;
 
         KMeansResult result = findOptimalResult(dataPoints);
         List<ClusterCenter> centers = buildClusterCenters(result, dataPoints.size());
         userPreferenceRepository.save(user.withCluster(centers));
     }
 
-    private List<float[]> buildDataPoints(List<UserInteractionHistory> interactions) {
-        Set<Long> movieIds = interactions.stream()
-                .map(UserInteractionHistory::getMovieId)
-                .collect(Collectors.toSet());
-
-        Map<Long, float[]> embeddingMap = movieEmbeddedRepository.findAllByIds(movieIds).stream()
-                .filter(m -> m.getEmbedding() != null)
-                .collect(Collectors.toMap(MovieEmbedded::getMovieId, MovieEmbedded::getEmbedding));
-
+    private List<float[]> buildDataPoints(List<UserInteractionHistory> interactions,
+                                          Map<Long, float[]> embeddingCache) {
         List<float[]> points = new ArrayList<>();
         for (UserInteractionHistory h : interactions) {
-            float[] embedding = embeddingMap.get(h.getMovieId());
+            float[] embedding = embeddingCache.get(h.getMovieId());
             if (embedding == null) continue;
 
             int repeat = h.getInteractionType() == InteractionType.WATCH ? watchWeight : likeWeight;
