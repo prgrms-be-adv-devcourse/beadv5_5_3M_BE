@@ -194,7 +194,7 @@ chore(gateway): docker 설정 변경
 ```
 feat(user): 이메일 로그인 기능 추가
 fix(payment): 결제 실패 시 재시도 로직 추가
-refactor(schedule): 쿼리 성능 개선
+refactor(ticket): 쿼리 성능 개선
 ```
 
 ---
@@ -245,8 +245,9 @@ feature/*         → 기능 개발
 | gateway    | 8000 |
 | creator    | 8080 |
 | payment    | 8081 |
-| review     | 8087 |
 | settlement | 8083 |
 | ticket     | 8084 |
 | user       | 8085 |
 | movie      | 8086 |
+| streaming  | 8088 |
+| ai         | 8089 |
