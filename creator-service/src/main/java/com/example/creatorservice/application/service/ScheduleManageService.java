@@ -7,13 +7,14 @@ import com.example.creatorservice.domain.model.Movie;
 import com.example.creatorservice.domain.model.Schedule;
 import com.example.creatorservice.domain.repository.MovieRepository;
 import com.example.creatorservice.domain.repository.ScheduleRepository;
-import com.example.creatorservice.infrastructure.kafka.MovieEventPublisher;
 import com.example.creatorservice.infrastructure.kafka.dto.ScheduleConfirmedMessage;
+import com.example.creatorservice.infrastructure.kafka.event.ScheduleConfirmedEvent;
 import com.example.creatorservice.presentation.dto.req.ConfirmScheduleRequest;
 import com.example.creatorservice.presentation.dto.req.RegisterScheduleRequest;
 import com.example.creatorservice.presentation.dto.res.ScheduleResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +33,7 @@ public class ScheduleManageService implements ScheduleManageUseCase {
 
     private final MovieRepository movieRepository;
     private final ScheduleRepository scheduleRepository;
-    private final MovieEventPublisher movieEventPublisher;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Override
     @Transactional
@@ -116,7 +117,7 @@ public class ScheduleManageService implements ScheduleManageUseCase {
             schedule.scheduled();
 
             Movie movie = schedule.getMovie();
-            movieEventPublisher.publishScheduleConfirmed(new ScheduleConfirmedMessage(
+            applicationEventPublisher.publishEvent(new ScheduleConfirmedEvent(new ScheduleConfirmedMessage(
                     schedule.getScheduleId(),
                     schedule.getStartTime(),
                     schedule.getEndTime(),
@@ -127,7 +128,7 @@ public class ScheduleManageService implements ScheduleManageUseCase {
                     movie.getMovieId(),
                     movie.getImageUrl(),
                     schedule.getRemainingSeats()
-            ));
+            )));
 
             log.info("[Schedule] 스케줄 확정 완료 - scheduleId: {}", scheduleId);
         }
