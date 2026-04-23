@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Profile({"dev","prod"})
+@Profile("dev")
 @RestController
 @RequestMapping("/internal/test/jobs")
 @RequiredArgsConstructor
