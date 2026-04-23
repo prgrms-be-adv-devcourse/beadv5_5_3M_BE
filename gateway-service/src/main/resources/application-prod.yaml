@@ -21,11 +21,6 @@ spring:
               predicates:
                 - Path=/api/payments/**
               filters:
-            #            - id: schedule-service
-            #              uri: http://${BASE_IP}:${PAYMENT_PORT}/
-            #              predicates:
-            #                - Path=/api/schedule/**
-            #              filters:
             - id: settlement-service
               uri: http://${BASE_IP}:${SETTLEMENT_PORT}/
               predicates:
@@ -45,10 +40,15 @@ spring:
               uri: http://${BASE_IP}:${MOVIE_PORT}/
               predicates:
                 - Path=/api/movies/**
-            - id: review-service
-              uri: http://${BASE_IP}:${REVIEW_PORT}/
+            - id: streaming-service
+              uri: http://${BASE_IP}:${STREAMING_PORT}/
               predicates:
-                - Path=/api/reviews/**
+                - Path=/api/streaming/**
+              filters:
+            - id: ai-service
+              uri: http://${BASE_IP}:${AI_PORT}/
+              predicates:
+                - Path=/api/ai/**
               filters:
           #                  - RewritePath=/user-service/(?<segment>.*), /$\{segment} #/user-service(이 부분 제거)/api/users
           #                  - StripPrefix=1 #origin/endpoint 첫 번째 endpoint 제거 위 RewritePath랑 같은 효과

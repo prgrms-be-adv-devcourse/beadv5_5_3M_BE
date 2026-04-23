@@ -25,6 +25,8 @@ services:
       TICKET_PORT: ${TICKET_PORT}
       USER_PORT: ${USER_PORT}
       MOVIE_PORT: ${MOVIE_PORT}
+      STREAMING_PORT: ${STREAMING_PORT}
+      AI_PORT: ${AI_PORT}
     mem_limit: 384m
     mem_reservation: 256m
     restart: unless-stopped
