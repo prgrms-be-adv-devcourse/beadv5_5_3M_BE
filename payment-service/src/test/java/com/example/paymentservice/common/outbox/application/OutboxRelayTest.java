@@ -4,7 +4,6 @@ import com.example.paymentservice.common.outbox.OutboxProperties;
 import com.example.paymentservice.common.outbox.OutboxStatus;
 import com.example.paymentservice.common.outbox.domain.model.OutboxMessage;
 import com.example.paymentservice.common.outbox.domain.repository.OutboxRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -20,22 +19,21 @@ import static org.mockito.Mockito.*;
 class OutboxRelayTest {
 
     private OutboxRepository repository;
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    private KafkaTemplate<String, String> kafkaTemplate;
     private OutboxRelay relay;
 
     @BeforeEach
     @SuppressWarnings("unchecked")
     void setUp() {
         repository = mock(OutboxRepository.class);
-        kafkaTemplate = (KafkaTemplate<String, Object>) mock(KafkaTemplate.class);
+        kafkaTemplate = (KafkaTemplate<String, String>) mock(KafkaTemplate.class);
         OutboxProperties props = new OutboxProperties();
         props.setBatchSize(100);
         props.setPollDelayMs(500L);
         props.setSendTimeoutMs(3_000L);
         props.setMaxRetries(5);
         props.setBackoffBaseSeconds(10);
-        ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
-        relay = new OutboxRelay(repository, kafkaTemplate, objectMapper, props);
+        relay = new OutboxRelay(repository, kafkaTemplate, props);
     }
 
     private OutboxMessage pending(long id) {
@@ -44,13 +42,13 @@ class OutboxRelayTest {
     }
 
     @SuppressWarnings("unchecked")
-    private CompletableFuture<SendResult<String, Object>> successFuture() {
-        SendResult<String, Object> result = (SendResult<String, Object>) mock(SendResult.class);
+    private CompletableFuture<SendResult<String, String>> successFuture() {
+        SendResult<String, String> result = (SendResult<String, String>) mock(SendResult.class);
         return CompletableFuture.completedFuture(result);
     }
 
-    private CompletableFuture<SendResult<String, Object>> failedFuture(String reason) {
-        CompletableFuture<SendResult<String, Object>> f = new CompletableFuture<>();
+    private CompletableFuture<SendResult<String, String>> failedFuture(String reason) {
+        CompletableFuture<SendResult<String, String>> f = new CompletableFuture<>();
         f.completeExceptionally(new RuntimeException(reason));
         return f;
     }

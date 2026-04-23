@@ -5,25 +5,119 @@ service: payment-service
 rules:
   - id: PAY-001
     severity: CRITICAL
-    title: 결제 생성 멱등성 키 누락
+    title: 결제 생성 멱등성 체크 누락 (orderId 기준)
     description: >
-      Payment 생성 시 orderId 또는 idempotencyKey에 DB UNIQUE 제약이 없는 경우.
-      네트워크 재시도로 동일 결제가 중복 생성될 수 있음 (이중 청구).
-      동일 orderId 재요청 시 기존 결제 정보를 반환해야 함.
+      PaymentService.confirmPayment에서 Payment.create 호출 이전에 paymentRepository.findByOrderId(orderId)로
+      SUCCESS 상태의 기존 결제가 있는지 확인하는 가드가 빠진 경우. Payment 엔티티의 order_id에 DB UNIQUE 제약이
+      없거나 제거된 경우도 동일 위반. 토스 confirm API 재시도·클라이언트 이중 클릭 시 동일 orderId 에 대해
+      Payment row가 중복 생성되고, 두 row 모두 PG confirm을 호출해 이중 청구가 발생한다. 동일 orderId 재요청은
+      기존 성공 결제를 그대로 반환해야 한다 (PaymentService.java:50-53 패턴).
 
   - id: PAY-002
     severity: CRITICAL
-    title: 환불 금액 계산 정수 나눗셈 오류
+    title: 환불 금액 계산 정수 나눗셈/오버플로우
     description: >
-      환불 KRW 계산 시 int 타입 나눗셈으로 소수점 버림이 발생하는 경우.
-      예: cookieAmount * totalAmount / totalCookies 에서 int 오버플로우 또는 정밀도 손실.
-      금액 계산에는 반드시 BigDecimal을 사용하거나 (long)으로 캐스팅 후 연산해야 함.
+      RefundService.requestRefund의 wonAmount 계산(cookieAmount × amount ÷ totalCookies)이 int 나눗셈으로
+      수행되거나 BigDecimal.divide에 scale/RoundingMode 인자가 빠진 경우. 또한 int × int 곱셈은 큰 결제 금액에서
+      오버플로우 가능. 반드시 BigDecimal.valueOf(...).multiply(...).divide(..., 0, RoundingMode.HALF_UP) 조합
+      또는 명시적인 (long) 캐스팅 후 연산해야 한다. 소수점 절삭·반올림 방향 오류는 환불 누락/과다 환불로 이어진다.
 
   - id: PAY-003
     severity: CRITICAL
-    title: 환불 중복 요청 Race Condition
+    title: 환불 총액 초과 검증 Race Condition
     description: >
-      환불 총액 합산 체크와 새 환불 INSERT 사이에 동시 요청이 들어오면 초과 환불 발생.
-      환불 요청에 비관적 락 또는 DB UNIQUE 제약(paymentId + 타임스탬프)으로 방어해야 함.
-      단, Payment 엔티티에 findByIdForUpdate 등 비관적 락이 이미 적용되어 있으면
-      해당 락이 환불 흐름 전체를 직렬화하므로 이 룰을 위반하지 않는 것으로 판단할 것.
+      RefundService.requestRefund에서 refundRepository.findByPaymentId(...).sum() 으로 기존 환불 총액을 집계한 뒤
+      새 Refund를 INSERT하는 check-then-act 구간이 paymentRepository.findByIdForUpdate(paymentId)의 비관적 락
+      안에서 수행되지 않는 경우. 두 환불 요청이 동시에 각자 check를 통과하고 동시에 INSERT하면 cookieAmount
+      합계가 payment.cookieAmount를 초과해 초과 환불이 확정된다. Payment에 대한 findByIdForUpdate 락이 트랜잭션
+      내내 유지되어야만 환불 흐름 전체가 직렬화되므로, 이 락이 유지되고 있으면 위반하지 않는 것으로 판단할 것.
+
+  - id: PAY-004
+    severity: CRITICAL
+    title: Kafka 직접 발행 (Outbox 우회)
+    description: >
+      application/ 또는 presentation/ 레이어의 서비스·컨트롤러에서 KafkaTemplate 또는 KafkaProducer를 직접
+      주입받아 .send() 하는 경우. payment-service는 Transactional Outbox 패턴(OutboxEnqueuer → outbox_messages
+      테이블 → OutboxRelay → Kafka)을 사용하며, 이 경로만이 DB 커밋과 메시지 발행의 원자성을 보장한다. 직접 발행은
+      (1) DB 롤백 시에도 Kafka 메시지가 브로커에 남는 phantom event, (2) DB 커밋 성공 후 Kafka 장애로 메시지 유실을
+      유발한다. Kafka 발행은 반드시 OutboxEnqueuer.enqueue(...)로 일원화되어야 하며, 예외는 OutboxRelay뿐이다.
+
+  - id: PAY-005
+    severity: CRITICAL
+    title: 결제/환불 상태 전이 후 outbox enqueue 누락
+    description: >
+      Payment.markSuccess / markFailed / cancel, Refund.markSuccess / markProcessingFailed / markFailed 호출
+      직후 OutboxEnqueuer.enqueue가 같은 @Transactional 또는 TransactionTemplate 블록 안에서 이루어지지 않는 경우.
+      상태 전이가 DB에 반영되었는데 매칭되는 payment.confirmed / payment.failed / payment.refunded 이벤트가 발행되지
+      않으면 settlement·ticket·user 등 downstream 소비자가 쿠키 지급·정산·티켓 확정을 영구히 놓친다. enqueue는
+      반드시 상태 변경과 같은 트랜잭션에서 수행되어 outbox row가 함께 커밋되어야 한다.
+
+  - id: PAY-006
+    severity: CRITICAL
+    title: 토스 PG 호출을 @Transactional 내부에서 수행
+    description: >
+      PaymentGateway.confirmPayment / RefundGateway.cancelPayment 호출이 @Transactional 메서드 또는
+      TransactionTemplate.execute 콜백 내부에서 이루어지는 경우. 외부 HTTP 호출은 수 초~수십 초까지 걸릴 수 있으며
+      DB 커넥션을 점유한 채 PG 응답을 기다리면 HikariCP 풀이 고갈되어 전체 서비스가 멈춘다. 또한 PG에서 돈이 빠진
+      후 DB 롤백되면 보상이 어렵다. 반드시 TX1(상태 IN_PROGRESS/PROCESSING 저장) → TX 밖 PG 호출 → TX2(결과 반영
+      + outbox enqueue) 3단 분리 구조를 유지해야 한다 (PaymentService.java:46-96, RefundService.java:84-123 참고).
+
+  - id: PAY-007
+    severity: CRITICAL
+    title: PG 성공 후 DB 반영 실패 시 보상 경로 누락
+    description: >
+      PG confirm/cancel API가 성공(돈이 실제로 이동함)한 이후의 TX2(markSuccess + outbox enqueue)에서
+      재시도 루프(retryCommit 패턴, 최대 MAX_RETRIES=3)와 최종 실패 시 log.error 기록이 빠진 경우. 이 구간은
+      PG에서 돈이 이미 움직인 상태이므로 단순 예외 throw로 끝내면 DB는 IN_PROGRESS/PROCESSING, PG는 SUCCESS로
+      영구 불일치. 재시도 + 알림(log.error + 향후 수동 보정용 식별자 남기기)이 필수다. 역으로 PG 호출 실패 경로는
+      markFailed + payment.failed 이벤트 발행으로 DB/이벤트 일관성을 맞춰야 한다.
+
+  - id: PAY-008
+    severity: CRITICAL
+    title: Payment/Refund 상태 변경 시 비관적 락 미사용
+    description: >
+      failPayment, approveRefund, rejectRefund 등 Payment/Refund 엔티티의 상태를 변경하는 메서드에서
+      findByIdForUpdate 대신 findById를 사용하는 경우. 동일 paymentId/refundId에 대한 동시 상태 전이
+      (예: approveRefund 와 rejectRefund 동시 호출, 또는 동일 refundId에 대한 approveRefund 이중 호출)가
+      충돌 없이 통과하면 이중 PG 취소·이중 outbox 발행·상태 역전이 발생한다. 상태 전이는 반드시 findByIdForUpdate
+      락 하에서 현재 상태를 재확인한 뒤 수행해야 한다. 조회 전용(@Transactional(readOnly = true)) 메서드는 제외.
+
+  - id: PAY-009
+    severity: CRITICAL
+    title: Outbox payload 직접 직렬화 또는 타입 불일치
+    description: >
+      상태 전이 서비스에서 OutboxEnqueuer.enqueue를 거치지 않고 objectMapper.writeValueAsString 으로 직접 직렬화해
+      outboxRepository.save 하거나, OutboxRelay가 kafkaTemplate.send에 String이 아닌 객체를 넘기는 경우. 운영
+      producer의 value-serializer는 StringSerializer로 설정되어 있어 String 외 타입 전달 시 ClassCastException
+      발생하고 outbox가 FAILED로 누적된다. enqueue는 항상 OutboxEnqueuer를 통해, relay는 msg.getPayload() 문자열을
+      그대로 kafkaTemplate.send(topic, key, String payload) 로 전달해야 한다.
+
+  - id: PAY-010
+    severity: CRITICAL
+    title: Toss secretKey / PG 응답 원문 로그·예외 메시지 노출
+    description: >
+      TossPaymentClient / TossRefundClient 또는 공통 예외 처리에서 (1) properties.getSecretKey() 값 로깅,
+      (2) encodeSecretKey()로 만든 Basic Auth 헤더 로깅, (3) TossPaymentResponse 원문(카드번호·결제수단 정보 포함)을
+      로그·에러 응답·Swagger 응답에 그대로 노출하는 경우. 운영 secretKey가 로그 수집 파이프라인에 누적되면 즉시
+      rotate 비용 발생, 카드 정보 노출은 PCI-DSS 위반. 4xx/5xx 응답 본문은 errorCode/message만 추출해 로그에
+      남기고, 고객 응답에는 내부 ErrorCode 기반 표준 메시지만 노출해야 한다.
+
+  - id: PAY-011
+    severity: CRITICAL
+    title: PG RestClient 타임아웃 / 재시도 상한 미설정
+    description: >
+      TossPaymentClient의 RestClient 생성 시 connect/read 타임아웃이 설정되지 않은 경우(RestClient.create() 기본값은
+      무제한 대기). PG가 응답을 지연하면 요청 스레드와 DB 커넥션(호출 전후 TX 포함)이 무기한 대기하며 서비스 전체가
+      정체된다. 또한 confirm/cancel 호출에 무제한 재시도 루프가 있으면 동일 요청을 반복 발송해 이중 청구를 유발할
+      수 있다. ClientHttpRequestFactory에 connectTimeout ≤ 5s, readTimeout ≤ 10s 등 상한을 반드시 지정하고,
+      PG 호출은 애플리케이션 레벨에서 재시도하지 않는 것이 원칙(오류는 markFailed로 귀결).
+
+  - id: PAY-012
+    severity: CRITICAL
+    title: Outbox FOR UPDATE SKIP LOCKED 쿼리 우회 또는 트랜잭션 제거
+    description: >
+      OutboxJpaRepository.findPendingForRelay의 nativeQuery에서 FOR UPDATE SKIP LOCKED 절이 제거되거나,
+      OutboxRelay.relay 메서드의 @Transactional이 삭제된 경우. 다중 replica(payment-service 인스턴스 N개)가
+      배치로 동일 PENDING row를 잡지 못하게 막는 행 잠금이 사라지면 동일 outbox 메시지가 중복 발행되어
+      consumer 측에서 잔액 이중 지급·정산 중복 집계가 발생한다. @Transactional 없이는 SKIP LOCKED의 잠금이
+      메서드 리턴 즉시 해제되므로 배치 내 publish 도중에도 다른 replica가 가로챌 수 있다.
