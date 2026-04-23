@@ -25,7 +25,10 @@ services:
       TICKET_PORT: ${TICKET_PORT}
       USER_PORT: ${USER_PORT}
       MOVIE_PORT: ${MOVIE_PORT}
-      REVIEW_PORT: ${REVIEW_PORT}
+      STREAMING_PORT: ${STREAMING_PORT}
+      AI_PORT: ${AI_PORT}
+    mem_limit: 384m
+    mem_reservation: 256m
     restart: unless-stopped
     networks: [app-network]
 
@@ -40,6 +43,8 @@ services:
     container_name: creator-service
     ports:
       - "${CREATOR_PORT}:${CREATOR_PORT}"
+    volumes:
+      - /home/ubuntu/s3-bucket:/root/uploads
     environment:
       SERVER_PORT: ${CREATOR_PORT}
       SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:5432/creator_db
@@ -54,6 +59,11 @@ services:
       JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY}
       JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY}
       DDL_AUTO: ${DDL_AUTO}
+      FILE_UPLOAD_BASE_PATH: /root/uploads
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 500MB
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 500MB
+    mem_limit: 640m
+    mem_reservation: 384m
     restart: unless-stopped
     networks: [app-network]
 
@@ -77,6 +87,8 @@ services:
       TOSS_PAYMENT_CK: ${TOSS_PAYMENT_CK}
       SPRING_PROFILES_ACTIVE: prod
       DDL_AUTO: ${DDL_AUTO}
+    mem_limit: 640m
+    mem_reservation: 384m
     restart: unless-stopped
     networks: [app-network]
 
@@ -105,6 +117,8 @@ services:
       SETTLEMENT_DLQ_MAX_RETRY: ${SETTLEMENT_DLQ_MAX_RETRY}
       SPRING_TASK_SCHEDULING_TIMEZONE: Asia/Seoul
       DDL_AUTO: ${DDL_AUTO}
+    mem_limit: 640m
+    mem_reservation: 384m
     restart: unless-stopped
     networks: [app-network]
 
@@ -130,6 +144,8 @@ services:
       CLIENT_USER_BASE_URL: http://user-service:${USER_PORT}
       SPRING_PROFILES_ACTIVE: prod
       DDL_AUTO: ${DDL_AUTO}
+    mem_limit: 768m
+    mem_reservation: 448m
     restart: unless-stopped
     networks: [app-network]
 
@@ -164,28 +180,14 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       MINIO_BUCKET: ${MINIO_BUCKET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
       DDL_AUTO: ${DDL_AUTO}
-    restart: unless-stopped
-    networks: [app-network]
-
-  # ──────────────────────────────────────────
-  # Review Service (포트 8087)
-  # - 리뷰 작성/수정/삭제
-  # ──────────────────────────────────────────
-  reivew-service:
-    profiles: [reivew-service]
-    image: ${DOCKERHUB_USERNAME}/reivew-service:latest
-    container_name: reivew-service
-    ports:
-      - "${REVIEW_PORT}:${REVIEW_PORT}"
-    environment:
-      SERVER_PORT: ${REVIEW_PORT}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:5432/review_db
-      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
-      SPRING_PROFILES_ACTIVE: prod
-      DDL_AUTO: ${DDL_AUTO}
+    mem_limit: 640m
+    mem_reservation: 384m
     restart: unless-stopped
     networks: [app-network]
 
@@ -201,12 +203,79 @@ services:
       - "${MOVIE_PORT}:${MOVIE_PORT}"
     environment:
       SERVER_PORT: ${MOVIE_PORT}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:5432/movie_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:5432/creator_db
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
+      MOVIE_ES_ENABLED: ${MOVIE_ES_ENABLED:-false}
+      ES_URIS: ${ES_URIS:-http://localhost:9200}
       SPRING_PROFILES_ACTIVE: prod
       DDL_AUTO: ${DDL_AUTO}
+    mem_limit: 640m
+    mem_reservation: 384m
+    restart: unless-stopped
+    networks: [app-network]
+
+  # ──────────────────────────────────────────
+  # Streaming Service (포트 8088)
+  # - 라이브 HLS 재생 + WebSocket/STOMP 채팅 + Quartz JDBC jobstore
+  # - creator-service HTTP 의존 (영화 위치 조회)
+  # ──────────────────────────────────────────
+  streaming-service:
+    profiles: [streaming-service]
+    image: ${DOCKERHUB_USERNAME}/streaming-service:latest
+    container_name: streaming-service
+    ports:
+      - "${STREAMING_PORT}:${STREAMING_PORT}"
+    environment:
+      SERVER_PORT: ${STREAMING_PORT}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: 5432
+      DB_NAME: streaming_db
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      KAFKA_CONSUMER_GROUP_ID: ${KAFKA_CONSUMER_GROUP_ID_STREAMING}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      STREAMING_JWT_SECRET: ${STREAMING_JWT_SECRET}
+      STREAMING_ADDRESS_ADAPTER: ${STREAMING_ADDRESS_ADAPTER}
+      STREAMING_PUBLIC_BASE_URL: ${STREAMING_PUBLIC_BASE_URL}
+      CLIENT_CREATOR_BASE_URL: http://creator-service:${CREATOR_PORT}
+      STORAGE_S3_PATH: ${STORAGE_S3_PATH}
+      SPRING_PROFILES_ACTIVE: prod
+      DDL_AUTO: ${DDL_AUTO}
+    mem_limit: 896m
+    mem_reservation: 512m
+    restart: unless-stopped
+    networks: [app-network]
+
+  # ──────────────────────────────────────────
+  # AI Service (포트 8089)
+  # - OpenAI 임베딩/요약/리랭킹 + pgvector 기반 추천
+  # - Kafka 이벤트 소비(movie/ticket/user)로만 연계, HTTP 아웃바운드 없음
+  # ──────────────────────────────────────────
+  ai-service:
+    profiles: [ai-service]
+    image: ${DOCKERHUB_USERNAME}/ai-service:latest
+    container_name: ai-service
+    ports:
+      - "${AI_PORT}:${AI_PORT}"
+    environment:
+      SERVER_PORT: ${AI_PORT}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:5432/ai_db
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      SPRING_PROFILES_ACTIVE: prod
+      DDL_AUTO: ${DDL_AUTO}
+    mem_limit: 896m
+    mem_reservation: 512m
     restart: unless-stopped
     networks: [app-network]
 

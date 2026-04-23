@@ -1,0 +1,52 @@
+[
+  {
+    "_comment": "user0001 → schedule 42 Entitlement",
+    "topic": "ticket.review.authorized",
+    "value": {
+      "ticketId": 1001,
+      "movieId": 1,
+      "scheduleId": 42,
+      "userId": "00000000-0000-0000-0000-000000000001"
+    }
+  },
+  {
+    "_comment": "user0002 → schedule 42 Entitlement",
+    "topic": "ticket.review.authorized",
+    "value": {
+      "ticketId": 1002,
+      "movieId": 1,
+      "scheduleId": 42,
+      "userId": "00000000-0000-0000-0000-000000000002"
+    }
+  },
+  {
+    "_comment": "user0003 → schedule 42 Entitlement",
+    "topic": "ticket.review.authorized",
+    "value": {
+      "ticketId": 1003,
+      "movieId": 1,
+      "scheduleId": 42,
+      "userId": "00000000-0000-0000-0000-000000000003"
+    }
+  },
+  {
+    "_comment": "user0001 → schedule 43 Entitlement (라이프사이클 시나리오용)",
+    "topic": "ticket.review.authorized",
+    "value": {
+      "ticketId": 2001,
+      "movieId": 2,
+      "scheduleId": 43,
+      "userId": "00000000-0000-0000-0000-000000000001"
+    }
+  },
+  {
+    "_comment": "user0002 → schedule 43 Entitlement",
+    "topic": "ticket.review.authorized",
+    "value": {
+      "ticketId": 2002,
+      "movieId": 2,
+      "scheduleId": 43,
+      "userId": "00000000-0000-0000-0000-000000000002"
+    }
+  }
+]

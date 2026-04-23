@@ -1,7 +1,0 @@
-version: 1
-scope: service
-service: schedule-service
-
-# 현재 스켈레톤 상태 — 구현 시작 시 다른 서비스 규칙 참고
-# CRITICAL 룰 없음
-rules: []

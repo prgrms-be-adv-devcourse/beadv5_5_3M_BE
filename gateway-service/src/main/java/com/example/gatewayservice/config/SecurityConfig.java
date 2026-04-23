@@ -29,7 +29,9 @@ public class SecurityConfig {
     private final static String[] PERMITALL_ANTPATTERNS = {
             "/", "/csrf",
             "/api/users/login", "/api/users/email/check", "/api/users/nickname/check", "/api/users/refresh",
+            "/api/users/email/verification/send", "/api/users/email/verification/verify",
             "/api/creators/login", "/api/creators/email/check", "/api/creators/nickname/check", "/api/creators/refresh",
+            "/api/users/oauth2/google",
             "/?*-service/actuator/?*", "/actuator/?*",
             "/actuator/gateway/**",
             "/v3/api-docs/**", "/?*-service/v3/api-docs", "/swagger*/**", "/webjars/**"
@@ -40,7 +42,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("https://3m-one.vercel.app", "http://localhost:5173"));
+        config.setAllowedOrigins(List.of("https://3m-cinestream.vercel.app", "http://localhost:5173"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

@@ -1,6 +1,5 @@
 package com.example.userservice.domain.model;
 
-import com.example.userservice.exception.InsufficientCookieException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
@@ -55,8 +54,15 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
-    @Schema(description = "쿠키 잔액", example = "10")
-    private Integer balance;
+    @Schema(description = "연령대", example = "20")
+    private Integer ageGroup;
+
+    @Schema(description = "성별", example = "MALE")
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Wallet wallet;
 
     @Schema(description = "생성일시")
     private LocalDateTime createAt;
@@ -64,15 +70,16 @@ public class User {
     @Schema(description = "수정일시")
     private LocalDateTime updateAt;
 
-    public static User create(String email, String rawPassword, String nickname) {
+    public static User create(String email, String rawPassword, String nickname, Integer ageGroup, Gender gender) {
         User user = new User();
         user.userId = UUID.randomUUID();
         user.email = email;
         user.nickname = nickname;
         user.role = Role.USER;
+        user.ageGroup = ageGroup;
+        user.gender = gender;
         user.saltKey = generateSalt();
         user.password = new BCryptPasswordEncoder().encode(rawPassword + user.saltKey);
-        user.balance = 0;
         return user;
     }
 
@@ -88,16 +95,12 @@ public class User {
         if (profileUrl != null) this.profileUrl = profileUrl;
     }
 
-    public void deductCookie(Integer amount) {
-        if (this.balance - amount < 0) {
-            throw new InsufficientCookieException();
-        }
-
-        this.balance -= amount;
+    public void initWallet() {
+        this.wallet = Wallet.create(this);
     }
 
-    public void addCookie(Integer amount) {
-        this.balance += amount;
+    public Integer getBalance() {
+        return wallet != null ? wallet.getBalance() : 0;
     }
 
     @PrePersist

@@ -7,7 +7,7 @@
 #
 # Environment variables:
 #   GEMINI_API_KEY      (required) Google AI Studio API key
-#   GEMINI_MODEL        (optional) default: gemini-2.0-flash
+#   GEMINI_MODEL        (optional) default: gemini-3-flash-preview
 #   MAX_OUTPUT_TOKENS   (optional) default: 4096
 #
 # Output:
@@ -20,7 +20,7 @@ PROMPT_FILE="${1:?prompt_file is required}"
 OUTPUT_FILE="${2:?output_file is required}"
 
 GEMINI_API_KEY="${GEMINI_API_KEY:?GEMINI_API_KEY environment variable is required}"
-GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.0-flash}"
+GEMINI_MODEL="${GEMINI_MODEL:-gemini-3-flash-preview}"
 MAX_OUTPUT_TOKENS="${MAX_OUTPUT_TOKENS:-4096}"
 MAX_RETRIES=3
 RETRY_DELAY=1
@@ -41,15 +41,13 @@ if [[ ! -f "$PROMPT_FILE" ]]; then
   exit 1
 fi
 
-SYSTEM_PROMPT=$(cat "$SYSTEM_PROMPT_FILE")
-USER_PROMPT=$(cat "$PROMPT_FILE")
-OUTPUT_SCHEMA=$(cat "$OUTPUT_SCHEMA_FILE")
-
 # Gemini API 요청 JSON 조립
-REQUEST_JSON=$(jq -n \
-  --arg system_prompt "$SYSTEM_PROMPT" \
-  --arg user_prompt "$USER_PROMPT" \
-  --argjson output_schema "$OUTPUT_SCHEMA" \
+# --rawfile: 파일 내용을 문자열로 읽음 (--arg와 달리 셸 인자를 거치지 않아 ARG_MAX 제한 없음)
+# --slurpfile: 파일 내용을 JSON 배열로 파싱 ($output_schema[0]으로 접근)
+jq -n \
+  --rawfile system_prompt "$SYSTEM_PROMPT_FILE" \
+  --rawfile user_prompt "$PROMPT_FILE" \
+  --slurpfile output_schema "$OUTPUT_SCHEMA_FILE" \
   --argjson max_tokens "$MAX_OUTPUT_TOKENS" \
   '{
     "system_instruction": {
@@ -65,9 +63,9 @@ REQUEST_JSON=$(jq -n \
       "temperature": 0.2,
       "maxOutputTokens": $max_tokens,
       "responseMimeType": "application/json",
-      "responseSchema": $output_schema
+      "responseSchema": $output_schema[0]
     }
-  }')
+  }' > /tmp/gemini_request.json
 
 API_URL="https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}"
 
@@ -76,13 +74,13 @@ attempt=1
 while [[ $attempt -le $MAX_RETRIES ]]; do
   echo "::debug::Gemini API 호출 시도 $attempt/$MAX_RETRIES (model: $GEMINI_MODEL)" >&2
 
-  HTTP_CODE=$(curl -s -w "%{http_code}" \
+  HTTP_CODE=$(curl -sS -w "%{http_code}" \
     -o /tmp/gemini_raw_response.json \
     -D /tmp/gemini_headers.txt \
     -X POST "$API_URL" \
     -H "Content-Type: application/json" \
-    -d "$REQUEST_JSON" \
-    --max-time 120)
+    -d @/tmp/gemini_request.json \
+    --max-time 180 2>/tmp/gemini_curl_err.txt) || true
 
   if [[ "$HTTP_CODE" == "200" ]]; then
     # 응답에서 실제 텍스트 콘텐츠 추출
@@ -128,9 +126,17 @@ while [[ $attempt -le $MAX_RETRIES ]]; do
     sleep "$WAIT_TIME"
     attempt=$((attempt + 1))
 
+  elif [[ -z "$HTTP_CODE" ]] || [[ "$HTTP_CODE" == "000" ]] || [[ "${HTTP_CODE:0:1}" == "5" ]]; then
+    # curl timeout / 네트워크 오류 (000) / 5xx 서버 오류 → 재시도
+    CURL_ERR=$(cat /tmp/gemini_curl_err.txt 2>/dev/null | tr '\n' ' ' || true)
+    WAIT_TIME=$((RETRY_DELAY * (2 ** (attempt - 1))))
+    echo "::warning::HTTP '${HTTP_CODE}' (curl: ${CURL_ERR:-no error msg}) — ${WAIT_TIME}초 후 재시도 ($attempt/$MAX_RETRIES)" >&2
+    sleep "$WAIT_TIME"
+    attempt=$((attempt + 1))
+
   else
     echo "::error::Gemini API 오류 (HTTP $HTTP_CODE)" >&2
-    cat /tmp/gemini_raw_response.json >&2
+    cat /tmp/gemini_raw_response.json >&2 || true
     exit 1
   fi
 done

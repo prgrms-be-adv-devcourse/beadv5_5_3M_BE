@@ -8,6 +8,7 @@ public record ScheduleConfirmedMessage(
         Long scheduleId,
         LocalDateTime startTime,
         LocalDateTime endTime,
+        LocalDateTime ticketingTime,
         String title,
         Integer cookie,
         UUID creatorId,
