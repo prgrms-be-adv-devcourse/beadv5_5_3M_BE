@@ -1,0 +1,47 @@
+version: 1
+scope: service
+service: ai-service
+
+rules:
+  - id: AI-001
+    severity: CRITICAL
+    title: OpenAI API 키 하드코딩 / 시크릿 유출
+    description: >
+      소스(`*.java`, `*.yaml`, `*.properties`)에 OpenAI 키를 하드코딩하거나, `openai.api-key` 프로퍼티에
+      `${OPENAI_API_KEY}` 외의 리터럴 값(`sk-`, `sk-proj-`, `sess-` 등 OpenAI 키 접두사)을 지정한 경우.
+      운영 API 키가 VCS·이미지·로그에 노출되면 즉시 rotate 비용 + 전량 사용량 청구 리스크가 발생한다.
+      값은 반드시 환경변수 치환(`${OPENAI_API_KEY}`)을 통해 주입하고, 로그·Swagger 응답·예외 메시지에
+      키 원문이 섞여 나가지 않도록 해야 한다.
+
+  - id: AI-002
+    severity: CRITICAL
+    title: OpenAI 호출에 rate-limit / 재시도 상한 / 비용 가드 부재
+    description: >
+      `MovieEmbeddingService`, `RecommendationService`, `InteractionService` 등에서 `ChatClient`·
+      `EmbeddingClient`·OpenAI REST 호출 시 다음 중 하나라도 빠진 경우 — (1) 단일 요청 토큰/프롬프트
+      길이 상한, (2) 배치 단위 처리량 제한(예: embedding batch size ≤ 100), (3) `@RetryableTopic` /
+      수동 재시도 루프의 최대 횟수(≤ 3) + backoff, (4) Kafka consumer에서 같은 event 재전송 시의
+      멱등 가드. 무제한 재시도·무제한 배치는 quota 초과·과금 폭증·OpenAI rate-limit으로 인한
+      downstream latency 증가를 유발한다. consumer 레벨 재시도는 `attempts <= 3` 로 고정 필수.
+
+  - id: AI-003
+    severity: CRITICAL
+    title: 프롬프트 인젝션 방어 부재 (사용자 입력 무검증 주입)
+    description: >
+      영화 제목·리뷰 본문·사용자 닉네임·검색어 등 외부 입력을 system / user 프롬프트에 그대로
+      이어 붙이는 경우. 방어가 빠졌다고 판단하는 기준 — (1) 길이 상한(예: 2000자) + `truncate()`
+      부재, (2) 줄바꿈·백틱·`"role":` 같은 토큰을 이스케이프하지 않음, (3) user 입력을 system
+      role 프롬프트에 직접 concat. 인젝션 시 리랭킹 결과 조작, 시스템 지시 유출, 다른 유저에게
+      노출될 요약 내용 오염이 가능하다. 사용자 입력은 반드시 user role 블록 안에만 들어가야 하며
+      길이·문자 화이트리스트를 사전 검증해야 한다.
+
+  - id: AI-004
+    severity: CRITICAL
+    title: 임베딩·추천 로그 중복 insert (idempotency 누락)
+    description: >
+      `MovieEmbedded`(movieId 기준), `RecommendedMovie`/`RecommendedLog`(userId+movieId 복합키),
+      `UserInteractionHistory` 등 Kafka 이벤트로 채워지는 엔티티 저장 시 다음 중 어느 것도 없는 경우 —
+      (1) DB unique constraint, (2) `existsById` + save 사이 락/트랜잭션 보호, (3) `INSERT ... ON
+      CONFLICT DO NOTHING` 혹은 `saveIfAbsent` 상당 로직. Kafka at-least-once 재전송 + concurrent
+      consumer로 인해 check-then-insert 패턴은 중복 임베딩 계산(비용 2배) 및 duplicate key 예외 폭주를
+      유발한다. 멱등 키 기준과 충돌 처리 경로가 명시적으로 있어야 한다.

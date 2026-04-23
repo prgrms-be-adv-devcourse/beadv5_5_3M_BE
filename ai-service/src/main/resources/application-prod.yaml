@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: ai-service
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:ai_db}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:validate}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:ai-service}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+
+openai:
+  api-key: ${OPENAI_API_KEY}
+  summary-model: gpt-4o-mini
+  reranking-model: gpt-4o-mini
+  embedding-model: text-embedding-3-small
+  embedding-dimensions: 1536
+
+server:
+  port: ${SERVER_PORT:8089}
+
+logging:
+  level:
+    root: WARN
+    com.example.aiservice: INFO
+
+batch:
+  diversity-window-min-days: 30
+  diversity-window-max-days: 180
+  ctr-window-days: 90
+  base-epsilon: 0.1
+  default-exploration-rate: 0.5
+
+  kmeans:
+    window-size: 100
+    k-max: 5
+    cold-start-threshold: 15.0
+    watch-weight: 1
+    like-weight: 3
