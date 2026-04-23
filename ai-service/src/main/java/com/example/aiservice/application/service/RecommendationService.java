@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -66,7 +68,12 @@ public class RecommendationService implements RecommendationUseCase {
         //    캐시 미스 상태를 유지해서 재계산 완료 후 새 데이터가 반영되도록 함
         if (result.size() <= 7) {
             log.warn("[Recommendation] 추천 결과 부족 ({}개), 백그라운드 재계산 트리거 - userId: {}", result.size(), userId);
-            recommendationTrigger.trigger(userId);
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    recommendationTrigger.trigger(userId);
+                }
+            });
             return result;
         }
 
