@@ -43,13 +43,24 @@ public class RecommendedLogRepositoryImpl implements RecommendedLogRepository {
     }
 
     @Override
-    public Map<UUID, Double> findExplorationCtrPerUser(LocalDate cutoff) {
-        return recommendedLogJpaRepository.findExplorationCtrPerUser(cutoff)
+    public Map<UUID, Double> findExplorationCtrPerUser(LocalDate cutoff, List<UUID> userIds) {
+        String pgArray = "{" + userIds.stream().map(UUID::toString).collect(Collectors.joining(",")) + "}";
+        return recommendedLogJpaRepository.findExplorationCtrPerUser(cutoff, pgArray)
                 .stream()
                 .filter(p -> p.getExplorationClickRate() != null)
                 .collect(Collectors.toMap(
                         p -> UUID.fromString(p.getUserId()),
                         ExplorationCtrProjection::getExplorationClickRate
                 ));
+    }
+
+    @Override
+    public List<Long> findRecentExposedMovieIds(UUID userId, LocalDate cutoff) {
+        return recommendedLogJpaRepository.findRecentExposedMovieIds(userId, cutoff);
+    }
+
+    @Override
+    public List<UUID> findActiveUserIds(LocalDate date) {
+        return recommendedLogJpaRepository.findActiveUserIds(date);
     }
 }

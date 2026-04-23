@@ -19,5 +19,9 @@ public interface RecommendedLogRepository {
 
     void deleteOlderThan(LocalDate cutoff);
 
-    Map<UUID, Double> findExplorationCtrPerUser(LocalDate cutoff);
+    Map<UUID, Double> findExplorationCtrPerUser(LocalDate cutoff, List<UUID> userIds);
+
+    List<Long> findRecentExposedMovieIds(UUID userId, LocalDate cutoff);
+
+    List<UUID> findActiveUserIds(LocalDate date);
 }

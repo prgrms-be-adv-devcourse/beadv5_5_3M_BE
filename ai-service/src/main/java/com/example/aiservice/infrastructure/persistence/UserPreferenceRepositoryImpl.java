@@ -46,6 +46,11 @@ public class UserPreferenceRepositoryImpl implements UserPreferenceRepository {
     }
 
     @Override
+    public List<UserPreference> findAllByIds(List<UUID> userIds) {
+        return userPreferenceJpaRepository.findAllById(userIds);
+    }
+
+    @Override
     public void updateEpsilonAndCtr(UUID userId, double epsilon, double explorationClickRate) {
         userPreferenceJpaRepository.updateEpsilonAndCtr(userId, epsilon, explorationClickRate);
     }

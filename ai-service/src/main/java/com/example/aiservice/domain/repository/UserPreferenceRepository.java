@@ -20,5 +20,7 @@ public interface UserPreferenceRepository {
 
     List<UserPreference> findAll();
 
+    List<UserPreference> findAllByIds(List<UUID> userIds);
+
     void updateEpsilonAndCtr(UUID userId, double epsilon, double explorationClickRate);
 }

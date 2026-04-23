@@ -4,11 +4,16 @@ import com.example.aiservice.domain.model.UserInteractionHistory;
 import com.example.aiservice.domain.model.enums.InteractionType;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public interface UserInteractionHistoryRepository {
 
     List<UserInteractionHistory> findRecentByUserId(UUID userId, int limit);
+
+    Map<UUID, List<UserInteractionHistory>> findRecentByUserIds(List<UUID> userIds, int limit);
+
+    List<Long> findDistinctMovieIdsByUserId(UUID userId);
 
     boolean existsByUserIdAndMovieIdAndInteractionType(UUID userId, Long movieId, InteractionType interactionType);
 

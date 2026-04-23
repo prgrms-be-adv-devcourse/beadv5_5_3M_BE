@@ -52,7 +52,16 @@ public interface RecommendedLogJpaRepository extends JpaRepository<RecommendedLo
                    / NULLIF(COUNT(*) FILTER (WHERE is_exploration = true), 0) AS explorationClickRate
             FROM recommended_log
             WHERE recommended_at >= :cutoff
+              AND user_id = ANY(CAST(:userIds AS uuid[]))
             GROUP BY user_id
             """, nativeQuery = true)
-    List<ExplorationCtrProjection> findExplorationCtrPerUser(@Param("cutoff") LocalDate cutoff);
+    List<ExplorationCtrProjection> findExplorationCtrPerUser(
+            @Param("cutoff") LocalDate cutoff,
+            @Param("userIds") String userIds);
+
+    @Query("SELECT DISTINCT l.movieId FROM RecommendedLog l WHERE l.userId = :userId AND l.recommendedAt >= :cutoff")
+    List<Long> findRecentExposedMovieIds(@Param("userId") UUID userId, @Param("cutoff") LocalDate cutoff);
+
+    @Query("SELECT DISTINCT l.userId FROM RecommendedLog l WHERE l.recommendedAt = :date")
+    List<UUID> findActiveUserIds(@Param("date") LocalDate date);
 }
