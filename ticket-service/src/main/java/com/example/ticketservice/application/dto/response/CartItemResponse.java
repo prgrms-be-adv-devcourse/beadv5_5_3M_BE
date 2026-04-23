@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 @Schema(description = "장바구니 항목 응답")
 public record CartItemResponse(
         @Schema(description = "스케줄 ID") Long scheduleId,
+        @Schema(description = "영화 ID") Long movieId,
         @Schema(description = "공연 제목") String title,
         @Schema(description = "공연 시작 시간") LocalDateTime startTime,
         @Schema(description = "공연 종료 시간") LocalDateTime endTime,
@@ -18,6 +19,7 @@ public record CartItemResponse(
     public static CartItemResponse from(Cart cart, Schedule schedule) {
         return new CartItemResponse(
                 schedule.getId(),
+                schedule.getMovieId(),
                 schedule.getTitle(),
                 schedule.getStartTime(),
                 schedule.getEndTime(),
