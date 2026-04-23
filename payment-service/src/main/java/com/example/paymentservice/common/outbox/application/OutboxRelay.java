@@ -3,8 +3,6 @@ package com.example.paymentservice.common.outbox.application;
 import com.example.paymentservice.common.outbox.OutboxProperties;
 import com.example.paymentservice.common.outbox.domain.model.OutboxMessage;
 import com.example.paymentservice.common.outbox.domain.repository.OutboxRepository;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -22,8 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class OutboxRelay {
 
     private final OutboxRepository outboxRepository;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
-    private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, String> kafkaTemplate;
     private final OutboxProperties properties;
 
     /**
@@ -47,14 +44,8 @@ public class OutboxRelay {
 
     private void publishOne(OutboxMessage msg) {
         try {
-            // Producer의 value-serializer가 JsonSerializer라, 저장된 JSON 문자열을
-            // 그대로 넘기면 이중 직렬화되어 이스케이프된 JSON이 브로커에 저장된다.
-            // JsonNode로 파싱해서 넘기면 JsonSerializer가 정상 직렬화하며,
-            // Consumer는 StringDeserializer로 JSON 문자열을 받아 파싱하는 기존 계약 유지.
-            JsonNode value = objectMapper.readTree(msg.getPayload());
-
             kafkaTemplate
-                    .send(msg.getTopic(), msg.getAggregateId(), value)
+                    .send(msg.getTopic(), msg.getAggregateId(), msg.getPayload())
                     .get(properties.sendTimeoutMs(), TimeUnit.MILLISECONDS);
             msg.markPublished();
             outboxRepository.save(msg);
