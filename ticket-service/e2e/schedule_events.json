@@ -1,0 +1,66 @@
+[
+  {
+    "_comment": "이벤트 1: Case A 테스트 (수요 < 좌석, seats=100)",
+    "topic": "movie.schedule.confirmed",
+    "value": {
+        "scheduleId": 1,
+        "startTime": "2026-04-20T19:00:00",
+      "endTime": "2026-04-20T21:00:00",
+      "ticketingTime": "2026-04-19T10:00:00",
+      "title": "E2E 테스트 공연 A",
+      "cookie": 5000,
+      "creatorId": "00000000-0000-0000-0000-000000000099",
+      "movieId": 1,
+      "imageUrl": "https://example.com/img-a.jpg",
+      "seats": 100
+    }
+  },
+  {
+    "_comment": "이벤트 2: Case B 테스트 (수요 >= 좌석, seats=3)",
+    "topic": "movie.schedule.confirmed",
+    "value": {
+      "scheduleId": 2,
+      "startTime": "2026-04-20T19:00:00",
+      "endTime": "2026-04-20T21:00:00",
+      "ticketingTime": "2026-04-19T10:00:00",
+      "title": "E2E 테스트 공연 B",
+      "cookie": 5000,
+      "creatorId": "00000000-0000-0000-0000-000000000099",
+      "movieId": 2,
+      "imageUrl": "https://example.com/img-b.jpg",
+      "seats": 3
+    }
+  },
+  {
+    "_comment": "이벤트 3: 동시성 테스트 (500명 동시 진입, seats=50)",
+    "topic": "movie.schedule.confirmed",
+    "value": {
+      "scheduleId": 3,
+      "startTime": "2026-04-20T19:00:00",
+      "endTime": "2026-04-20T21:00:00",
+      "ticketingTime": "2026-04-19T10:00:00",
+      "title": "E2E 동시성 테스트",
+      "cookie": 5000,
+      "creatorId": "00000000-0000-0000-0000-000000000099",
+      "movieId": 3,
+      "imageUrl": "https://example.com/img-c.jpg",
+      "seats": 50
+    }
+  },
+  {
+    "_comment": "이벤트 4: SOLD_OUT / INSUFFICIENT_BALANCE 테스트 (seats=2)",
+    "topic": "movie.schedule.confirmed",
+    "value": {
+      "scheduleId": 4,
+      "startTime": "2026-04-20T19:00:00",
+      "endTime": "2026-04-20T21:00:00",
+      "ticketingTime": "2026-04-19T10:00:00",
+      "title": "E2E 에러 케이스 테스트",
+      "cookie": 5000,
+      "creatorId": "00000000-0000-0000-0000-000000000099",
+      "movieId": 4,
+      "imageUrl": "https://example.com/img-d.jpg",
+      "seats": 2
+    }
+  }
+]

@@ -3,11 +3,208 @@ scope: service
 service: ticket-service
 
 rules:
+  # ──────────────────────────────────────────────
+  # TKT: 도메인 로직 / 동시성 / 정합성
+  # ──────────────────────────────────────────────
+
   - id: TKT-001
     severity: CRITICAL
-    title: 티켓 조회 시 비관적 락 누락
+    title: paying 카운터 finally 블록 외부 감소
     description: >
-      AVAILABLE 티켓을 조회하는 쿼리(findFirstAvailableBySchedule 등)에
-      @Lock(LockModeType.PESSIMISTIC_WRITE)가 없는 경우.
-      동시 요청 시 동일 티켓을 두 사용자가 예약하여 초과 예약 발생.
-      상태 전이(AVAILABLE→RESERVED)를 수반하는 모든 조회는 SELECT FOR UPDATE 필요.
+      QueueAutoProcessService.processWindowParallel()에서 paying 카운터 감소
+      (cachePort.decrement(PAYING_KEY_PREFIX + scheduleId))가 finally 블록 밖에
+      위치한 경우.
+      예외 발생 시 paying이 영구적으로 누적되어 checkTermination()의
+      "stock <= 0 && paying <= 0 && queue > 0" 종료 조건이 절대 충족되지 않음.
+      결과적으로 잔여 대기자가 큐에서 영구 대기하고 queue.terminated 이벤트가
+      발행되지 않아 해당 scheduleId의 큐 자원이 TTL 만료 전까지 누수됨.
+      정상 패턴: try { tryPurchase() } catch (Exception e) { cachePort.increment(stockKey) }
+      finally { cachePort.decrement(payingKey) }
+
+  - id: TKT-002
+    severity: CRITICAL
+    title: DECR 후 ZPOPMIN null 반환 시 stock 미복구
+    description: >
+      QueueAutoProcessService.collectWindow()에서 cachePort.decrement(STOCK_KEY_PREFIX)
+      성공 후 cachePort.popMinFromZSet(QUEUE_KEY_PREFIX)가 null을 반환(큐 비어있음)했을 때
+      cachePort.increment(STOCK_KEY_PREFIX)로 stock을 복구하지 않는 경우.
+      DECR과 ZPOPMIN은 원자적이지 않으므로, stock을 먼저 감소시킨 뒤 큐에서 사용자를
+      꺼내지 못하면 해당 좌석은 영구적으로 감소한 채 복구되지 않음.
+      실제 잔여 좌석이 있어도 SOLD_OUT으로 처리되거나 이후 드레인 윈도우가 과소하게 계산됨.
+      정상 패턴: popMin 결과가 null이면 즉시 stock INCR 후 해당 슬롯 스킵.
+
+  - id: TKT-003
+    severity: CRITICAL
+    title: ticketProvideJob — bulkMarkProvided 후 Kafka 발행 누락 또는 단일 KafkaTemplate 사용
+    description: >
+      TicketProvideBatchConfig의 ticketProvideStep Tasklet에서 아래 두 가지 패턴 중 하나:
+      (1) ticketJpaRepository.bulkMarkProvided(ticketIds) 실행 후
+          eventPublisherPort.publish(TOPIC, ...) 호출이 없거나 예외로 건너뛰는 경우.
+      (2) 배치 Kafka 발행에 @Primary KafkaTemplate(단일 이벤트 최적화)을 사용하고
+          @Qualifier("bulkKafkaTemplate")(batch.size=64KB, linger.ms=20, lz4)을
+          사용하지 않는 경우.
+      (1)의 위험: DB에 provideFlag=true가 기록됐으나 ticket.provide 이벤트 미전달 →
+      settlement-service가 정산을 처리하지 못해 크리에이터 정산 누락.
+      (2)의 위험: 대량 티켓에 대해 단일 KafkaTemplate으로 발행 시 네트워크 요청 폭발 및
+      Kafka 브로커 부하 급증.
+      정상 패턴: bulkMarkProvided → messages.forEach(eventPublisherPort.publish) 순서 보장,
+      TicketProvideBatchAdapter에 @Qualifier("bulkKafkaTemplate") 주입 확인.
+
+  - id: TKT-004
+    severity: HIGH
+    title: SelfPayment 쿠키 차감 실패 시 stock 복구 경로 회귀
+    description: >
+      SelfPaymentService.pay()에서 userPort.deductTicketFee() 결과 flag==false
+      (잔액 부족)일 때, 아래 두 단계가 모두 존재해야 함:
+      (1) cachePort.exists(stockKey) 가드 체크 후 stock INCR.
+          가드 없이 무조건 INCR하면 TICKETING 단계가 아닐 때 존재하지 않는 stock 키가
+          생성되어 QueueService에서 QUEUE_NOT_OPEN 체크를 우회하거나 잘못된 재고 값이 세팅됨.
+          가드 후 INCR을 아예 생략하면 RESERVED 티켓이 점유한 재고가 복구되지 않아
+          잔여 대기자가 구매 기회를 잃음.
+      (2) stock INCR 후 queue.drain Kafka 메시지 직접 발행
+          (eventPublisherPort.publish(QUEUE_DRAIN, scheduleId, QueueDrainMessage)).
+          이 경로는 @Transactional 롤백 경로이므로 AFTER_COMMIT 이벤트가 아닌
+          Kafka 직접 발행을 사용해야 함. 발행 누락 시 대기열 드레인이 중단됨.
+      정상 패턴: if (cachePort.exists(stockKey)) {
+        cachePort.increment(stockKey);
+        eventPublisherPort.publish(QUEUE_DRAIN, scheduleId, new QueueDrainMessage(scheduleId)); }
+
+  - id: TKT-005
+    severity: HIGH
+    title: StreamingStart/Finish Job 상태 전이 가드 제거 또는 예외 throw 변경
+    description: >
+      StreamingStartService.execute() 또는 StreamingFinishService.execute()에서
+      현재 구현된 상태 가드(schedule.getStatus() != 기대_상태 → early return)가
+      제거되거나, early return 대신 예외를 throw하도록 변경된 경우.
+      Quartz Job은 @DisallowConcurrentExecution으로 중복 실행을 방지하지만,
+      잡 재실행(misfire), 클러스터 페일오버, 수동 트리거 등 예외 상황에서
+      이미 FINISH 상태인 스케줄에 startStreaming()을 호출하거나
+      STREAMING 상태가 아닌데 finishStreaming()을 호출할 수 있음.
+      예외를 throw하면 Quartz Job이 FAILED로 기록되고 재시도 트리거에서
+      무한 루프 위험이 있으므로, 반드시 early return으로 처리해야 함.
+      정상 패턴: execute() 진입 시 schedule.getStatus() == 기대_상태 아니면
+      log.warn 후 early return.
+
+  - id: TKT-006
+    severity: HIGH
+    title: '@Transactional 내 Quartz Job 직접 등록 (AFTER_COMMIT 우회)'
+    description: >
+      @Transactional 메서드 내부에서 schedulerPort.scheduleCartCloseJob() 등을
+      직접 호출하는 경우 (ScheduleEventListener의 @TransactionalEventListener를
+      거치지 않는 경우).
+      DB 트랜잭션이 롤백되더라도 Quartz JDBC Job Store에 이미 등록된 Job은
+      롤백되지 않아, 존재하지 않는 scheduleId에 대해 CartCloseQuartzJob 등이
+      실행됨 → ScheduleException(NOT_FOUND) 반복 발생, Quartz FAILED 잡 누적.
+      정상 패턴: 반드시 @TransactionalEventListener(phase = AFTER_COMMIT) 내에서
+      schedulerPort 호출. @Transactional 메서드에서는 ApplicationEventPublisher로
+      이벤트만 발행.
+
+  - id: TKT-007
+    severity: CRITICAL
+    title: DailyTicketFeeProvideScheduler 클러스터 중복 실행 방지 장치 없음
+    description: >
+      DailyTicketFeeProvideScheduler에 @Scheduled(cron = "0 0 1 * * *")만 사용하고
+      ShedLock, Quartz Job Store 클러스터 모드, 또는 분산 락 등 중복 실행 방지 장치가
+      없는 경우.
+      @Scheduled는 모든 JVM 인스턴스에서 독립적으로 실행되므로, 다중 인스턴스 배포 시
+      같은 시각에 ProvideTicketFeeUseCase.provide()가 여러 번 실행됨.
+      bulkMarkProvided는 멱등적(@Modifying UPDATE)이나 ticket.provide Kafka 이벤트는
+      중복 발행되어 settlement-service에서 이중 정산 처리 → 크리에이터에게 중복 지급 발생.
+      현재 단일 EC2이더라도 배포 전략(Rolling, Blue-Green) 전환 시 순간적으로
+      두 인스턴스가 공존하면 동일 위험 발생.
+      정상 패턴: Quartz 클러스터 모드(org.quartz.jobStore.isClustered=true) 활용
+      또는 @SchedulerLock(ShedLock) 적용.
+
+  - id: TKT-008
+    severity: CRITICAL
+    title: removeFromCart 장바구니 미존재 시 Redis DECR → 음수 카운터 드리프트
+    description: >
+      CartService.removeFromCart()에서 cartRepository.deleteByUserIdAndScheduleId() 호출 후
+      삭제된 행 수를 확인하지 않고 무조건 CartUpdatedEvent(added=false)를 발행하는 경우.
+      deleteByUserIdAndScheduleId()는 JPA의 void 반환 메서드로, 해당 유저의 장바구니 항목이
+      존재하지 않아도 예외 없이 정상 종료됨.
+      이 경우 AFTER_COMMIT 핸들러에서 cart:count:schedule:{scheduleId} 키가 DECR되어
+      카운터가 음수로 드리프트됨.
+      CartCloseService에서 장바구니 수요 vs 좌석 수 비교(Case A/B 분기)에 이 카운터를
+      사용하면 수요가 실제보다 적게 집계되어 Case A(전원 예매)가 잘못 선택되거나
+      Case B에서 예매 인원이 부족하게 산정됨.
+      정상 패턴: deleteByUserIdAndScheduleId() 호출 전 existsByUserIdAndScheduleId()로
+      존재 여부를 확인하거나, 삭제된 행 수를 반환받아(long 반환 타입) 0이면 이벤트 발행 스킵.
+
+  - id: TKT-009
+    severity: CRITICAL
+    title: CookieCompensationHelper.registerRollbackRefund() 호출 위치 오류
+    description: >
+      SelfPaymentService.pay() 또는 QueuePurchaseProcessor.tryPurchase()에서
+      CookieCompensationHelper.registerRollbackRefund()가 아래 위치에 호출되는 경우:
+      (1) userPort.deductTicketFee() 호출 전에 등록 — HTTP 차감이 아직 성공하지 않은
+          상태에서 DB 롤백 시 환불 HTTP가 호출되어 차감하지 않은 쿠키를 환불 시도.
+          user-service에서 존재하지 않는 차감 건에 대한 환불로 잔액 오염.
+      (2) userPort.deductTicketFee() 성공 후 registerRollbackRefund() 호출 없이
+          ticket.pay() 등 DB 변경을 수행 — DB 롤백 시 차감된 쿠키가 복구되지 않아
+          유저 잔액 영구 손실.
+      정상 패턴(현재 구현): deductTicketFee() 성공 직후, ticket.pay() 직전에
+      registerRollbackRefund() 호출. 이 순서가 변경되면 쿠키-DB 정합성이 깨짐.
+
+  - id: TKT-010
+    severity: HIGH
+    title: ticketProvideStep 다중 페이지 처리 중 Kafka 발행 실패 시 DB-Kafka 불일치
+    description: >
+      TicketProvideBatchConfig.ticketProvideStep()의 Tasklet에서 다중 페이지를 순회하며
+      각 페이지마다 bulkMarkProvided() → Kafka 발행을 수행하는데, 페이지 N에서 Kafka 발행이
+      실패하여 예외가 throw되면 Tasklet 트랜잭션 전체가 롤백됨.
+      그러나 페이지 1~(N-1)에서 이미 발행된 Kafka 메시지는 회수 불가 →
+      settlement-service가 ticket.provide 이벤트를 처리하지만 DB에는 provideFlag=false인
+      티켓이 됨. 재실행 시 동일 티켓이 다시 발행되어 이중 정산 위험.
+      위험도는 단일 페이지(500건 미만) 환경에서는 낮지만, 대규모 운영에서는 발생 가능.
+      정상 패턴: 페이지 단위로 트랜잭션을 분리하거나, Kafka 발행 실패 시 해당 페이지의
+      bulkMarkProvided를 개별 롤백하거나, settlement-service 측에서 멱등성 보장.
+
+  - id: TKT-011
+    severity: HIGH
+    title: QueueDrainConsumer 일시적 오류 시 queue.drain 신호 유실 — 대기자 영구 대기
+    description: >
+      QueueDrainConsumer.consume()에서 모든 예외를 catch-log 후 정상 소비 처리하는 패턴.
+      Redis 일시적 타임아웃, DB 커넥션 풀 고갈 등 재시도 가능한 예외에서도
+      해당 queue.drain 메시지가 소비 완료(offset commit)되어 재시도되지 않음.
+      이후 추가 queue.drain 신호가 없으면(예: 마지막 환불 후 더 이상 결제/환불 없음)
+      대기열에 남은 유저들이 영구적으로 대기하고 queue.terminated 이벤트도 미발행.
+      현재 코드의 주석("다음 queue.drain 메시지에서 재트리거됨")은 추가 트리거가
+      보장되지 않는 시나리오를 고려하지 않음.
+      정상 패턴: 일시적 예외(Redis/DB timeout)는 rethrow하여 Kafka 재시도에 맡기고,
+      영구적 예외(역직렬화 실패 등)만 catch-log. 또는 실패 시 지연 재발행 메커니즘 도입.
+
+  # ──────────────────────────────────────────────
+  # RES: 리소스 (t3.large 단일 EC2 — 2 vCPU, 8GB RAM)
+  # ──────────────────────────────────────────────
+
+  - id: RES-001
+    severity: CRITICAL
+    title: Dockerfile JVM 힙 제한 없음 — 단일 EC2 OOM 위험
+    description: >
+      ticket-service Dockerfile의 ENTRYPOINT에 -Xmx, -Xms, -XX:MaxRAMPercentage,
+      JAVA_TOOL_OPTIONS 등 JVM 힙 상한 설정이 전혀 없는 경우.
+      Java 21은 컨테이너 메모리 제한이 없으면 호스트 전체 RAM을 기준으로 힙을 산정
+      (기본 MaxRAMPercentage=25%). 8GB 호스트라면 서비스당 최대 ~2GB.
+      8개 서비스가 동시에 힙을 확장하면 총 16GB 요구 → Linux OOM Killer 발동,
+      컨테이너 랜덤 종료, 서비스 다운.
+      특히 ticketProvideJob(배치) + 큐 드레인 병렬처리가 동시에 발생하는
+      1:00 AM 전후에 메모리 스파이크 가능성이 높음.
+      정상 패턴: JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:InitialRAMPercentage=25.0"
+      + docker-compose의 deploy.resources.limits.memory 또는 mem_limit 설정.
+
+  - id: RES-004
+    severity: HIGH
+    title: HikariCP maximum-pool-size 인상 시 PostgreSQL max_connections 초과 위험
+    description: >
+      서비스의 HikariCP maximum-pool-size를 인상하여 전체 서비스 합산 커넥션 수가
+      PostgreSQL max_connections(기본값 100)를 초과하는 경우.
+      단일 EC2에서 모든 서비스 + PostgreSQL이 동일 머신에서 실행 중이므로
+      max_connections가 별도로 튜닝되지 않았을 가능성이 높음.
+      서비스별 풀 크기 합산이 max_connections를 초과하면 신규 커넥션 획득 실패
+      (HikariCP connectionTimeout 30s 후 SQLException).
+      배치 실행 시 JPA가 다수의 커넥션을 동시에 점유하여 다른 서비스 요청이
+      커넥션 대기 → 응답 지연 전파.
+      정상 패턴: PostgreSQL max_connections 확인 후 (max_connections - 여유분) / 서비스수
+      로 각 서비스의 maximum-pool-size 상한 설정. ticket-service는 배치 실행 고려해
+      다른 서비스보다 약간 높게 유지하되 합산은 max_connections 이내로 제한.

@@ -7,7 +7,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "review")
+@Table(
+    name = "review",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_review_user_schedule",
+        columnNames = {"user_id", "schedule_id"}
+    )
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -15,8 +21,9 @@ import java.util.UUID;
 public class Review {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "review_id")
-    private Long reviewId;   // 외부 서비스 ID 그대로 사용
+    private Long reviewId;
 
     @Column(name = "user_id")
     private UUID userId;
@@ -42,6 +49,12 @@ public class Review {
 
     @Column(name = "movie_id")
     private Long movieId;
+
+    @Column(name = "ticket_id")
+    private Long ticketId;
+
+    @Column(name = "schedule_id")
+    private Long scheduleId;
 
     public enum ReviewStatus {
         CREATE,  // 작성

@@ -23,6 +23,12 @@ public record MovieCardResponse(
         Float averageRating,
 
         @Schema(description = "카테고리 ID 목록", example = "[1, 2]")
-        List<Long> categoryIds
+        List<Long> categoryIds,
+
+        @Schema(description = "하이라이트 처리된 제목 (ES 검색 시만, <em> 태그 포함, 매칭 없으면 null)", example = "<em>인터</em>스텔라")
+        String highlightedTitle,
+
+        @Schema(description = "하이라이트 처리된 크리에이터 닉네임 (ES 검색 시만)", example = "<em>봉준</em>호감독")
+        String highlightedNickname
 ) {
 }
