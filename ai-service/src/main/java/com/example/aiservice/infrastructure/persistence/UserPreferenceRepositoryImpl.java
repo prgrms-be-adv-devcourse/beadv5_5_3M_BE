@@ -5,6 +5,7 @@ import com.example.aiservice.domain.repository.UserPreferenceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -38,4 +39,20 @@ public class UserPreferenceRepositoryImpl implements UserPreferenceRepository {
     public void incrementWatchCount(UUID userId) {
         userPreferenceJpaRepository.incrementWatchCount(userId);
     }
+
+    @Override
+    public List<UserPreference> findAll() {
+        return userPreferenceJpaRepository.findAll();
+    }
+
+    @Override
+    public List<UserPreference> findAllByIds(List<UUID> userIds) {
+        return userPreferenceJpaRepository.findAllById(userIds);
+    }
+
+    @Override
+    public void updateEpsilonAndCtr(UUID userId, double epsilon, double explorationClickRate) {
+        userPreferenceJpaRepository.updateEpsilonAndCtr(userId, epsilon, explorationClickRate);
+    }
+
 }

@@ -2,6 +2,7 @@ package com.example.aiservice.infrastructure.persistence;
 
 import com.example.aiservice.domain.model.RecommendedMovie;
 import com.example.aiservice.domain.model.RecommendedMovieId;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,8 +13,8 @@ import java.util.UUID;
 
 public interface RecommendedMovieJpaRepository extends JpaRepository<RecommendedMovie, RecommendedMovieId> {
 
-    @Query("SELECT r FROM RecommendedMovie r WHERE r.id.userId = :userId ORDER BY r.rank ASC LIMIT 10")
-    List<RecommendedMovie> findTop10ByUserIdOrderByRank(@Param("userId") UUID userId);
+    @Query("SELECT r FROM RecommendedMovie r WHERE r.id.userId = :userId ORDER BY r.rank ASC")
+    List<RecommendedMovie> findTop10ByUserIdOrderByRank(@Param("userId") UUID userId, Pageable pageable);
 
     @Query("SELECT r.id.userId FROM RecommendedMovie r WHERE r.id.movieId = :movieId")
     List<UUID> findUserIdsByMovieId(@Param("movieId") Long movieId);

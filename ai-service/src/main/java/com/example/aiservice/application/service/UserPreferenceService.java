@@ -1,5 +1,6 @@
 package com.example.aiservice.application.service;
 
+import com.example.aiservice.application.batch.RecommendationTrigger;
 import com.example.aiservice.application.usecase.UserPreferenceUseCase;
 import com.example.aiservice.domain.model.UserPreference;
 import com.example.aiservice.domain.model.enums.Gender;
@@ -13,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 
@@ -26,6 +29,7 @@ public class UserPreferenceService implements UserPreferenceUseCase {
     private final UserInteractionHistoryRepository userInteractionHistoryRepository;
     private final RecommendedMovieRepository recommendedMovieRepository;
     private final RecommendedLogRepository recommendedLogRepository;
+    private final RecommendationTrigger recommendationTrigger;
 
     @Override
     @Transactional
@@ -42,10 +46,18 @@ public class UserPreferenceService implements UserPreferenceUseCase {
                 .watchCount(0)
                 .updatedAt(LocalDateTime.now())
                 .explorationClickRate(0.0)
-                .epsilon(0.0)
+                .epsilon(0.1)
                 .build();
 
         userPreferenceRepository.save(userPreference);
+        // @Async trigger()는 별도 스레드에서 실행되므로, 트랜잭션 커밋 완료 후 호출해야
+        // userPreferenceRepository.findById()가 null을 반환하지 않는다.
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                recommendationTrigger.trigger(msg.userId());
+            }
+        });
     }
 
     @Override

@@ -29,4 +29,15 @@ public class MovieStatisticsRepositoryImpl implements MovieStatisticsRepository 
         movieStatisticsJpaRepository.incrementWatchCount(movieId, ageGroup, gender);
     }
 
+    @Override
+    public List<Long> findDemographicCandidates(int ageGroup, Gender gender, int limit) {
+        // native query는 enum 자동 변환 불가 → gender.name()으로 전달
+        return movieStatisticsJpaRepository.findDemographicCandidates(ageGroup, gender.name(), limit);
+    }
+
+    @Override
+    public List<Long> findLowExposureCandidates(int limit) {
+        return movieStatisticsJpaRepository.findLowExposureCandidates(limit);
+    }
+
 }

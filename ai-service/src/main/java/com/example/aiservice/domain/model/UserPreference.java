@@ -7,6 +7,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -30,7 +31,7 @@ public class UserPreference {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "cluster", columnDefinition = "jsonb")
-    private String cluster;
+    private List<ClusterCenter> cluster;
 
     @Column(name = "watch_count", nullable = false)
     private int watchCount;
@@ -43,4 +44,17 @@ public class UserPreference {
 
     @Column(name = "epsilon", nullable = false)
     private double epsilon;
+
+    public UserPreference withCluster(List<ClusterCenter> cluster) {
+        return UserPreference.builder()
+                .userId(this.userId)
+                .ageGroup(this.ageGroup)
+                .gender(this.gender)
+                .cluster(cluster)
+                .watchCount(this.watchCount)
+                .updatedAt(LocalDateTime.now())
+                .explorationClickRate(this.explorationClickRate)
+                .epsilon(this.epsilon)
+                .build();
+    }
 }
