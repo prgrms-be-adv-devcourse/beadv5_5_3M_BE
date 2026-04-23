@@ -2,19 +2,20 @@ package com.example.paymentservice.refund.application;
 
 import com.example.paymentservice.common.exception.BusinessException;
 import com.example.paymentservice.common.exception.ErrorCode;
+import com.example.paymentservice.common.messaging.PaymentTopics;
+import com.example.paymentservice.common.messaging.dto.PaymentRefundedMessage;
+import com.example.paymentservice.common.outbox.application.OutboxEnqueuer;
 import com.example.paymentservice.payment.domain.PaymentStatus;
 import com.example.paymentservice.payment.domain.model.Payment;
 import com.example.paymentservice.payment.domain.repository.PaymentRepository;
 import com.example.paymentservice.refund.application.dto.RefundCommand;
 import com.example.paymentservice.refund.application.dto.RefundInfo;
-import com.example.paymentservice.refund.application.event.RefundApprovedEvent;
 import com.example.paymentservice.refund.client.RefundGateway;
 import com.example.paymentservice.refund.domain.RefundStatus;
 import com.example.paymentservice.refund.domain.model.Refund;
 import com.example.paymentservice.refund.domain.repository.RefundRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -32,11 +33,12 @@ public class RefundService {
 
     private static final int REFUND_AVAILABLE_DAYS = 7;
     private static final int MAX_RETRIES = 3;
+    private static final String AGGREGATE_REFUND = "REFUND";
 
     private final RefundRepository refundRepository;
     private final PaymentRepository paymentRepository;
     private final RefundGateway refundGateway;
-    private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEnqueuer outboxEnqueuer;
     private final TransactionTemplate txTemplate;
 
     @Transactional
@@ -77,7 +79,7 @@ public class RefundService {
      *
      * [TX1] 검증 + PROCESSING 상태 변경 (비관적 락으로 이중 승인 방지)
      * [TX 밖] 토스 PG 취소 API 호출 (DB 커넥션 점유 X)
-     * [TX2] 결과에 따라 SUCCESS 또는 FAILED 처리
+     * [TX2] 결과에 따라 SUCCESS + outbox enqueue, 또는 FAILED
      */
     public RefundInfo approveRefund(Long refundId) {
 
@@ -85,7 +87,6 @@ public class RefundService {
         Refund processingRefund = txTemplate.execute(status -> {
             Refund refund = refundRepository.findByIdForUpdate(refundId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.REFUND_NOT_FOUND));
-
             refund.validatePending();
             refund.markProcessing();
             return refund;
@@ -99,7 +100,7 @@ public class RefundService {
 
         log.info("[Refund] 환불 처리 시작 - refundId: {}, amount: {}", refundId, refundAmount);
 
-        // ━━━ TX 밖: PG 취소 API 호출 (DB 커넥션 점유 X) ━━━
+        // ━━━ TX 밖: PG 취소 API 호출 ━━━
         Exception pgException = null;
         try {
             refundGateway.cancelPayment(paymentKey, refundAmount, "환불 확인");
@@ -109,7 +110,6 @@ public class RefundService {
             pgException = e;
         }
 
-        // ━━━ TX2: 결과에 따라 최종 DB 반영 ━━━
         if (pgException != null) {
             txTemplate.executeWithoutResult(s -> {
                 Refund r = refundRepository.findById(refundId)
@@ -132,9 +132,13 @@ public class RefundService {
                     Refund r = refundRepository.findById(refundId)
                             .orElseThrow(() -> new BusinessException(ErrorCode.REFUND_NOT_FOUND));
                     r.markSuccess();
-                    eventPublisher.publishEvent(
-                            RefundApprovedEvent.of(r.getId(), r.getPaymentId(),
-                                    r.getUserId(), r.getAmount(), r.getCookieAmount()));
+                    outboxEnqueuer.enqueue(
+                            AGGREGATE_REFUND,
+                            r.getId().toString(),
+                            PaymentTopics.PAYMENT_REFUNDED,
+                            PaymentRefundedMessage.of(r.getId(), r.getPaymentId(),
+                                    r.getUserId(), r.getAmount(), r.getCookieAmount())
+                    );
                     return RefundInfo.from(r);
                 });
                 log.info("[Refund] 환불 완료 - refundId: {}", refundId);
@@ -157,7 +161,6 @@ public class RefundService {
     public RefundInfo rejectRefund(Long refundId) {
         Refund refund = refundRepository.findById(refundId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.REFUND_NOT_FOUND));
-
         refund.markFailed();
         return RefundInfo.from(refund);
     }

@@ -45,13 +45,24 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      retries: 3
+      acks: all
+      retries: 10
       properties:
         spring.json.add.type.headers: false
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
         max.block.ms: 3000
         retry.backoff.ms: 1000
-        delivery.timeout.ms: 120000
-        acks: all
+        delivery.timeout.ms: 30000
+        request.timeout.ms: 10000
+
+payment:
+  outbox:
+    batch-size: 100
+    poll-delay-ms: 500
+    send-timeout-ms: 3000
+    max-retries: 5
+    backoff-base-seconds: 10
 
 toss:
   payments:
