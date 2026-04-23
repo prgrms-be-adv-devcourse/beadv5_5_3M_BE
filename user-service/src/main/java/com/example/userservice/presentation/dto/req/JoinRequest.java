@@ -1,7 +1,9 @@
 package com.example.userservice.presentation.dto.req;
 
+import com.example.userservice.domain.model.Gender;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 @Schema(description = "유저 회원가입 요청")
 public record JoinRequest(
@@ -15,6 +17,14 @@ public record JoinRequest(
 
         @Schema(description = "닉네임", example = "멋진유저", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotBlank
-        String nickname
+        String nickname,
+
+        @Schema(description = "연령대", example = "20", requiredMode = Schema.RequiredMode.REQUIRED)
+        @NotNull
+        Integer ageGroup,
+
+        @Schema(description = "성별", example = "MALE", requiredMode = Schema.RequiredMode.REQUIRED)
+        @NotNull
+        Gender gender
 ) {
 }

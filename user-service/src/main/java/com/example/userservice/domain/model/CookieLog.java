@@ -11,6 +11,11 @@ import static lombok.AccessLevel.PROTECTED;
 
 @Schema(description = "쿠키 거래 로그 엔티티")
 @Entity
+@Table(uniqueConstraints = {
+        @UniqueConstraint(name = "uq_cookie_log_payment", columnNames = {"userId", "paymentId"}),
+        @UniqueConstraint(name = "uq_cookie_log_refund", columnNames = {"userId", "refundId"}),
+        @UniqueConstraint(name = "uq_cookie_log_ticket", columnNames = {"userId", "ticketId"})
+})
 @NoArgsConstructor(access = PROTECTED)
 public class CookieLog {
 
@@ -25,20 +30,36 @@ public class CookieLog {
     @Schema(description = "쿠키 변동량 (양수: 충전, 음수: 차감)", example = "-5")
     private Integer amount;
 
+    @Schema(description = "관련 결제 ID", example = "1")
+    private Long paymentId;
+
+    @Schema(description = "관련 환불 ID", example = "1")
+    private Long refundId;
+
     @Schema(description = "관련 티켓 ID", example = "1")
     private Long ticketId;
 
     @Schema(description = "생성일시")
     private LocalDateTime createAt;
 
-    public CookieLog(UUID userId, Integer amount, Long ticketId) {
+    private CookieLog(UUID userId, Integer amount, Long paymentId, Long refundId, Long ticketId) {
         this.userId = userId;
         this.amount = amount;
+        this.paymentId = paymentId;
+        this.refundId = refundId;
         this.ticketId = ticketId;
     }
 
+    public static CookieLog createForPayment(UUID userId, Integer amount, Long paymentId) {
+        return new CookieLog(userId, amount, paymentId, null, null);
+    }
+
+    public static CookieLog createForRefund(UUID userId, Integer amount, Long refundId) {
+        return new CookieLog(userId, amount, null, refundId, null);
+    }
+
     public static CookieLog create(UUID userId, Integer amount, Long ticketId) {
-        return new CookieLog(userId, amount, ticketId);
+        return new CookieLog(userId, amount, null, null, ticketId);
     }
 
     @PrePersist
