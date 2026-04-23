@@ -14,4 +14,6 @@ public interface RecommendedMovieRepository {
     void deleteByMovieId(Long movieId);
 
     void deleteByUserId(UUID userId);
+
+    void upsertAll(UUID userId, List<RecommendedMovie> movies);
 }
