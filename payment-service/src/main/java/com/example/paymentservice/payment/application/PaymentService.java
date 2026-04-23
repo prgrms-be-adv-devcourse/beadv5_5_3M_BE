@@ -2,10 +2,12 @@ package com.example.paymentservice.payment.application;
 
 import com.example.paymentservice.common.exception.BusinessException;
 import com.example.paymentservice.common.exception.ErrorCode;
+import com.example.paymentservice.common.messaging.PaymentTopics;
+import com.example.paymentservice.common.messaging.dto.PaymentConfirmedMessage;
+import com.example.paymentservice.common.messaging.dto.PaymentFailedMessage;
+import com.example.paymentservice.common.outbox.application.OutboxEnqueuer;
 import com.example.paymentservice.payment.application.dto.PaymentConfirmCommand;
 import com.example.paymentservice.payment.application.dto.PaymentInfo;
-import com.example.paymentservice.payment.application.event.PaymentCompletedEvent;
-import com.example.paymentservice.payment.application.event.PaymentFailedEvent;
 import com.example.paymentservice.payment.client.PaymentGateway;
 import com.example.paymentservice.payment.client.PaymentGateway.PaymentGatewayResponse;
 import com.example.paymentservice.payment.domain.PaymentStatus;
@@ -13,7 +15,6 @@ import com.example.paymentservice.payment.domain.model.Payment;
 import com.example.paymentservice.payment.domain.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -27,19 +28,20 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PaymentService {
 
+    private static final String AGGREGATE_PAYMENT = "PAYMENT";
+    private static final int MAX_RETRIES = 3;
+
     private final PaymentRepository paymentRepository;
     private final PaymentGateway paymentGateway;
-    private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEnqueuer outboxEnqueuer;
     private final TransactionTemplate txTemplate;
-
-    private static final int MAX_RETRIES = 3;
 
     /**
      * 결제 승인 — TransactionTemplate으로 트랜잭션 분리
      *
      * [TX1] 멱등성 체크 + Payment 생성(IN_PROGRESS)
      * [TX 밖] 토스 PG confirm API 호출 (DB 커넥션 점유 X)
-     * [TX2] 결과에 따라 SUCCESS 또는 FAILED 처리
+     * [TX2] 결과에 따라 SUCCESS 또는 FAILED 처리 + outbox enqueue (같은 TX로 커밋)
      */
     public PaymentInfo confirmPayment(PaymentConfirmCommand command) {
 
@@ -49,19 +51,16 @@ public class PaymentService {
             if (existing.isPresent() && existing.get().getStatus() == PaymentStatus.SUCCESS) {
                 return existing.get();
             }
-
             Payment payment = Payment.create(command.userId(), command.amount(), command.cookieAmount());
             return paymentRepository.save(payment);
         });
 
-        // 멱등성: 이미 성공한 결제면 바로 반환 (새 Payment는 IN_PROGRESS이므로 구분 가능)
         if (result.getStatus() == PaymentStatus.SUCCESS) {
             log.info("[Payment] 멱등성 - 이미 완료된 결제: orderId={}", command.orderId());
             return PaymentInfo.from(result);
         }
 
         Payment inProgress = result;
-
         Long paymentId = inProgress.getId();
         log.info("[Payment] 결제 처리 시작 - paymentId: {}, amount: {}", paymentId, inProgress.getAmount());
 
@@ -76,13 +75,18 @@ public class PaymentService {
             pgException = e;
         }
 
-        // ━━━ TX2: 결과에 따라 최종 DB 반영 ━━━
+        // ━━━ TX2: 결과 반영 + outbox enqueue ━━━
         if (pgException != null) {
             txTemplate.executeWithoutResult(s -> {
                 Payment p = paymentRepository.findById(paymentId)
                         .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
                 p.markFailed();
-                eventPublisher.publishEvent(PaymentFailedEvent.of(p.getId(), p.getUserId()));
+                outboxEnqueuer.enqueue(
+                        AGGREGATE_PAYMENT,
+                        p.getId().toString(),
+                        PaymentTopics.PAYMENT_FAILED,
+                        PaymentFailedMessage.of(p.getId(), p.getUserId())
+                );
             });
             throw new BusinessException(ErrorCode.PG_CONFIRM_FAILED);
         }
@@ -101,9 +105,13 @@ public class PaymentService {
                     Payment p = paymentRepository.findById(paymentId)
                             .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
                     p.markSuccess(pgPaymentKey, orderId);
-                    eventPublisher.publishEvent(
-                            PaymentCompletedEvent.of(p.getId(), p.getUserId(),
-                                    p.getAmount(), p.getCookieAmount()));
+                    outboxEnqueuer.enqueue(
+                            AGGREGATE_PAYMENT,
+                            p.getId().toString(),
+                            PaymentTopics.PAYMENT_CONFIRMED,
+                            PaymentConfirmedMessage.of(p.getId(), p.getUserId(),
+                                    p.getAmount(), p.getCookieAmount())
+                    );
                     return PaymentInfo.from(p);
                 });
                 log.info("[Payment] 결제 완료 - paymentId: {}", paymentId);
@@ -128,7 +136,12 @@ public class PaymentService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
         payment.markFailed();
-        eventPublisher.publishEvent(PaymentFailedEvent.of(payment.getId(), payment.getUserId()));
+        outboxEnqueuer.enqueue(
+                AGGREGATE_PAYMENT,
+                payment.getId().toString(),
+                PaymentTopics.PAYMENT_FAILED,
+                PaymentFailedMessage.of(payment.getId(), payment.getUserId())
+        );
         return PaymentInfo.from(payment);
     }
 
