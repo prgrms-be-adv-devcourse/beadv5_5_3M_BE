@@ -24,13 +24,16 @@ public class ScheduleEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleScheduleInitialized(ScheduleInitializedEvent event) {
+        // ReviewAuth 는 streaming-service LOBBY_OPEN (startTime - 10m) 시점에 맞춰 발행.
+        // Entitlement 사본이 대기실 개방 전에 도착해야 WebSocket CONNECT 시 권한 검증이 통과됨.
+        LocalDateTime reviewAuthTime = event.startTime().minusMinutes(10);
         schedulerPort.scheduleCartCloseJob(event.scheduleId(), event.ticketingTime().minusHours(24));
         schedulerPort.scheduleTicketingStartJob(event.scheduleId(), event.ticketingTime());
-        schedulerPort.scheduleReviewAuthJob(event.scheduleId(), event.startTime());
+        schedulerPort.scheduleReviewAuthJob(event.scheduleId(), reviewAuthTime);
         schedulerPort.scheduleStreamingStartJob(event.scheduleId(), event.startTime());
         schedulerPort.scheduleStreamingFinishJob(event.scheduleId(), event.endTime());
-        log.info("Quartz Job 등록 완료 - scheduleId={}, ticketingTime={}, startTime={}, endTime={}",
-                event.scheduleId(), event.ticketingTime(), event.startTime(), event.endTime());
+        log.info("Quartz Job 등록 완료 - scheduleId={}, ticketingTime={}, reviewAuthTime={}, startTime={}, endTime={}",
+                event.scheduleId(), event.ticketingTime(), reviewAuthTime, event.startTime(), event.endTime());
 
         Duration ttl = Duration.between(LocalDateTime.now(), event.ticketingTime().minusHours(24));
         if (!ttl.isNegative() && !ttl.isZero()) {

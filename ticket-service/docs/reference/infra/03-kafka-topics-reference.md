@@ -86,7 +86,7 @@ creatorId, ticketId, scheduleId, cookieAmount
 | 항목 | 내용 |
 |------|------|
 | 수신처 | review-service |
-| 발행 시점 | `ReviewAuthQuartzJob` (공연 startTime) |
+| 발행 시점 | `ReviewAuthQuartzJob` (startTime - 10m, streaming-service LOBBY_OPEN 정합) |
 | 발행 주체 | `ReviewAuthService.publishReviewAuth()` |
 
 ```
