@@ -8,7 +8,6 @@ import com.example.creatorservice.domain.model.Movie.Visibility;
 import com.example.creatorservice.domain.repository.CategoryRepository;
 import com.example.creatorservice.domain.repository.CreatorRepository;
 import com.example.creatorservice.domain.repository.MovieRepository;
-import com.example.creatorservice.infrastructure.kafka.MovieEventPublisher;
 import com.example.creatorservice.infrastructure.kafka.dto.MovieAiCreatedMessage;
 import com.example.creatorservice.infrastructure.kafka.dto.MovieAiUpdatedMessage;
 import com.example.creatorservice.infrastructure.kafka.dto.MovieDeletedMessage;
@@ -17,6 +16,10 @@ import com.example.creatorservice.infrastructure.kafka.dto.MovieUploadedMessage;
 import com.example.creatorservice.infrastructure.kafka.dto.MovieVisibilityChangedMessage;
 import com.example.creatorservice.infrastructure.kafka.event.MovieAiCreatedEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieAiUpdatedEvent;
+import com.example.creatorservice.infrastructure.kafka.event.MovieDeletedEvent;
+import com.example.creatorservice.infrastructure.kafka.event.MovieUpdatedEvent;
+import com.example.creatorservice.infrastructure.kafka.event.MovieUploadedEvent;
+import com.example.creatorservice.infrastructure.kafka.event.MovieVisibilityChangedEvent;
 import com.example.creatorservice.infrastructure.storage.FfprobeResult;
 import com.example.creatorservice.infrastructure.storage.FfprobeVideoValidator;
 import com.example.creatorservice.infrastructure.storage.FileStorageService;
@@ -55,7 +58,6 @@ public class MovieUploadService implements MovieUploadUseCase {
     private final FileStorageService fileStorageService;
     private final VideoProcessingService videoProcessingService;
     private final FfprobeVideoValidator ffprobeVideoValidator;
-    private final MovieEventPublisher movieEventPublisher;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     @Override
@@ -143,14 +145,14 @@ public class MovieUploadService implements MovieUploadUseCase {
             List<MovieUploadedMessage.CategoryInfo> categories = movie.getCategories().stream()
                     .map(c -> new MovieUploadedMessage.CategoryInfo(c.getCategoryId(), c.getName()))
                     .toList();
-            movieEventPublisher.publishMovieUploaded(
+            applicationEventPublisher.publishEvent(new MovieUploadedEvent(
                     new MovieUploadedMessage(movie.getMovieId(), movie.getTitle(), movie.getDescription(), movie.getCreatorId(), creatorNickname, categories)
-            );
+            ));
         } else {
             // 이후 visibility 변경 — ES visibility 필드만 업데이트
-            movieEventPublisher.publishMovieVisibilityChanged(
+            applicationEventPublisher.publishEvent(new MovieVisibilityChangedEvent(
                     new MovieVisibilityChangedMessage(movie.getMovieId(), after.name())
-            );
+            ));
         }
 
         applicationEventPublisher.publishEvent(new MovieAiUpdatedEvent(
@@ -193,9 +195,9 @@ public class MovieUploadService implements MovieUploadUseCase {
             List<MovieUpdatedMessage.CategoryInfo> categories = movie.getCategories().stream()
                     .map(c -> new MovieUpdatedMessage.CategoryInfo(c.getCategoryId(), c.getName()))
                     .toList();
-            movieEventPublisher.publishMovieUpdated(
+            applicationEventPublisher.publishEvent(new MovieUpdatedEvent(
                     new MovieUpdatedMessage(movie.getMovieId(), movie.getTitle(), movie.getDescription(), categories)
-            );
+            ));
         }
 
         // 실제 변경된 필드가 있을 때만 발행
@@ -234,7 +236,7 @@ public class MovieUploadService implements MovieUploadUseCase {
         if (imageUrl != null) fileStorageService.delete(imageUrl);
         if (videoUrl != null) fileStorageService.delete(videoUrl);
 
-        movieEventPublisher.publishMovieDeleted(new MovieDeletedMessage(movie.getMovieId()));
+        applicationEventPublisher.publishEvent(new MovieDeletedEvent(new MovieDeletedMessage(movie.getMovieId())));
 
         log.info("[Movie] 영화 삭제 완료 - movieId: {}, creatorId: {}", movieId, creatorId);
     }
