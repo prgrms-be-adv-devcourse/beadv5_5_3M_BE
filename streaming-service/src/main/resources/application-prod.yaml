@@ -1,0 +1,79 @@
+spring:
+  application:
+    name: streaming-service
+
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:streaming_db}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 5
+
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:validate}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:streaming-service}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: never
+    properties:
+      org.quartz.jobStore.isClustered: false
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+      org.quartz.threadPool.threadCount: 5
+
+server:
+  port: ${SERVER_PORT:8088}
+
+logging:
+  level:
+    root: WARN
+    com.example.streamingservice: INFO
+
+streaming:
+  jwt:
+    secret: ${STREAMING_JWT_SECRET}
+    algorithm: HS256
+    issuer: streaming-service
+  session:
+    window-grace-minutes: 10
+  address:
+    adapter: ${STREAMING_ADDRESS_ADAPTER:local-direct}
+    public-base-url: ${STREAMING_PUBLIC_BASE_URL}
+  chat:
+    rate-limit-per-second: 3
+    max-message-length: 500
+  viewer:
+    broadcast-interval-seconds: 5
+
+client:
+  creator:
+    base-url: ${CLIENT_CREATOR_BASE_URL}
+
+storage:
+  s3-path: ${STORAGE_S3_PATH}

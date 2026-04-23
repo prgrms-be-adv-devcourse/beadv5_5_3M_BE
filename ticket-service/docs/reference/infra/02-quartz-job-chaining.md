@@ -68,15 +68,19 @@ JobData: scheduleId
 ### Job 3: ReviewAuthQuartzJob
 
 ```
-트리거:  startTime (공연 시작)
+트리거:  startTime - 10m (streaming-service LOBBY_OPEN 시점)
 그룹:    REVIEW_AUTH
 JobData: scheduleId
 
 실행:
   ReviewAuthUseCase.publishReviewAuth(scheduleId)
     → DB에서 CONFIRMED 티켓 목록 조회
-    → 각 userId에 Kafka ticket.review-auth 발행
+    → 각 userId에 Kafka ticket.review.authorized 발행
 ```
+
+**트리거 시각 근거**: streaming-service 가 `startTime - 10m` 에 대기실(LOBBY)을 개방하고
+이 시점부터 WebSocket CONNECT · 세션 발급이 가능하다. Entitlement 사본이 그 순간
+이미 streaming-service 쪽에 적재되어 있어야 `NO_ENTITLEMENT` 오류 없이 권한 검증이 통과됨.
 
 ### Job 4: StreamingStartQuartzJob
 

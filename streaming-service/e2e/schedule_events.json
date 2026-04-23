@@ -1,0 +1,34 @@
+[
+  {
+    "_comment": "이벤트 1: 기본 시나리오 — HLS 서빙, 세션 발급, STOMP Chat/Kick",
+    "topic": "movie.schedule.confirmed",
+    "value": {
+      "scheduleId": 42,
+      "startTime": "2026-04-21T09:00:00",
+      "endTime": "2026-04-21T23:30:00",
+      "ticketingTime": "2026-04-20T09:00:00",
+      "title": "E2E Streaming Test (ON_AIR window)",
+      "cookie": 5000,
+      "creatorId": "00000000-0000-0000-0000-000000000099",
+      "movieId": 1,
+      "imageUrl": "https://example.com/poster-42.jpg",
+      "seats": 100
+    }
+  },
+  {
+    "_comment": "이벤트 2: ForceExit 시나리오 — LifecycleService 6 상태 순차 트리거 대상",
+    "topic": "movie.schedule.confirmed",
+    "value": {
+      "scheduleId": 43,
+      "startTime": "2026-04-21T09:00:00",
+      "endTime": "2026-04-21T23:30:00",
+      "ticketingTime": "2026-04-20T09:00:00",
+      "title": "E2E Force Exit Test",
+      "cookie": 5000,
+      "creatorId": "00000000-0000-0000-0000-000000000099",
+      "movieId": 2,
+      "imageUrl": "https://example.com/poster-43.jpg",
+      "seats": 50
+    }
+  }
+]
