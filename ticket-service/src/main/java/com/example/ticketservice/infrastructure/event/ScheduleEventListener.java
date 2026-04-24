@@ -36,9 +36,13 @@ public class ScheduleEventListener {
                 event.scheduleId(), event.ticketingTime(), reviewAuthTime, event.startTime(), event.endTime());
 
         Duration ttl = Duration.between(LocalDateTime.now(), event.ticketingTime().minusHours(24));
+        String cartCountKey = RedisKeys.CART_COUNT + event.scheduleId();
         if (!ttl.isNegative() && !ttl.isZero()) {
-            cachePort.setCounter(RedisKeys.CART_COUNT + event.scheduleId(), 0, ttl);
+            cachePort.setCounter(cartCountKey, 0, ttl);
             log.debug("장바구니 수요 카운터 초기화 - scheduleId={}, ttl={}s", event.scheduleId(), ttl.getSeconds());
+        } else {
+            // Redis는 영속되므로 동일 scheduleId가 과거에 쓰였다면 잔존값이 addToCart INCR에 누적됨.
+            cachePort.delete(cartCountKey);
         }
     }
 }
