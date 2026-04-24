@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.RequestPath;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import com.example.gatewayservice.exception.JwtAuthenticationException;
 import org.springframework.security.access.AuthorizationServiceException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authorization.AuthorizationDecision;
@@ -12,8 +13,10 @@ import org.springframework.security.authorization.AuthorizationResult;
 import org.springframework.security.authorization.ReactiveAuthorizationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.server.authorization.AuthorizationContext;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -28,7 +31,8 @@ public class ReactiveAuthorization implements ReactiveAuthorizationManager<Autho
     private final List<String> CREATOR_REQUEST_PATH = List.of(
             "/api/settlements",
             "/api/movies/creator", "/api/movies/schedules/creator", "/api/movies/categories",
-            "/api/wallets"
+            "/api/wallets",
+            "/api/creators"
     );
 
     @Value("${user-service.host:http://localhost:8085}")
@@ -51,6 +55,7 @@ public class ReactiveAuthorization implements ReactiveAuthorizationManager<Autho
         log.info("baseUrl={}", baseUrl);
 
         String userId = request.getHeaders().getFirst("X-User-Id");
+        String authHeader = request.getHeaders().getFirst("Authorization");
         log.info("userId = {}", userId);
 
         if (userId == null) {
@@ -67,6 +72,7 @@ public class ReactiveAuthorization implements ReactiveAuthorizationManager<Autho
         return WebClient.create(baseUrl)
                 .get()
                 .header(key, userId)
+                .headers(h -> { if (authHeader != null) h.set("Authorization", authHeader); })
                 .retrieve()
                 .bodyToMono(Boolean.class)
                 .map(granted -> {
@@ -74,6 +80,9 @@ public class ReactiveAuthorization implements ReactiveAuthorizationManager<Autho
                     return (AuthorizationResult) new AuthorizationDecision(granted);
                 })
                 .onErrorMap(e -> {
+                    if (e instanceof WebClientResponseException wce && wce.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                        return new JwtAuthenticationException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED");
+                    }
                     log.error("인가 서버에 요청 중 오류 : {}", e.getMessage());
                     return new AuthorizationServiceException("인가 요청시 오류 발생");
                 });

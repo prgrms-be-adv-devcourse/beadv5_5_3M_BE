@@ -43,4 +43,9 @@ public class CreatorJpaRepositoryAdapter implements CreatorRepository {
                 .orElseThrow(CreatorNotFoundException::new);
     }
 
+    @Override
+    public boolean existsById(UUID creatorId) {
+        return creatorJpaRepository.existsById(creatorId);
+    }
+
 }

@@ -13,4 +13,6 @@ public interface CreatorRepository {
     Creator findByEmail(String email);
 
     Creator findById(UUID creatorId);
+
+    boolean existsById(UUID creatorId);
 }

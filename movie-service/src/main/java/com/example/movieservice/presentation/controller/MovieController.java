@@ -1,5 +1,6 @@
 package com.example.movieservice.presentation.controller;
 
+import com.example.movieservice.application.usecase.MovieSearchUseCase;
 import com.example.movieservice.application.usecase.MovieUseCase;
 import com.example.movieservice.presentation.dto.response.movie.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -7,11 +8,16 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Tag(name = "Movie", description = "영화 관련 API")
 @RestController
@@ -20,6 +26,16 @@ import java.util.UUID;
 public class MovieController {
 
     private final MovieUseCase movieUseCase;
+
+    /**
+     * ES 활성화 시에만 빈이 등록되므로 nullable.
+     * movie.elasticsearch.enabled=false 이면 null → JPA 분기로만 동작.
+     */
+    @Autowired(required = false)
+    private MovieSearchUseCase movieSearchUseCase;
+
+    @Value("${movie.elasticsearch.enabled:false}")
+    private boolean esEnabled;
 
     @Operation(summary = "영화 상세 조회 (사용자)", description = "사용자가 공개된 영화의 상세 정보를 조회합니다.")
     @ApiResponses({
@@ -83,14 +99,31 @@ public class MovieController {
         return ResponseEntity.ok(movieUseCase.getMovieListByGenre(categoryId));
     }
 
-    @Operation(summary = "영화 제목 검색", description = "제목에 검색어가 포함된 공개 영화 목록을 조회합니다.")
+    @Operation(summary = "영화 검색",
+            description = "ES 활성화 시: 제목/설명/크리에이터명 통합 검색(관련도 정렬, 오타 허용, 복수 카테고리 필터, 하이라이트). " +
+                    "ES 비활성화 시: JPA LIKE 제목 검색.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
     })
     @GetMapping("/search")
     public ResponseEntity<List<MovieCardResponse>> searchMoviesByTitle(
-            @Parameter(description = "검색할 제목 키워드 (미입력 시 전체 반환)")
-            @RequestParam(required = false, defaultValue = "") String title) {
+            @Parameter(description = "검색 키워드 (미입력 시 전체 반환)")
+            @RequestParam(required = false, defaultValue = "") String title,
+            @Parameter(description = "카테고리 ID 복수 선택 (ES 활성화 시만 동작, 예: ?categoryIds=1&categoryIds=3)")
+            @RequestParam(required = false) List<Long> categoryIds) {
+        if (esEnabled && movieSearchUseCase != null) {
+            Pageable pageable = PageRequest.of(0, 20);
+            var esResult = movieSearchUseCase.searchMovies(
+                    title.isBlank() ? null : title, categoryIds, pageable);
+            List<MovieCardResponse> cards = esResult.items().stream()
+                    .map(item -> new MovieCardResponse(
+                            item.movieId(), null, item.creatorNickname(),
+                            item.title(), null, null,
+                            item.highlightedTitle(),
+                            item.highlightedCreatorNickname()))
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(cards);
+        }
         return ResponseEntity.ok(movieUseCase.searchMoviesByTitle(title));
     }
 }

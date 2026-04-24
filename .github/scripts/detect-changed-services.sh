@@ -9,8 +9,15 @@
 #   JSON array  →  ["ticket-service","user-service"]
 #
 # Special cases:
-#   - 루트 CLAUDE.md 변경 시 모든 서비스 포함
 #   - .github/review-rules/_common.yml 변경 시 모든 서비스 포함
+#
+# Exclusions (리뷰 대상 아님 — pr-review.yml 의 awk 필터와 동일 정책):
+#   - 문서/설정: *.md, *.txt, *.sql, *.json, *.gradle, *.py, *.sh
+#   - 메타: .gitignore, .gitattributes, LICENSE
+#   - 빌드 래퍼: gradlew, gradlew.bat
+#   - 테스트: *Test.java, *Tests.java
+#   - 디렉토리: /e2e/, /local/
+#   - 한 서비스에서 위 파일들만 바뀌면 해당 서비스는 리뷰 스킵
 
 set -euo pipefail
 
@@ -19,15 +26,15 @@ HEAD_SHA="${2:?head_sha is required}"
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
-# 변경된 파일 목록
-CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+# 리뷰 대상이 아닌 파일 패턴 (pr-review.yml 의 awk 필터와 동일 정책)
+EXCLUDE_PATTERN='\.(md|sql|py|gradle|json|sh|txt|gitignore|gitattributes)$|(^|/)LICENSE$|(^|/)gradlew(\.bat)?$|(Test|Tests)\.java$|(^|/)e2e/|(^|/)local/'
+
+# 변경된 파일 목록 (리뷰 제외 대상 필터링)
+RAW_CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+CHANGED_FILES=$(echo "$RAW_CHANGED" | grep -vE "$EXCLUDE_PATTERN" || true)
 
 # 전체 서비스 강제 포함 조건 체크
 FORCE_ALL=false
-if echo "$CHANGED_FILES" | grep -qE '^CLAUDE\.md$'; then
-  echo "::notice::루트 CLAUDE.md 변경 감지 → 전체 서비스 리뷰 적용" >&2
-  FORCE_ALL=true
-fi
 if echo "$CHANGED_FILES" | grep -qE '^\.github/review-rules/_common\.yml$'; then
   echo "::notice::_common.yml 변경 감지 → 전체 서비스 리뷰 적용" >&2
   FORCE_ALL=true
