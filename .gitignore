@@ -138,3 +138,4 @@ __pycache__/
 .cache/
 # K3s deployment local env
 k8s/infra/.env.k3s
+!k8s/infra/.env.k3s.example
