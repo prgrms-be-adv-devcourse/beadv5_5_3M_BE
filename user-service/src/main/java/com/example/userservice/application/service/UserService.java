@@ -71,12 +71,14 @@ public class UserService implements UserUseCase {
 //            throw new SessionExpiredException();
 //        }
 
-        User findUser = userRepository.findById(toUUID(userId));
-        List<Permission> permissions = permissionRepository.findByRole(findUser.getRole());
+//        User findUser = userRepository.findById(toUUID(userId));
+//        List<Permission> permissions = permissionRepository.findByRole(findUser.getRole());
+//
+//        return permissions.stream()
+//                .filter(p -> p.getHttpMethod() == null || p.getHttpMethod().equals(request.httpMethod().name()))
+//                .noneMatch(p -> request.requestPath().startsWith(p.getPathPattern()));
+        return true;
 
-        return permissions.stream()
-                .filter(p -> p.getHttpMethod() == null || p.getHttpMethod().equals(request.httpMethod().name()))
-                .noneMatch(p -> request.requestPath().startsWith(p.getPathPattern()));
     }
 
     @Override
