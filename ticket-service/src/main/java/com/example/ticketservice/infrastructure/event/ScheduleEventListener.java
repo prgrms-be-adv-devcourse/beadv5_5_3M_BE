@@ -24,18 +24,25 @@ public class ScheduleEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleScheduleInitialized(ScheduleInitializedEvent event) {
-        schedulerPort.scheduleCartCloseJob(event.scheduleId(), event.ticketingTime().minusHours(24));
+        // ReviewAuth 는 streaming-service LOBBY_OPEN (startTime - 10m) 시점에 맞춰 발행.
+        // Entitlement 사본이 대기실 개방 전에 도착해야 WebSocket CONNECT 시 권한 검증이 통과됨.
+        LocalDateTime reviewAuthTime = event.startTime().minusMinutes(1);//10
+        schedulerPort.scheduleCartCloseJob(event.scheduleId(), event.ticketingTime().minusMinutes(3));//minusHours(24)
         schedulerPort.scheduleTicketingStartJob(event.scheduleId(), event.ticketingTime());
-        schedulerPort.scheduleReviewAuthJob(event.scheduleId(), event.startTime());
+        schedulerPort.scheduleReviewAuthJob(event.scheduleId(), reviewAuthTime);
         schedulerPort.scheduleStreamingStartJob(event.scheduleId(), event.startTime());
         schedulerPort.scheduleStreamingFinishJob(event.scheduleId(), event.endTime());
-        log.info("Quartz Job 등록 완료 - scheduleId={}, ticketingTime={}, startTime={}, endTime={}",
-                event.scheduleId(), event.ticketingTime(), event.startTime(), event.endTime());
+        log.info("Quartz Job 등록 완료 - scheduleId={}, ticketingTime={}, reviewAuthTime={}, startTime={}, endTime={}",
+                event.scheduleId(), event.ticketingTime(), reviewAuthTime, event.startTime(), event.endTime());
 
-        Duration ttl = Duration.between(LocalDateTime.now(), event.ticketingTime().minusHours(24));
+        Duration ttl = Duration.between(LocalDateTime.now(), event.ticketingTime().minusMinutes(3));//minusHours(24)
+        String cartCountKey = RedisKeys.CART_COUNT + event.scheduleId();
         if (!ttl.isNegative() && !ttl.isZero()) {
-            cachePort.setCounter(RedisKeys.CART_COUNT + event.scheduleId(), 0, ttl);
+            cachePort.setCounter(cartCountKey, 0, ttl);
             log.debug("장바구니 수요 카운터 초기화 - scheduleId={}, ttl={}s", event.scheduleId(), ttl.getSeconds());
+        } else {
+            // Redis는 영속되므로 동일 scheduleId가 과거에 쓰였다면 잔존값이 addToCart INCR에 누적됨.
+            cachePort.delete(cartCountKey);
         }
     }
 }

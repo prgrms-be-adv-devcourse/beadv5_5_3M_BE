@@ -52,6 +52,30 @@ spring:
       properties:
         spring.json.add.type.headers: false
 
+  # SMTP Mail (UserService 의 JavaMailSender)
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  # Google OAuth (GoogleOAuthService)
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            redirect-uri: ${GOOGLE_REDIRECT_URI}
+            scope: openid, email, profile
+
 # RSA 키페어 — JWT 토큰 발급 (JwtProvider.java)
 jwt:
   private-key: ${JWT_PRIVATE_KEY}

@@ -131,10 +131,91 @@ jobs:
             docker compose --profile ${{ matrix.service }} up -d --remove-orphans
             docker image prune -f
 
+  # ─────────────────────────────────────────────
+  # docker-compose.yml / .env.example 만 변경된 경우 대응
+  # → 이미지 재빌드 없이 EC2 의 떠 있는 컨테이너만 새 env 로 force-recreate
+  # ─────────────────────────────────────────────
+  detect-config-changes:
+    name: Detect Config-Only Changes
+    runs-on: ubuntu-latest
+    outputs:
+      config_changed: ${{ steps.detect.outputs.config_changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect docker-compose.yml or .env.example changes
+        id: detect
+        run: |
+          if [[ "${{ github.event.before }}" =~ ^0+$ ]]; then
+            CHANGED=$(git diff-tree --no-commit-id -r --name-only HEAD 2>/dev/null || echo "")
+          else
+            CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" 2>/dev/null || echo "")
+          fi
+          if echo "$CHANGED" | grep -qE "^(docker-compose\.yml|\.env\.example)$"; then
+            echo "config_changed=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::root-level 설정 변경 감지 — 떠 있는 컨테이너 재생성 예정"
+          else
+            echo "config_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  compose-redeploy:
+    name: Compose-only Redeploy
+    needs: [detect-changes, detect-config-changes, deploy-to-ec2]
+    # 정상 deploy 가 끝난 뒤 (또는 변경 서비스 자체가 없을 때) 실행
+    # 정상 deploy 가 실패해도 config 재적용은 시도
+    if: |
+      always() &&
+      needs.detect-config-changes.outputs.config_changed == 'true' &&
+      (needs.detect-changes.outputs.has_changes == 'false' || needs.deploy-to-ec2.result != 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose.yml to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: docker-compose.yml
+          target: ~/app/
+
+      - name: Force-recreate running containers (excluding already-deployed)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/app
+            # 정상 deploy 가 다룬 서비스는 이미 새 env 로 떴으므로 제외
+            ALREADY_DEPLOYED='${{ needs.detect-changes.outputs.services }}'
+            ALL_SERVICES="gateway-service creator-service payment-service settlement-service ticket-service user-service movie-service streaming-service ai-service"
+
+            for svc in $ALL_SERVICES; do
+              # 정상 deploy 매트릭스에 포함됐으면 스킵 (이미 처리됨)
+              if echo "$ALREADY_DEPLOYED" | grep -q "\"$svc\""; then
+                echo "⏭  $svc — 정상 deploy 에서 이미 처리됨"
+                continue
+              fi
+
+              # 떠 있는 컨테이너만 재생성 (없는 서비스는 무시)
+              if docker ps --format '{{.Names}}' | grep -q "^${svc}$"; then
+                echo "♻️  $svc — 새 docker-compose env 로 force-recreate"
+                docker compose --profile $svc up -d --force-recreate $svc
+              else
+                echo "💤 $svc — 컨테이너 미실행, 스킵"
+              fi
+            done
+
   cd-summary:
     name: CD Summary
-    needs: [detect-changes, docker-build-push, deploy-to-ec2]
-    if: always() && needs.detect-changes.outputs.has_changes == 'true'
+    needs: [detect-changes, docker-build-push, deploy-to-ec2, detect-config-changes, compose-redeploy]
+    if: always() && (needs.detect-changes.outputs.has_changes == 'true' || needs.detect-config-changes.outputs.config_changed == 'true')
     runs-on: ubuntu-latest
     steps:
       - name: Write summary
@@ -142,16 +223,26 @@ jobs:
           SERVICES='${{ needs.detect-changes.outputs.services }}'
           DOCKER_RESULT="${{ needs.docker-build-push.result }}"
           DEPLOY_RESULT="${{ needs.deploy-to-ec2.result }}"
+          CONFIG_CHANGED="${{ needs.detect-config-changes.outputs.config_changed }}"
+          REDEPLOY_RESULT="${{ needs.compose-redeploy.result }}"
           SHA="${{ github.sha }}"
           SHORT_SHA="${SHA:0:7}"
 
           echo "## CD 결과 — \`$SHORT_SHA\`" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| 서비스 | Docker Hub | EC2 배포 |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|--------|-----------|---------|" >> "$GITHUB_STEP_SUMMARY"
 
-          for svc in $(echo "$SERVICES" | jq -r '.[]'); do
-            DOCKER_ICON=$([[ "$DOCKER_RESULT" == "success" ]] && echo "✅" || echo "❌")
-            DEPLOY_ICON=$([[ "$DEPLOY_RESULT" == "success" ]] && echo "✅" || echo "❌")
-            echo "| \`$svc\` | $DOCKER_ICON | $DEPLOY_ICON |" >> "$GITHUB_STEP_SUMMARY"
-          done
+          if [[ -n "$SERVICES" && "$SERVICES" != "" && "$SERVICES" != "[]" ]]; then
+            echo "| 서비스 | Docker Hub | EC2 배포 |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|--------|-----------|---------|" >> "$GITHUB_STEP_SUMMARY"
+            for svc in $(echo "$SERVICES" | jq -r '.[]'); do
+              DOCKER_ICON=$([[ "$DOCKER_RESULT" == "success" ]] && echo "✅" || echo "❌")
+              DEPLOY_ICON=$([[ "$DEPLOY_RESULT" == "success" ]] && echo "✅" || echo "❌")
+              echo "| \`$svc\` | $DOCKER_ICON | $DEPLOY_ICON |" >> "$GITHUB_STEP_SUMMARY"
+            done
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [[ "$CONFIG_CHANGED" == "true" ]]; then
+            REDEPLOY_ICON=$([[ "$REDEPLOY_RESULT" == "success" ]] && echo "✅" || echo "❌")
+            echo "**Compose-only redeploy** (root-level 설정 변경): $REDEPLOY_ICON" >> "$GITHUB_STEP_SUMMARY"
+          fi

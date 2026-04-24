@@ -54,18 +54,38 @@ public class Refund {
         return refund;
     }
 
-    public void markSuccess() {
+    /** PENDING -> PROCESSING (PG 취소 요청 전, 이중 승인 방지) */
+    public void markProcessing() {
         validatePending();
+        this.status = RefundStatus.PROCESSING;
+    }
+
+    /** PROCESSING -> SUCCESS (PG 취소 완료 후) */
+    public void markSuccess() {
+        validateProcessing();
         this.status = RefundStatus.SUCCESS;
     }
 
+    /** PENDING -> FAILED (관리자 거절) */
     public void markFailed() {
         validatePending();
         this.status = RefundStatus.FAILED;
     }
 
+    /** PROCESSING -> FAILED (PG 취소 실패) */
+    public void markProcessingFailed() {
+        validateProcessing();
+        this.status = RefundStatus.FAILED;
+    }
+
     public void validatePending() {
         if (this.status != RefundStatus.PENDING) {
+            throw new BusinessException(ErrorCode.REFUND_ALREADY_PROCESSED);
+        }
+    }
+
+    private void validateProcessing() {
+        if (this.status != RefundStatus.PROCESSING) {
             throw new BusinessException(ErrorCode.REFUND_ALREADY_PROCESSED);
         }
     }

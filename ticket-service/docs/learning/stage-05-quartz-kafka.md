@@ -95,9 +95,11 @@ public class TicketingStartQuartzJob extends QuartzJobBean {
 | `TicketingStartQuartzJob` | `TicketingStartUseCase` | `ticketingTime` |
 | `StreamingStartQuartzJob` | `StreamingStartUseCase` | `startTime` |
 | `StreamingFinishQuartzJob` | `StreamingFinishUseCase` | `endTime` |
-| `ReviewAuthQuartzJob` | `ReviewAuthUseCase` | `startTime` |
+| `ReviewAuthQuartzJob` | `ReviewAuthUseCase` | `startTime - 10m` |
 
-**주의**: `StreamingStart`와 `ReviewAuth`가 **동일한 `startTime`**에 트리거. 두 Job이 동시에 실행됨 → 다른 JobKey이므로 `@DisallowConcurrentExecution`이 서로에게 영향 없음 (각자 내부만 단독 실행).
+**주의**: `ReviewAuth` 는 `startTime - 10m` (streaming-service 대기실 개방 시점)에,
+`StreamingStart` 는 `startTime` 에 트리거. 서로 다른 JobKey + 다른 시각이므로 충돌 없음.
+Entitlement 사본이 streaming-service 에 먼저 적재되어야 LOBBY_OPEN 시 WebSocket CONNECT 가 통과됨.
 
 ---
 

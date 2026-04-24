@@ -61,6 +61,9 @@ public class Movie {
     @Column(name = "additional_cookie", nullable = false)
     private Integer additionalCookie;
 
+    @Column(name = "total_cookie")
+    private Integer totalCookie;
+
     @Column(name = "average_rating")
     @Builder.Default
     private Float averageRating = 0f;
@@ -98,6 +101,7 @@ public class Movie {
         this.title = title;
         this.description = description;
         this.additionalCookie = additionalCookie;
+        this.totalCookie = this.baseCookie + additionalCookie;
     }
 
     // review.written 수신 시
