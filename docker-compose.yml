@@ -229,6 +229,8 @@ services:
     container_name: streaming-service
     ports:
       - "${STREAMING_PORT}:${STREAMING_PORT}"
+    volumes:
+      - /home/ubuntu/s3-bucket:/root/uploads
     environment:
       SERVER_PORT: ${STREAMING_PORT}
       DB_HOST: ${DB_HOST}
