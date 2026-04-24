@@ -44,12 +44,9 @@ public class ReviewService implements ReviewUseCase {
     @Override
     @Transactional
     public ReviewResponse write(UUID userId, WriteReviewRequest request) {
-        ReviewAuthorization authorization = reviewAuthorizationRepository.findByUserIdAndScheduleId(userId, request.scheduleId())
+        ReviewAuthorization authorization = reviewAuthorizationRepository
+                .findFirstByUserIdAndMovieIdAndUsedFalse(userId, request.movieId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.REVIEW_NOT_AUTHORIZED));
-
-        if (reviewRepository.existsByUserIdAndScheduleId(userId, request.scheduleId())) {
-            throw new GeneralException(ErrorStatus.REVIEW_ALREADY_EXISTS);
-        }
 
         Movie movie = movieRepository.findByMovieIdForUpdate(request.movieId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
@@ -74,12 +71,17 @@ public class ReviewService implements ReviewUseCase {
         try {
             saved = reviewRepository.save(review);
         } catch (DataIntegrityViolationException e) {
-            log.warn("[Review] 중복 리뷰 skip (UNIQUE 위반) - userId: {}, movieId: {}", userId, request.movieId());
+            log.warn("[Review] 중복 리뷰 skip (UNIQUE 위반) - userId: {}, scheduleId: {}", userId, authorization.getScheduleId());
             throw new GeneralException(ErrorStatus.REVIEW_ALREADY_EXISTS);
         }
+
+        authorization.markAsUsed();
+        reviewAuthorizationRepository.save(authorization);
+
         movie.applyReviewCreated(request.rating());
 
-        log.info("[Review] 작성 완료 - reviewId: {}, userId: {}, movieId: {}", saved.getReviewId(), userId, request.movieId());
+        log.info("[Review] 작성 완료 - reviewId: {}, userId: {}, movieId: {}, scheduleId: {}",
+                saved.getReviewId(), userId, request.movieId(), authorization.getScheduleId());
         return ReviewResponse.of(saved, userSync.getNickname(), userSync.getUrl());
     }
 
@@ -120,10 +122,17 @@ public class ReviewService implements ReviewUseCase {
 
         Movie movie = movieRepository.findByMovieIdForUpdate(review.getMovieId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MOVIE_NOT_FOUND));
+
         reviewRepository.delete(review);
         movie.applyReviewDeleted(review.getRating());
 
-        log.info("[Review] 삭제 완료 - reviewId: {}", reviewId);
+        reviewAuthorizationRepository.findByUserIdAndScheduleId(userId, review.getScheduleId())
+                .ifPresent(auth -> {
+                    auth.markAsUnused();
+                    reviewAuthorizationRepository.save(auth);
+                });
+
+        log.info("[Review] 삭제 완료 - reviewId: {}, scheduleId: {}", reviewId, review.getScheduleId());
     }
 
     @Override
