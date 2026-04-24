@@ -1,0 +1,64 @@
+# user-service (포트 8085) — review-service 통합
+# - 사용자 관리, JWT 발급, S3 프로필 이미지, OAuth, Mail
+# - DB: user_db
+
+image:
+  repository: y0000h/user-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8085
+  targetPort: 8085
+
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m"
+  SERVER_PORT: "8085"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.dev.svc.cluster.local:5432/user_db"
+  SPRING_DATASOURCE_USERNAME: "postgres"
+  SPRING_DATASOURCE_PASSWORD: "_OVERRIDE_FROM_SECRET_"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
+  SPRING_DATA_REDIS_HOST: "redis-master.dev.svc.cluster.local"
+  SPRING_DATA_REDIS_PORT: "6379"
+  DDL_AUTO: "validate"
+  # MinIO (사용 안 하면 빈 값 — S3 로 통일)
+  MINIO_ENDPOINT: ""
+  MINIO_ACCESS_KEY: ""
+  MINIO_SECRET_KEY: ""
+  MINIO_BUCKET: ""
+  # Google OAuth (실제 값은 별도 google-secret 으로 분리 권장)
+  GOOGLE_CLIENT_ID: "REPLACE_WITH_REAL_OR_MOVE_TO_SECRET"
+  GOOGLE_CLIENT_SECRET: "REPLACE_WITH_REAL_OR_MOVE_TO_SECRET"
+  GOOGLE_REDIRECT_URI: "https://REPLACE_DOMAIN/login/oauth2/code/google"
+  # Mail
+  MAIL_USERNAME: "REPLACE_WITH_REAL"
+  MAIL_PASSWORD: "REPLACE_WITH_REAL_OR_MOVE_TO_SECRET"
+
+sharedEnv: {}
+
+secretRefs:
+  postgres: true
+  jwt: true
+  toss: false
+  aws: true       # S3 프로필 이미지
+  openai: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    cpu: 500m
+    memory: 640Mi
+
+healthcheck:
+  enabled: true
+  path: /actuator/health
+  livenessInitialDelay: 120      # OAuth/Mail 초기화 시간 고려 +30s
+  livenessPeriod: 30
+  readinessInitialDelay: 60
+  readinessPeriod: 10
+
+ingress:
+  enabled: false

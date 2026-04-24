@@ -1,0 +1,55 @@
+# movie-service (포트 8086) — Elasticsearch OFF, JPA 폴백 (PR #133)
+# - DB: docker-compose 가 creator_db 를 가리키고 있음 — 실제 데이터 위치 조원 확인 후 수정 가능
+
+image:
+  repository: y0000h/movie-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8086
+  targetPort: 8086
+
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m"
+  SERVER_PORT: "8086"
+  # ⚠️ docker-compose 가 creator_db 를 가리키는 상태 그대로. movie_db 로 바꿔야 한다면 조원 확인 후 여기만 수정.
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.dev.svc.cluster.local:5432/creator_db"
+  SPRING_DATASOURCE_USERNAME: "postgres"
+  SPRING_DATASOURCE_PASSWORD: "_OVERRIDE_FROM_SECRET_"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
+  SPRING_DATA_REDIS_HOST: "redis-master.dev.svc.cluster.local"
+  SPRING_DATA_REDIS_PORT: "6379"
+  DDL_AUTO: "validate"
+  # ★ ES 폴백 모드 (메모리 한계로 ES 미배포 — PR #133)
+  MOVIE_ES_ENABLED: "false"
+  ES_URIS: "http://localhost:9200"
+
+sharedEnv: {}
+
+secretRefs:
+  postgres: true
+  jwt: false        # gateway 에서 검증
+  toss: false
+  aws: false
+  openai: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    cpu: 500m
+    memory: 640Mi
+
+healthcheck:
+  enabled: true
+  path: /actuator/health
+  livenessInitialDelay: 90
+  livenessPeriod: 30
+  readinessInitialDelay: 30
+  readinessPeriod: 10
+
+ingress:
+  enabled: false
