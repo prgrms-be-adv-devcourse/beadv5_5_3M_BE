@@ -34,7 +34,7 @@ public class ScheduleService implements ScheduleUseCase {
         log.info("[getSpecificMovieSchedule] 조회된 스케줄 수={}", schedules.size());
 
         return schedules.stream()
-                .map(s -> new ScheduleForUserResponse(s.getScheduleId(), s.getStartTime(), s.getRemainingSeats(), s.getStatus().name()))
+                .map(s -> new ScheduleForUserResponse(s.getScheduleId(), s.getTicketingTime(), s.getStartTime(), s.getRemainingSeats(), s.getStatus().name()))
                 .toList();
     }
 
