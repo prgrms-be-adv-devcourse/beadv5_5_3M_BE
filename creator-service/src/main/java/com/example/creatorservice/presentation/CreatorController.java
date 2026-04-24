@@ -104,6 +104,19 @@ public class CreatorController {
         return ResponseEntity.status(HttpStatus.CREATED).body(creatorUseCase.refresh(refreshToken));
     }
 
+    @Operation(summary = "로그아웃", description = "크리에이터 로그아웃 및 리프레시 토큰을 삭제합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "로그아웃 성공"),
+            @ApiResponse(responseCode = "401", description = "인증 정보 없음", content = @Content)
+    })
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @Parameter(description = "크리에이터 ID (게이트웨이에서 주입)", required = true, example = "550e8400-e29b-41d4-a716-446655440000")
+            @RequestHeader("X-Creator-Id") String creatorId) {
+        creatorUseCase.logout(creatorId);
+        return ResponseEntity.ok().build();
+    }
+
 
 
 
