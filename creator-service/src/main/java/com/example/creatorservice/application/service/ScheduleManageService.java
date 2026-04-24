@@ -107,7 +107,7 @@ public class ScheduleManageService implements ScheduleManageUseCase {
 
             // 테스트용
             // if (!schedule.getTicketingTime().isAfter(now.plusDays(2))) {
-            if (!schedule.getTicketingTime().isAfter(now.plusMinutes(2))) {
+            if (!schedule.getTicketingTime().isAfter(now.plusMinutes(4))) {
                 throw ScheduleException.invalidTicketingStart();
             }
 
@@ -184,7 +184,7 @@ public class ScheduleManageService implements ScheduleManageUseCase {
 
         // 테스트용
         // if (minutesBetween < 10) {
-        if (minutesBetween < 1) {
+        if (minutesBetween < 4) {
             throw ScheduleException.invalidTicketingWindow();
         }
 
@@ -194,7 +194,7 @@ public class ScheduleManageService implements ScheduleManageUseCase {
 
         // 테스트용
         // if (!slot.ticketingTime().isAfter(LocalDateTime.now().plusDays(2))) {
-        if (!slot.ticketingTime().isAfter(LocalDateTime.now().plusMinutes(2))) {
+        if (!slot.ticketingTime().isAfter(LocalDateTime.now().plusMinutes(4))) {
             throw ScheduleException.invalidTicketingStart();
         }
     }
