@@ -117,7 +117,8 @@ public class CreatorService implements CreatorUseCase {
         return new TokenResponse(accessToken, newRefreshToken);
     }
 
-
-
-
+    @Override
+    public void logout(String creatorId) {
+        redisTemplate.delete("refresh:token:" + creatorId);
+    }
 }
