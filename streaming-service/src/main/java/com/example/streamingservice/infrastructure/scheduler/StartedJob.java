@@ -1,18 +1,20 @@
 package com.example.streamingservice.infrastructure.scheduler;
 
 import com.example.streamingservice.application.usecase.LifecycleUseCase;
+import lombok.RequiredArgsConstructor;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.JobExecutionContext;
 import org.quartz.PersistJobDataAfterExecution;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
+import org.springframework.stereotype.Component;
 
+@Component
+@RequiredArgsConstructor
 @DisallowConcurrentExecution
 @PersistJobDataAfterExecution
 public class StartedJob extends QuartzJobBean {
 
-	@Autowired
-	private LifecycleUseCase lifecycle;
+	private final LifecycleUseCase lifecycle;
 
 	@Override
 	protected void executeInternal(JobExecutionContext context) {
