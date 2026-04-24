@@ -122,7 +122,7 @@
 			if (hls) { hls.destroy(); hls = null; }
 			const manifestUrl = /^https?:\/\//i.test(result.manifestUrl)
 				? result.manifestUrl
-				: location.protocol + '//' + result.manifestUrl.replace(/^\/+/, '');
+				: 'http://' + result.manifestUrl.replace(/^\/+/, '');
 			if (video.canPlayType('application/vnd.apple.mpegurl')) {
 				video.src = manifestUrl;
 				video.play().catch(() => {});
