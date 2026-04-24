@@ -33,7 +33,19 @@ public class ReviewAuthorization {
     @Column(name = "schedule_id", nullable = false)
     private Long scheduleId;
 
+    @Column(name = "used", nullable = false)
+    @Builder.Default
+    private boolean used = false;
+
     @CreationTimestamp
     @Column(name = "authorized_at", updatable = false)
     private LocalDateTime authorizedAt;
+
+    public void markAsUsed() {
+        this.used = true;
+    }
+
+    public void markAsUnused() {
+        this.used = false;
+    }
 }
