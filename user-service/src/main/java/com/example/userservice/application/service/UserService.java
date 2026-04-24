@@ -78,6 +78,7 @@ public class UserService implements UserUseCase {
 //                .filter(p -> p.getHttpMethod() == null || p.getHttpMethod().equals(request.httpMethod().name()))
 //                .noneMatch(p -> request.requestPath().startsWith(p.getPathPattern()));
         return true;
+
     }
 
     @Override
