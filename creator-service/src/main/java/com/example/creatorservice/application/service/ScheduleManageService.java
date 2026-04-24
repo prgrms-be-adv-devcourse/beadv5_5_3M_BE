@@ -105,7 +105,9 @@ public class ScheduleManageService implements ScheduleManageUseCase {
                 throw ScheduleException.alreadyConfirmed();
             }
 
-            if (!schedule.getTicketingTime().isAfter(now.plusDays(2))) {
+            // 테스트용
+            // if (!schedule.getTicketingTime().isAfter(now.plusDays(2))) {
+            if (!schedule.getTicketingTime().isAfter(now.plusMinutes(2))) {
                 throw ScheduleException.invalidTicketingStart();
             }
 
@@ -123,7 +125,7 @@ public class ScheduleManageService implements ScheduleManageUseCase {
                     schedule.getEndTime(),
                     schedule.getTicketingTime(),
                     movie.getTitle(),
-                    movie.getBaseCookie(),
+                    movie.getTotalCookie(),
                     movie.getCreatorId(),
                     movie.getMovieId(),
                     movie.getImageUrl(),
@@ -172,14 +174,17 @@ public class ScheduleManageService implements ScheduleManageUseCase {
     }
 
     private void validateSlot(RegisterScheduleRequest.ScheduleSlot slot, Integer runningTimeSeconds) {
-        if (slot.startTime().getMinute() != 0 || slot.startTime().getSecond() != 0) {
-            throw ScheduleException.invalidStartTime();
-        }
+        // 테스트용 정각 등록 제거
+//        if (slot.startTime().getMinute() != 0 || slot.startTime().getSecond() != 0) {
+//            throw ScheduleException.invalidStartTime();
+//        }
 
         LocalDateTime endTime = slot.startTime().plusSeconds(runningTimeSeconds);
         long minutesBetween = java.time.Duration.between(slot.ticketingTime(), slot.startTime()).toMinutes();
 
-        if (minutesBetween < 10) {
+        // 테스트용
+        // if (minutesBetween < 10) {
+        if (minutesBetween < 1) {
             throw ScheduleException.invalidTicketingWindow();
         }
 
@@ -187,7 +192,9 @@ public class ScheduleManageService implements ScheduleManageUseCase {
             throw ScheduleException.invalidTicketingWindow();
         }
 
-        if (!slot.ticketingTime().isAfter(LocalDateTime.now().plusDays(2))) {
+        // 테스트용
+        // if (!slot.ticketingTime().isAfter(LocalDateTime.now().plusDays(2))) {
+        if (!slot.ticketingTime().isAfter(LocalDateTime.now().plusMinutes(2))) {
             throw ScheduleException.invalidTicketingStart();
         }
     }
