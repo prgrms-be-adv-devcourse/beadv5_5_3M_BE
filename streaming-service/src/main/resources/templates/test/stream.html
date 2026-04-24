@@ -120,12 +120,15 @@
 
 			// HLS 재생
 			if (hls) { hls.destroy(); hls = null; }
+			const manifestUrl = /^https?:\/\//i.test(result.manifestUrl)
+				? result.manifestUrl
+				: location.protocol + '//' + result.manifestUrl.replace(/^\/+/, '');
 			if (video.canPlayType('application/vnd.apple.mpegurl')) {
-				video.src = result.manifestUrl;
+				video.src = manifestUrl;
 				video.play().catch(() => {});
 			} else if (window.Hls && Hls.isSupported()) {
 				hls = new Hls();
-				hls.loadSource(result.manifestUrl);
+				hls.loadSource(manifestUrl);
 				hls.attachMedia(video);
 				hls.on(Hls.Events.ERROR, (_, data) => {
 					if (data.fatal) appendMessage('[HLS ERROR] ' + data.type + ' / ' + data.details, 'err');
