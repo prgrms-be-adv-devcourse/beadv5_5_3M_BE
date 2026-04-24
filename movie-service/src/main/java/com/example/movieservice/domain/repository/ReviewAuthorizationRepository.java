@@ -9,6 +9,7 @@ public interface ReviewAuthorizationRepository {
     void save(ReviewAuthorization authorization);
     boolean existsByTicketId(Long ticketId);
     boolean existsByUserIdAndMovieId(UUID userId, Long movieId);
+    Optional<ReviewAuthorization> findFirstByUserIdAndMovieIdAndUsedFalse(UUID userId, Long movieId);
     Optional<ReviewAuthorization> findByUserIdAndScheduleId(UUID userId, Long scheduleId);
     void deleteByUserId(UUID userId);
 }
