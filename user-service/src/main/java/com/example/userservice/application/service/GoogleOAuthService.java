@@ -37,6 +37,9 @@ public class GoogleOAuthService {
     }
 
     public GoogleUserInfo exchangeCodeForUserInfo(String code) {
+        log.info("OAuth token exchange 시작 - redirect_uri: {}, client_id: {}, code 앞 10자: {}",
+                redirectUri, clientId, code.length() > 10 ? code.substring(0, 10) + "..." : code);
+
         // Exchange authorization code for tokens
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -50,11 +53,17 @@ public class GoogleOAuthService {
 
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
 
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-                "https://oauth2.googleapis.com/token",
-                request,
-                Map.class
-        );
+        ResponseEntity<Map> response;
+        try {
+            response = restTemplate.postForEntity(
+                    "https://oauth2.googleapis.com/token",
+                    request,
+                    Map.class
+            );
+        } catch (Exception e) {
+            log.error("Google token exchange 실패 - redirect_uri: {}, error: {}", redirectUri, e.getMessage());
+            throw e;
+        }
 
         String idToken = (String) response.getBody().get("id_token");
         log.info("Google OAuth token exchange successful");
