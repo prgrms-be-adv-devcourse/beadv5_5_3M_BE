@@ -118,11 +118,10 @@
 
 			setStatus('세션 발급 성공. sessionId=' + result.sessionId + ' / manifestUrl=' + result.manifestUrl, 'ok');
 
-			// HLS 재생
+			// HLS 재생 — 테스트 페이지는 gateway 우회, 페이지 origin으로 강제
 			if (hls) { hls.destroy(); hls = null; }
-			const manifestUrl = /^https?:\/\//i.test(result.manifestUrl)
-				? result.manifestUrl
-				: location.protocol + '//' + result.manifestUrl.replace(/^\/+/, '');
+			const pathOnly = result.manifestUrl.replace(/^(?:https?:\/\/)?[^\/]+/, '');
+			const manifestUrl = location.origin + (pathOnly.startsWith('/') ? pathOnly : '/' + pathOnly);
 			if (video.canPlayType('application/vnd.apple.mpegurl')) {
 				video.src = manifestUrl;
 				video.play().catch(() => {});
