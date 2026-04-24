@@ -43,7 +43,7 @@ public class MovieService implements MovieUseCase {
 
         List<ScheduleForUserResponse> schedules = scheduleRepository.findUpcomingByMovieId(movieId, LocalDateTime.now())
                 .stream()
-                .map(s -> new ScheduleForUserResponse(s.getScheduleId(), s.getStartTime(), s.getRemainingSeats(), s.getStatus().name()))
+                .map(s -> new ScheduleForUserResponse(s.getScheduleId(), s.getTicketingTime(), s.getStartTime(), s.getRemainingSeats(), s.getStatus().name()))
                 .toList();
 
         List<ReviewSummaryResponse> reviews = reviewRepository.findTop5ByMovieId(movieId)
