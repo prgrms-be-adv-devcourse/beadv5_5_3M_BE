@@ -66,10 +66,10 @@ public class UserService implements UserUseCase {
 
     @Override
     public boolean checkAuthorization(AuthorizationRequest request, String userId, String accessToken) {
-        Optional<String> storedToken = redisPort.findAccessToken(userId);
-        if (storedToken.isEmpty() || !storedToken.get().equals(accessToken)) {
-            throw new SessionExpiredException();
-        }
+//        Optional<String> storedToken = redisPort.findAccessToken(userId);
+//        if (storedToken.isEmpty() || !storedToken.get().equals(accessToken)) {
+//            throw new SessionExpiredException();
+//        }
 
         User findUser = userRepository.findById(toUUID(userId));
         List<Permission> permissions = permissionRepository.findByRole(findUser.getRole());
