@@ -20,4 +20,6 @@ public interface CreatorUseCase {
     boolean checkAuthorization(AuthorizationRequest request, String creatorId);
 
     TokenResponse refresh(String refreshToken);
+
+    void logout(String creatorId);
 }
