@@ -10,7 +10,7 @@
 
 **Tech Stack:** K3s v1.30.x · Helm 3 · Bitnami Redis (Helm) · in-cluster PostgreSQL 16 · Traefik (K3s 내장) · GitHub Actions · AWS EC2 t3.large (Ubuntu 22.04) · AWS S3 · IAM User Access Key · Docker Hub
 
-**Spec:** [docs/superpowers/specs/2026-04-24-k3s-ec2-deployment-design.md](../specs/2026-04-24-k3s-ec2-deployment-design.md)
+**Spec:** [docs/superpowers/specs/k3s-ec2-deployment-design.md](../specs/k3s-ec2-deployment-design.md)
 
 ---
 
@@ -3487,8 +3487,8 @@ kubectl delete namespace dev
 
 ## 참고
 
-- 설계서: [docs/superpowers/specs/2026-04-24-k3s-ec2-deployment-design.md](../docs/superpowers/specs/2026-04-24-k3s-ec2-deployment-design.md)
-- 구현 계획서: [docs/superpowers/plans/2026-04-24-k3s-ec2-deployment.md](../docs/superpowers/plans/2026-04-24-k3s-ec2-deployment.md)
+- 설계서: [docs/superpowers/specs/k3s-ec2-deployment-design.md](../docs/superpowers/specs/k3s-ec2-deployment-design.md)
+- 구현 계획서: [docs/superpowers/plans/k3s-ec2-deployment.md](../docs/superpowers/plans/k3s-ec2-deployment.md)
 - 팀 1페이지 요약: [docs/k8s-team-summary.md](../docs/k8s-team-summary.md)
 ```
 
@@ -3516,7 +3516,7 @@ cat docs/k8s-team-summary.md | head -30
 
 Edit `docs/k8s-team-summary.md`:
 
-상단 TL;DR 부분과 비용 표, 아키텍처 다이어그램을 K3s 기준으로 교체. 자세한 변경은 spec [§3 Q1-Q12 표](../specs/2026-04-24-k3s-ec2-deployment-design.md) 참조.
+상단 TL;DR 부분과 비용 표, 아키텍처 다이어그램을 K3s 기준으로 교체. 자세한 변경은 spec [§3 Q1-Q12 표](../specs/k3s-ec2-deployment-design.md) 참조.
 
 핵심 변경점만 요약:
 - AWS EKS → K3s on EC2 t3.large 1대

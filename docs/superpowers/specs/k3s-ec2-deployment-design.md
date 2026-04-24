@@ -4,7 +4,6 @@
 - **대상 프로젝트**: beadv5_5_3M_BE (영화 스트리밍 MSA, 활성 9개 서비스)
 - **작성자**: y0000h2
 - **상태**: 초안 (사용자 검토 대기)
-- **이전 설계서**: [2026-04-22-k8s-aws-deployment-design.md](2026-04-22-k8s-aws-deployment-design.md) (EKS 기반, 자원 한계로 폐기)
 
 ---
 
@@ -523,8 +522,7 @@ deploy-to-k3s:
 - `project_k8s_design_decisions.md` — EKS 시절 Q1-Q9 결정 누적 (본 설계서로 일부 갱신)
 
 **Repo 내 파일**
-- 이전 설계서 (EKS, 폐기): [2026-04-22-k8s-aws-deployment-design.md](2026-04-22-k8s-aws-deployment-design.md)
-- 팀 공유용 1페이지 요약: [docs/k8s-team-summary.md](../../k8s-team-summary.md) (K3s 변경 반영 필요)
+- 팀 공유용 1페이지 요약: [docs/k8s-team-summary.md](../../k8s-team-summary.md)
 - 기존 CI/CD: [.github/workflows/cd.yml](../../../.github/workflows/cd.yml)
 - 기존 Compose: [docker-compose.yml](../../../docker-compose.yml)
 - 환경변수 가이드: [docs/env-guide.md](../../env-guide.md)

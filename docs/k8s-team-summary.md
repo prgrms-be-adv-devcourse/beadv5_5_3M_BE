@@ -170,8 +170,8 @@
 
 ## 🔗 자세한 자료
 
-- **설계서 (왜/무엇)**: [docs/superpowers/specs/2026-04-24-k3s-ec2-deployment-design.md](superpowers/specs/2026-04-24-k3s-ec2-deployment-design.md)
-- **구현 계획서 (어떻게/순서, Phase 0~10)**: [docs/superpowers/plans/2026-04-24-k3s-ec2-deployment.md](superpowers/plans/2026-04-24-k3s-ec2-deployment.md)
+- **설계서 (왜/무엇)**: [docs/superpowers/specs/k3s-ec2-deployment-design.md](superpowers/specs/k3s-ec2-deployment-design.md)
+- **구현 계획서 (어떻게/순서, Phase 0~10)**: [docs/superpowers/plans/k3s-ec2-deployment.md](superpowers/plans/k3s-ec2-deployment.md)
 - **궁금한 점은 슬랙으로** 또는 본 PR 댓글로
 
 ---
