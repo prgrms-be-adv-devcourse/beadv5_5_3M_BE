@@ -1,22 +1,27 @@
 package com.example.streamingservice.infrastructure.scheduler;
 
 import com.example.streamingservice.application.usecase.LifecycleUseCase;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.JobExecutionContext;
 import org.quartz.PersistJobDataAfterExecution;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
+import org.springframework.stereotype.Component;
 
+@Slf4j
+@Component
+@RequiredArgsConstructor
 @DisallowConcurrentExecution
 @PersistJobDataAfterExecution
 public class ForceExitJob extends QuartzJobBean {
 
-	@Autowired
-	private LifecycleUseCase lifecycle;
+	private final LifecycleUseCase lifecycle;
 
 	@Override
 	protected void executeInternal(JobExecutionContext context) {
 		long scheduleId = context.getMergedJobDataMap().getLong(QuartzSchedulerAdapter.JOB_DATA_SCHEDULE_ID);
+		log.info("ForceExitJob 실행 - scheduleId={}", scheduleId);
 		lifecycle.onForceExit(scheduleId);
 	}
 }
