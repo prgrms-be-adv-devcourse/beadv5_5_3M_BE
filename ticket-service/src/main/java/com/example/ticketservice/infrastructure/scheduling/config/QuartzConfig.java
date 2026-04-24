@@ -1,34 +1,24 @@
 package com.example.ticketservice.infrastructure.scheduling.config;
 
+import org.jspecify.annotations.NonNull;
 import org.quartz.spi.TriggerFiredBundle;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.boot.quartz.autoconfigure.SchedulerFactoryBeanCustomizer;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.scheduling.quartz.SpringBeanJobFactory;
 
 @Configuration
 public class QuartzConfig {
 
-    // Spring Boot auto-config가 만든 SchedulerFactoryBean에 JobFactory만 교체.
-    // SchedulerFactoryBeanCustomizer는 Spring Boot 버전별 패키지 차이가 있어 우회.
     @Bean
-    public BeanPostProcessor quartzJobFactoryPostProcessor(ApplicationContext applicationContext) {
-        return new BeanPostProcessor() {
-            @Override
-            public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-                if (bean instanceof SchedulerFactoryBean schedulerFactoryBean) {
-                    AutowiringSpringBeanJobFactory jobFactory = new AutowiringSpringBeanJobFactory();
-                    jobFactory.setApplicationContext(applicationContext);
-                    schedulerFactoryBean.setJobFactory(jobFactory);
-                }
-                return bean;
-            }
-        };
+    public SchedulerFactoryBeanCustomizer springBeanJobFactoryCustomizer(ApplicationContext applicationContext) {
+        AutowiringSpringBeanJobFactory jobFactory = new AutowiringSpringBeanJobFactory();
+        jobFactory.setApplicationContext(applicationContext);
+        return schedulerFactoryBean -> schedulerFactoryBean.setJobFactory(jobFactory);
     }
 
     private static class AutowiringSpringBeanJobFactory extends SpringBeanJobFactory implements ApplicationContextAware {
@@ -36,7 +26,7 @@ public class QuartzConfig {
         private transient ApplicationContext applicationContext;
 
         @Override
-        public void setApplicationContext(ApplicationContext context) throws BeansException {
+        public void setApplicationContext(@NonNull ApplicationContext context) throws BeansException {
             this.applicationContext = context;
         }
 
