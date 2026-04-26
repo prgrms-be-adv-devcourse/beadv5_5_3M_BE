@@ -1,6 +1,7 @@
 package com.example.ticketservice.application.service;
 
 import com.example.ticketservice.application.constants.RedisKeys;
+import com.example.ticketservice.application.dto.response.MovieScheduleResponse;
 import com.example.ticketservice.application.dto.response.TicketableScheduleResponse;
 import com.example.ticketservice.application.port.out.CachePort;
 import com.example.ticketservice.application.usecase.ScheduleQueryUseCase;
@@ -27,6 +28,10 @@ public class ScheduleQueryService implements ScheduleQueryUseCase {
     private static final Set<ScheduleStatus> DEFAULT_OPEN_STATUSES =
             EnumSet.of(ScheduleStatus.CART, ScheduleStatus.IN_PROGRESSING, ScheduleStatus.TICKETING);
 
+    private static final Set<ScheduleStatus> MOVIE_DETAIL_STATUSES =
+            EnumSet.of(ScheduleStatus.CART, ScheduleStatus.IN_PROGRESSING,
+                    ScheduleStatus.TICKETING, ScheduleStatus.STREAMING);
+
     private final ScheduleRepository scheduleRepository;
     private final CachePort cachePort;
 
@@ -43,6 +48,19 @@ public class ScheduleQueryService implements ScheduleQueryUseCase {
                 TicketableScheduleResponse.from(schedule, stockByScheduleId.get(schedule.getId())));
 
         return PageResult.from(mapped);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<MovieScheduleResponse> listSchedulesByMovieId(Long movieId) {
+        List<Schedule> schedules = scheduleRepository
+                .findAllByMovieIdAndStatusInOrderByStartTimeAsc(movieId, MOVIE_DETAIL_STATUSES);
+
+        Map<Long, Integer> stockByScheduleId = loadStockForTicketing(schedules);
+
+        return schedules.stream()
+                .map(s -> MovieScheduleResponse.from(s, stockByScheduleId.get(s.getId())))
+                .toList();
     }
 
     private Set<ScheduleStatus> resolveAndValidate(Set<ScheduleStatus> statusFilter) {

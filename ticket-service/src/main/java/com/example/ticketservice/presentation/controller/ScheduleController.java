@@ -1,5 +1,6 @@
 package com.example.ticketservice.presentation.controller;
 
+import com.example.ticketservice.application.dto.response.MovieScheduleResponse;
 import com.example.ticketservice.application.dto.response.TicketableScheduleResponse;
 import com.example.ticketservice.application.usecase.ScheduleQueryUseCase;
 import com.example.ticketservice.common.model.PageResult;
@@ -15,11 +16,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -48,5 +51,21 @@ public class ScheduleController {
             @PageableDefault(size = 20, sort = "ticketingTime", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         return ResponseEntity.ok(scheduleQueryUseCase.listOpenSchedules(status, pageable));
+    }
+
+    @Operation(
+            summary = "영화별 진행 가능 회차 목록",
+            description = "특정 영화의 CART/IN_PROGRESSING/TICKETING/STREAMING 회차를 startTime ASC로 반환합니다. " +
+                    "TICKETING 회차의 잔여 좌석은 Redis stock 카운터에서 함께 내려옵니다. FINISH는 제외."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공 (회차 0개여도 200 + 빈 배열)")
+    })
+    @GetMapping("/movie/{movieId}")
+    public ResponseEntity<List<MovieScheduleResponse>> listSchedulesByMovieId(
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable Long movieId
+    ) {
+        return ResponseEntity.ok(scheduleQueryUseCase.listSchedulesByMovieId(movieId));
     }
 }

@@ -15,4 +15,5 @@ public interface ScheduleRepository {
     List<Schedule> findAllById(Collection<Long> ids);
     boolean existsById(Long id);
     Page<Schedule> findAllByStatusIn(Collection<ScheduleStatus> statuses, Pageable pageable);
+    List<Schedule> findAllByMovieIdAndStatusInOrderByStartTimeAsc(Long movieId, Collection<ScheduleStatus> statuses);
 }
