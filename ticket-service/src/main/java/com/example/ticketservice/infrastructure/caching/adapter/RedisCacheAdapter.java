@@ -10,6 +10,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.data.redis.core.ZSetOperations;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -84,6 +89,26 @@ public class RedisCacheAdapter implements CachePort {
             return null;
         }
         return Long.parseLong(value);
+    }
+
+    @Override
+    public Map<String, Long> getCounters(Collection<String> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return Map.of();
+        }
+        List<String> orderedKeys = new ArrayList<>(keys);
+        List<String> values = redisTemplate.opsForValue().multiGet(orderedKeys);
+        Map<String, Long> result = new HashMap<>(orderedKeys.size());
+        if (values == null) {
+            return result;
+        }
+        for (int i = 0; i < orderedKeys.size(); i++) {
+            String value = i < values.size() ? values.get(i) : null;
+            if (value != null) {
+                result.put(orderedKeys.get(i), Long.parseLong(value));
+            }
+        }
+        return result;
     }
 
     @Override

@@ -1,6 +1,8 @@
 package com.example.ticketservice.application.port.out;
 
 import java.time.Duration;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -24,6 +26,8 @@ public interface CachePort {
     Long decrement(String key);
 
     Long getCounter(String key);
+
+    Map<String, Long> getCounters(Collection<String> keys);
 
     // Set 연산
     void addToSet(String key, String member);

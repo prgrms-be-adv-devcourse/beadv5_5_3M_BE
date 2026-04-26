@@ -27,6 +27,7 @@
 |------|--------|---------------------|
 | `INCR/DECR` | ✅ 단일 키에 대해 원자 | `stock`, `paying`, `cart:count` |
 | `SET k v EX <ttl>` | ✅ | `seats`, `cookie`, `startTime` (티켓팅 시작 시 한 번) |
+| `MGET k1 k2 ...` | ✅ 다건 키 일괄 조회 (Redis 라운드트립 1회) | `getCounters` — `ScheduleQueryService`에서 TICKETING 회차 stock 일괄 |
 | `DEL k` | ✅ 반환값으로 "이전 존재 여부" 제공 | `queue` 종료 (중복 발행 방지) |
 | `ZADD k score member` | ✅ 단일 member | 큐 입장 |
 | `ZPOPMIN k` | ✅ 가장 낮은 점수 원소 원자 제거 | 대기열 드레인 |
@@ -52,6 +53,7 @@ public interface CachePort {
     Long increment(String key);
     Long decrement(String key);
     Long getCounter(String key);
+    Map<String, Long> getCounters(Collection<String> keys);  // ← Redis MGET, 다건 일괄 조회 (null 키는 결과 Map에서 제외)
 
     // ZSet
     void addToZSetWithTimestamp(String key, String member);
@@ -105,12 +107,27 @@ public String popMinFromZSet(String key) {
 public void addToZSetWithTimestamp(String key, String member) {
     redisTemplate.opsForZSet().add(key, member, System.currentTimeMillis());
 }
+
+@Override
+public Map<String, Long> getCounters(Collection<String> keys) {
+    if (keys == null || keys.isEmpty()) return Map.of();
+    List<String> ordered = new ArrayList<>(keys);
+    List<String> values = redisTemplate.opsForValue().multiGet(ordered);  // ← Redis MGET
+    Map<String, Long> result = new HashMap<>(ordered.size());
+    if (values == null) return result;
+    for (int i = 0; i < ordered.size(); i++) {
+        String v = i < values.size() ? values.get(i) : null;
+        if (v != null) result.put(ordered.get(i), Long.parseLong(v));
+    }
+    return result;
+}
 ```
 
 **주목할 점**:
 - `StringRedisTemplate`만 사용 — 모든 값은 String 직렬화.
 - 객체 저장 시 `KafkaMessageUtil.serialize(...)`로 JSON 직렬화. 캐시에 JSON 저장.
 - `addToZSetWithTimestamp`: **점수 = 현재 시각 millis**. FIFO 대기열이 되는 이유.
+- `getCounters`: `multiGet`은 라운드트립 1회. **null인 키는 결과 Map에 넣지 않음** — 호출 측에서 `map.get(key) == null`로 "TTL 만료/미시딩"을 자연스럽게 분기.
 
 ---
 

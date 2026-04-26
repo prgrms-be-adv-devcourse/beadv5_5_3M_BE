@@ -1,9 +1,12 @@
 package com.example.ticketservice.infrastructure.persistence.impl;
 
+import com.example.ticketservice.domain.enums.ScheduleStatus;
 import com.example.ticketservice.domain.model.Schedule;
 import com.example.ticketservice.domain.repository.ScheduleRepository;
 import com.example.ticketservice.infrastructure.persistence.ScheduleJpaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
@@ -33,5 +36,10 @@ public class ScheduleRepositoryImpl implements ScheduleRepository {
     @Override
     public boolean existsById(Long id) {
         return scheduleJpaRepository.existsById(id);
+    }
+
+    @Override
+    public Page<Schedule> findAllByStatusIn(Collection<ScheduleStatus> statuses, Pageable pageable) {
+        return scheduleJpaRepository.findAllByStatusIn(statuses, pageable);
     }
 }
