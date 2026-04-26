@@ -42,4 +42,9 @@ public class ScheduleRepositoryImpl implements ScheduleRepository {
     public Page<Schedule> findAllByStatusIn(Collection<ScheduleStatus> statuses, Pageable pageable) {
         return scheduleJpaRepository.findAllByStatusIn(statuses, pageable);
     }
+
+    @Override
+    public List<Schedule> findAllByMovieIdAndStatusInOrderByStartTimeAsc(Long movieId, Collection<ScheduleStatus> statuses) {
+        return scheduleJpaRepository.findAllByMovieIdAndStatusInOrderByStartTimeAsc(movieId, statuses);
+    }
 }
