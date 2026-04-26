@@ -7,8 +7,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Collection;
+import java.util.List;
 
 public interface ScheduleJpaRepository extends JpaRepository<Schedule, Long> {
     boolean existsById(Long id);
     Page<Schedule> findAllByStatusIn(Collection<ScheduleStatus> statuses, Pageable pageable);
+    List<Schedule> findAllByMovieIdAndStatusInOrderByStartTimeAsc(Long movieId, Collection<ScheduleStatus> statuses);
 }
