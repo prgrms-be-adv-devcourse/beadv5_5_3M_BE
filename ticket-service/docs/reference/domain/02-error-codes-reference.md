@@ -30,6 +30,7 @@
 | `CART_CLOSED` | 409 | 장바구니가 마감된 스케줄입니다: {id} | CartCloseJob이 이미 실행된 스케줄 |
 | `NOT_IN_TICKETING` | 409 | 티켓팅 기간이 아닌 스케줄입니다: {id} | status != TICKETING 인 스케줄에 대기열 진입 |
 | `NOT_IN_STREAMING` | 409 | 스트리밍 중이 아닌 스케줄입니다: {id} | status != STREAMING 인 스케줄에 접근 |
+| `INVALID_STATUS_FILTER` | 400 | 조회 가능한 status는 CART/IN_PROGRESSING/TICKETING만 허용됩니다. | `GET /api/tickets/schedules/open?status=...`에 STREAMING 또는 FINISH 포함 |
 
 ---
 
@@ -80,6 +81,12 @@ NOT_CONFIRMED        → status != CONFIRMED
 NOT_FOUND            → 스케줄 없음
 NOT_IN_CART_PERIOD   → status != CART
 ALREADY_IN_CART      → 중복 추가
+```
+
+### `GET /api/tickets/schedules/open`
+
+```
+INVALID_STATUS_FILTER → status 쿼리 파라미터에 STREAMING 또는 FINISH 포함
 ```
 
 ---
