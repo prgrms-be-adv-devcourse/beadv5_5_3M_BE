@@ -79,7 +79,7 @@ payload: ScheduleConfirmedMessage {
 |-----|----------|------|
 | `CartCloseQuartzJob` | `ticketingTime - 24h` | 장바구니 마감 |
 | `TicketingStartQuartzJob` | `ticketingTime` | 티켓팅 오픈 |
-| `ReviewAuthQuartzJob` | `startTime` | 리뷰 권한 발행 |
+| `ReviewAuthQuartzJob` | `startTime - 10m` | 리뷰 권한 발행 (streaming-service LOBBY_OPEN 시점 정합) |
 | `StreamingStartQuartzJob` | `startTime` | TICKETING → STREAMING 전환 |
 | `StreamingFinishQuartzJob` | `endTime` | STREAMING → FINISH 전환 |
 

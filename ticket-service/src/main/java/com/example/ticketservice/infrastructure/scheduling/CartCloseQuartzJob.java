@@ -1,23 +1,23 @@
 package com.example.ticketservice.infrastructure.scheduling;
 
 import com.example.ticketservice.application.usecase.CartCloseUseCase;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.springframework.scheduling.quartz.QuartzJobBean;
+import org.springframework.stereotype.Component;
 
 @Slf4j
+@Component
+@RequiredArgsConstructor
 @DisallowConcurrentExecution
 public class CartCloseQuartzJob extends QuartzJobBean {
 
     public static final String SCHEDULE_ID_KEY = "scheduleId";
 
-    private CartCloseUseCase cartCloseUseCase;
-
-    public void setCartCloseUseCase(CartCloseUseCase cartCloseUseCase) {
-        this.cartCloseUseCase = cartCloseUseCase;
-    }
+    private final CartCloseUseCase cartCloseUseCase;
 
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
