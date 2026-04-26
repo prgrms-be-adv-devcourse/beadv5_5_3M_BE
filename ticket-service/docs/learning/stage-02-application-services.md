@@ -1,12 +1,12 @@
 # Stage 2 — 애플리케이션 서비스 (유스케이스)
 
-> **목표**: "사용자 요청 → Service → 엔티티 메서드 호출 → 이벤트 발행"까지의 실제 코드 흐름을 9개 서비스로 훑는다.
+> **목표**: "사용자 요청 → Service → 엔티티 메서드 호출 → 이벤트 발행"까지의 실제 코드 흐름을 10개 서비스로 훑는다.
 > 이 Stage가 본 가이드의 **척추**. 여기서 잡은 흐름이 Stage 3~7 전부의 전제가 된다.
 > **예상 소요**: 2~3일
 
 ---
 
-## 0. 서비스 9종 한눈에
+## 0. 서비스 10종 한눈에
 
 | # | 서비스 | 트리거 | 핵심 동작 | 이벤트 발행 |
 |---|--------|-------|-----------|-------------|
@@ -19,6 +19,7 @@
 | 7 | `RefundService` | HTTP (사용자) | CONFIRMED 삭제 | `TicketRefundedEvent` |
 | 8 | `CookieCompensationHelper` | Service 내부에서 호출 | ★ DB 롤백 시 쿠키 환불 훅 등록 | — |
 | 9 | `ProvideTicketFeeService` | Quartz (01:00) | Spring Batch Job 트리거 | — (Batch Writer가 발행) |
+| 10 | `ScheduleQueryService` | HTTP (사용자) | 진입 가능한 스케줄 페이지 조회 (CART/IN_PROGRESSING/TICKETING) | — (read-only) |
 
 ---
 
@@ -604,6 +605,68 @@ public class ProvideTicketFeeService implements ProvideTicketFeeUseCase {
 
 ---
 
+## 10. ScheduleQueryService — 진입 가능한 스케줄 조회 (read-only)
+
+`application/service/ScheduleQueryService.java`
+
+위 1~9번이 **상태를 바꾸는** 서비스라면, 10번은 **읽기만 하는** 서비스다. 메인/티켓팅 진입 페이지에서 "지금 들어갈 수 있는 회차"를 한 번에 보여주기 위한 것.
+
+### 한 줄 요약
+
+`@Transactional(readOnly = true)`로 `ScheduleStatus IN (CART, IN_PROGRESSING, TICKETING)`인 스케줄을 페이지 조회한 뒤, **TICKETING 회차의 잔여 좌석만** Redis MGET으로 한 번에 가져와 응답에 채운다.
+
+### 의존성 (포트만 둘)
+
+```java
+private final ScheduleRepository scheduleRepository;
+private final CachePort cachePort;
+```
+
+Kafka, Quartz, HTTP, 이벤트 발행 일절 없음.
+
+### 흐름
+
+```
+1) statusFilter 검증
+   - null/empty → 기본 {CART, IN_PROGRESSING, TICKETING}
+   - STREAMING/FINISH 포함 → ScheduleErrorCode.INVALID_STATUS_FILTER (HTTP 400)
+
+2) DB 페이지 조회
+   scheduleRepository.findAllByStatusIn(statuses, pageable)
+
+3) Redis 일괄 조회 (TICKETING 회차만)
+   - ticketingIds 추출 → keys = [stock:schedule:{id}, ...]
+   - cachePort.getCounters(keys)  ← Redis MGET 한 번
+   - TTL 만료/누락 키는 결과 Map에서 제외 → availableSeats=null
+
+4) DTO 변환
+   page.map(s -> TicketableScheduleResponse.from(s, stockMap.get(s.id)))
+   → PageResult.from(...)
+```
+
+### 왜 이 구조인가
+
+- **HTTP/Kafka 미사용**: Schedule 엔티티가 `movie.schedule.confirmed` 컨슈머에서 이미 `title`/`imageUrl`/`cookie`를 캐싱하고 있어 movie-service 왕복 불필요. read-only 조회에 부수효과를 만들지 않는다.
+- **Redis 일괄 조회**: `getCounter`를 N번 부르는 N+1을 피하려고 `getCounters(...)` 메서드를 새로 추가 (Stage 3 참조). N개 회차여도 Redis 라운드트립 1번.
+- **TTL 안전장치**: TICKETING이라도 `startTime - 10min` TTL로 만료된 키가 있을 수 있음 → `availableSeats=null` 허용 (곧 STREAMING 전이 직전).
+- **status 필터 화이트리스트**: STREAMING/FINISH를 명시적으로 거절해, "구매 불가 회차"가 진입 페이지에 노출되지 않게 한다.
+
+### 컨트롤러
+
+`presentation/controller/ScheduleController.java` — `GET /api/tickets/schedules/open`
+
+```java
+@GetMapping("/open")
+public ResponseEntity<PageResult<TicketableScheduleResponse>> listOpenSchedules(
+        @RequestHeader("X-User-Id") UUID userId,
+        @RequestParam(required = false) Set<ScheduleStatus> status,
+        @PageableDefault(size = 20, sort = "ticketingTime", direction = Sort.Direction.ASC) Pageable pageable)
+```
+
+`X-User-Id`는 비로그인 차단용 (사용자별 필터링 없음). 정렬 기본값은 `ticketingTime ASC`로 "곧 열리는 회차" 우선.
+
+---
+
 ## 체크리스트
 
 - [ ] `CartService.addToCart` → `CartCloseService` → `TicketingStartService`로 이어지는 Schedule 상태 전이 3단계를 코드 라인으로 짚을 수 있다
@@ -617,7 +680,7 @@ public class ProvideTicketFeeService implements ProvideTicketFeeUseCase {
 
 ## 원본 참고
 
-- `src/main/java/com/example/ticketservice/application/service/*.java` — 위 9개 서비스 전체
+- `src/main/java/com/example/ticketservice/application/service/*.java` — 위 10개 서비스 전체
 - `src/main/java/com/example/ticketservice/application/event/*.java` — 이벤트 records (Stage 4에서 상세)
 - `docs/reference/flow/02-cart-reservation-flow.md` — CartClose 흐름
 - `docs/reference/flow/03-queue-flow-and-implementation.md` — 대기열 상세
