@@ -2,6 +2,9 @@ package com.example.userservice.domain.repository;
 
 import com.example.userservice.domain.model.CookieLog;
 
+import java.util.List;
+import java.util.UUID;
+
 public interface CookieLogRepository {
 
     void save(CookieLog cookieLog);
@@ -11,4 +14,6 @@ public interface CookieLogRepository {
     boolean existsByRefundId(Long refundId);
 
     boolean existsByTicketId(Long ticketId);
+
+    List<CookieLog> findByUserId(UUID userId);
 }
