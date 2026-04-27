@@ -6,6 +6,7 @@ import com.example.streamingservice.application.exception.SessionException;
 import com.example.streamingservice.application.exception.StreamTokenException;
 import com.example.streamingservice.application.port.SessionCachePort;
 import com.example.streamingservice.application.port.StreamTokenPort;
+import com.example.streamingservice.application.usecase.ViewerCountUseCase;
 import com.example.streamingservice.domain.Entitlement;
 import com.example.streamingservice.domain.EntitlementRepository;
 import com.example.streamingservice.domain.Schedule;
@@ -44,6 +45,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 	private final SessionCachePort sessionCache;
 	private final ScheduleRepository scheduleRepository;
 	private final EntitlementRepository entitlementRepository;
+	private final ViewerCountUseCase viewerCount;
 
 	@Override
 	public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -87,6 +89,13 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 		attrs.put(ATTR_NICKNAME, "관람객#" + entitlement.getTicketId());
 
 		acc.setUser(new StreamingPrincipal(meta.userId().toString()));
+
+		// SessionConnectedEvent 의존성 우회 — handleConnect 도달 시점에 viewer 등록 직접 호출.
+		// (Spring Boot 4.x의 SimpAttribute carry 변화로 SessionPresenceListener 가
+		//  silent return 되는 케이스가 있어 SADD 가 안 일어나는 문제 보호)
+		// SADD/broadcast 모두 idempotent 이므로 SessionPresenceListener 동시 호출 무해.
+		viewerCount.onConnect(meta.scheduleId(), meta.userId());
+
 		return MessageBuilder.createMessage(message.getPayload(), acc.getMessageHeaders());
 	}
 
