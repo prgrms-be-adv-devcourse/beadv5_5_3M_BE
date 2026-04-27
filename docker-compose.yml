@@ -1,6 +1,26 @@
 services:
 
   # ──────────────────────────────────────────
+  # Caddy (TLS 종료 + reverse proxy)
+  # - apex 도메인 3m-msa.p-e.kr 으로 노출
+  # - Let's Encrypt 자동 발급/갱신, WebSocket upgrade 통과
+  # - HTTP-01 challenge용 80, 운영 트래픽 443
+  # ──────────────────────────────────────────
+  caddy:
+    profiles: [caddy]
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [app-network]
+
+  # ──────────────────────────────────────────
   # Gateway Service (포트 8000)
   # - 모든 외부 요청의 진입점 (JWT 인증/인가 처리)
   # - DB 불필요 (Stateless)
@@ -289,3 +309,12 @@ services:
 networks:
   app-network:
     driver: bridge
+
+# ──────────────────────────────────────────
+# Volumes
+# - caddy_data: Let's Encrypt 인증서 / ACME 계정 키 보존
+# - caddy_config: Caddy 자동 설정 캐시
+# ──────────────────────────────────────────
+volumes:
+  caddy_data:
+  caddy_config:
