@@ -25,6 +25,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.userservice.presentation.dto.req.OAuthLoginRequest;
+import com.example.userservice.presentation.dto.res.CookieLogResponse;
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "User", description = "유저 API")
@@ -202,5 +204,12 @@ public class UserController {
             @RequestHeader("X-User-Id") String userId) {
         userUseCase.updateProfile(userId, request.nickname(), request.phone(), request.profileImage());
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "내 쿠키 사용 내역 조회")
+    @GetMapping("/me/cookie-logs")
+    public ResponseEntity<List<CookieLogResponse>> getMyCookieLogs(
+            @RequestHeader("X-User-Id") String userId) {
+        return ResponseEntity.ok(userUseCase.getMyCookieLogs(userId));
     }
 }

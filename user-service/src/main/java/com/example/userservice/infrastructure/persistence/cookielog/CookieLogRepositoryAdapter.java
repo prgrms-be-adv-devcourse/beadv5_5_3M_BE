@@ -5,6 +5,9 @@ import com.example.userservice.domain.repository.CookieLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+import java.util.UUID;
+
 @Repository
 @RequiredArgsConstructor
 public class CookieLogRepositoryAdapter implements CookieLogRepository {
@@ -29,5 +32,10 @@ public class CookieLogRepositoryAdapter implements CookieLogRepository {
     @Override
     public boolean existsByTicketId(Long ticketId) {
         return cookieLogJpaRepository.existsByTicketId(ticketId);
+    }
+
+    @Override
+    public List<CookieLog> findByUserId(UUID userId) {
+        return cookieLogJpaRepository.findByUserIdOrderByCreateAtDesc(userId);
     }
 }
