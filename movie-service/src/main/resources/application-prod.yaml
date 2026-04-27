@@ -67,7 +67,7 @@ logging:
   level:
     root: WARN
     com.example.movieservice: INFO
-    org.springframework.kafka: WARN
+    org.springframework.kafka: INFO
     org.hibernate: WARN
 
 springdoc:
