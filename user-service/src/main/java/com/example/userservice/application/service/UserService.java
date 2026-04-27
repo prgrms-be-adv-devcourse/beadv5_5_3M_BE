@@ -272,6 +272,20 @@ public class UserService implements UserUseCase {
         return new TokenResponse(accessToken, rawRefreshToken);
     }
 
+    @Transactional
+    protected User findOrCreateOAuthUser(GoogleUserInfo googleUser) {
+        if (userRepository.existsByEmail(googleUser.email())) {
+            return userRepository.findByEmail(googleUser.email());
+        }
+        User user = User.create(googleUser.email(), UUID.randomUUID().toString(), googleUser.name(), null, null);
+        user.initWallet();
+        userRepository.save(user);
+        log.info("Google OAuth new user created: email={}", googleUser.email());
+        eventPublisher.publishEvent(UserCreatedEvent.from(user));
+        return user;
+    }
+
+
     private UUID toUUID(String userId) {
         return UUID.fromString(userId);
     }
