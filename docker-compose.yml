@@ -1,23 +1,40 @@
 services:
 
   # ──────────────────────────────────────────
-  # Caddy (TLS 종료 + reverse proxy)
-  # - apex 도메인 3m-msa.p-e.kr 으로 노출
-  # - Let's Encrypt 자동 발급/갱신, WebSocket upgrade 통과
-  # - HTTP-01 challenge용 80, 운영 트래픽 443
+  # nginx (TLS 종료 + reverse proxy)
+  # - apex 도메인 3m-msa.p-e.kr 노출, gateway-service:8000 으로 프록시
+  # - WebSocket upgrade 헤더 통과 (wss://3m-msa.p-e.kr/ws/stream)
+  # - 인증서는 옆 certbot 컨테이너가 webroot 방식으로 발급/갱신
   # ──────────────────────────────────────────
-  caddy:
-    profiles: [caddy]
-    image: caddy:2-alpine
-    container_name: caddy
+  nginx:
+    profiles: [nginx]
+    image: nginx:1-alpine
+    container_name: nginx
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot_conf:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    networks: [app-network]
+
+  # ──────────────────────────────────────────
+  # certbot (Let's Encrypt 자동 발급/갱신)
+  # - webroot 모드 — nginx의 .well-known/acme-challenge/ 경로 공유
+  # - 12시간마다 renew 시도, 만료 30일 이내일 때 실제 갱신
+  # - 첫 발급은 사용자가 수동 1회 실행
+  # ──────────────────────────────────────────
+  certbot:
+    profiles: [nginx]
+    image: certbot/certbot
+    container_name: certbot
+    restart: unless-stopped
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: ["sh", "-c", "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"]
     networks: [app-network]
 
   # ──────────────────────────────────────────
@@ -312,9 +329,9 @@ networks:
 
 # ──────────────────────────────────────────
 # Volumes
-# - caddy_data: Let's Encrypt 인증서 / ACME 계정 키 보존
-# - caddy_config: Caddy 자동 설정 캐시
+# - certbot_conf: Let's Encrypt 인증서·ACME 계정 키·갱신 메타데이터 보존
+# - certbot_www: HTTP-01 challenge 토큰 공유 (nginx → certbot)
 # ──────────────────────────────────────────
 volumes:
-  caddy_data:
-  caddy_config:
+  certbot_conf:
+  certbot_www:
