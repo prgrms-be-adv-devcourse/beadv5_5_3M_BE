@@ -20,14 +20,20 @@ public class Like {
 
     private Long movieId;
 
+    private String imageUrl;
+
+    private String title;
+
     private UUID userId;
 
-    public Like(Long movieId, UUID userId) {
+    public Like(Long movieId, UUID userId, String imageUrl, String title) {
         this.movieId = movieId;
         this.userId = userId;
+        this.imageUrl = imageUrl;
+        this.title = title;
     }
 
-    public static Like create(Long movieId, UUID userId) {
-        return new Like(movieId, userId);
+    public static Like create(Long movieId, UUID userId, String imageUrl, String title) {
+        return new Like(movieId, userId, imageUrl, title);
     }
 }
