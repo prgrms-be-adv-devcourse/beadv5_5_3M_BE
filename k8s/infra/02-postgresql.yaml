@@ -48,7 +48,7 @@ spec:
     spec:
       containers:
         - name: postgresql
-          image: pgvector/pgvector:pg17
+          image: pgvector/pgvector:pg18
           env:
             - name: POSTGRES_PASSWORD
               valueFrom:
@@ -68,7 +68,7 @@ spec:
           ports:
             - containerPort: 5432
           volumeMounts:
-            - mountPath: /var/lib/postgresql/data
+            - mountPath: /var/lib/postgresql
               name: postgresql-data
             - mountPath: /docker-entrypoint-initdb.d
               name: postgresql-init
