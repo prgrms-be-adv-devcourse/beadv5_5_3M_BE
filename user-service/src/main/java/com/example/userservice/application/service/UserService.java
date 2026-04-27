@@ -225,7 +225,7 @@ public class UserService implements UserUseCase {
     public DeductCookieResponse deductCookie(DeductCookieRequest request) {
         Wallet wallet = walletRepository.findByUserId(request.userId());
         wallet.deduct(request.amount());
-        CookieLog cookieLog = CookieLog.create(request.userId(), request.amount(), request.ticketId());
+        CookieLog cookieLog = CookieLog.create(request.userId(), -request.amount(), request.ticketId());
         cookieLogRepository.save(cookieLog);
         return new DeductCookieResponse(request.userId(), request.ticketId(), request.amount(), true);
     }
