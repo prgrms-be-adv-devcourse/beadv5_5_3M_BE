@@ -27,9 +27,10 @@ public class QuartzSchedulerAdapter implements SchedulerPort {
 	static final String JOB_DATA_SCHEDULE_ID = "scheduleId";
 	private static final String GROUP = "streaming";
 
-	private static final Duration LOBBY_LEAD = Duration.ofMinutes(10);
-	private static final Duration SOON_LEAD = Duration.ofMinutes(1);
-	private static final Duration POST_GRACE = Duration.ofMinutes(10);
+	// 관측용: 3분 단위 체인 구성. 운영 복원 시 10m / 1m / 10m로 되돌릴 것.
+	private static final Duration LOBBY_LEAD = Duration.ofMinutes(6);   // prod: ofMinutes(10)
+	private static final Duration SOON_LEAD = Duration.ofMinutes(3);    // prod: ofMinutes(1)
+	private static final Duration POST_GRACE = Duration.ofMinutes(3);   // prod: ofMinutes(10)
 
 	private static final String[] KINDS = {
 		"lobbyOpen", "startingSoon", "started", "endingSoon", "ended", "forceExit"

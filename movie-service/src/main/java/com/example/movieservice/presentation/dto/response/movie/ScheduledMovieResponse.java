@@ -24,7 +24,9 @@ public record ScheduledMovieResponse(
         LocalDateTime startTime,
 
         @Schema(description = "카테고리 ID 목록", example = "[1, 2]")
-        List<Long> categoryIds
-        // todo : 나중에 포스터 이미지 추가
+        List<Long> categoryIds,
+
+        @Schema(description = "포스터 이미지 URL", example = "https://example.com/image.jpg")
+        String imageUrl
 ) {
 }

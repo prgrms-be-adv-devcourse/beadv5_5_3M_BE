@@ -39,7 +39,7 @@ spring:
             - id: ticket-service
               uri: http://${BASE_IP}:${TICKET_PORT}/
               predicates:
-                - Path=/api/tickets/**, /api/cart/**
+                - Path=/api/tickets/**, /api/cart/**, /api/queue/**
               filters:
             - id: user-service
               uri: http://${BASE_IP}:${USER_PORT}/
@@ -49,7 +49,7 @@ spring:
             - id: movie-service
               uri: http://${BASE_IP}:${MOVIE_PORT}/
               predicates:
-                - Path=/api/movies/**
+                - Path=/api/movies/**, /api/reviews/**
             - id: streaming-service
               uri: http://${BASE_IP}:${STREAMING_PORT}/
               predicates:

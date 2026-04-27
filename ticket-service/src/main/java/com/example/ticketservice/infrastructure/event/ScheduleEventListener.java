@@ -24,10 +24,11 @@ public class ScheduleEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleScheduleInitialized(ScheduleInitializedEvent event) {
-        // ReviewAuth 는 streaming-service LOBBY_OPEN (startTime - 10m) 시점에 맞춰 발행.
-        // Entitlement 사본이 대기실 개방 전에 도착해야 WebSocket CONNECT 시 권한 검증이 통과됨.
-        LocalDateTime reviewAuthTime = event.startTime().minusMinutes(1);//10
-        schedulerPort.scheduleCartCloseJob(event.scheduleId(), event.ticketingTime().minusMinutes(3));//minusHours(24)
+        // ReviewAuth는 streaming LobbyOpen과 동시 발행해야 Entitlement가 WS CONNECT 전에 도달.
+        // 관측용: startTime - 6m (streaming LOBBY_LEAD와 동기화). 운영 복원 시 minusMinutes(10).
+        LocalDateTime reviewAuthTime = event.startTime().minusMinutes(6);
+        // 관측용: ticketingTime - 3m. 운영 복원 시 minusHours(24).
+        schedulerPort.scheduleCartCloseJob(event.scheduleId(), event.ticketingTime().minusMinutes(3));
         schedulerPort.scheduleTicketingStartJob(event.scheduleId(), event.ticketingTime());
         schedulerPort.scheduleReviewAuthJob(event.scheduleId(), reviewAuthTime);
         schedulerPort.scheduleStreamingStartJob(event.scheduleId(), event.startTime());
@@ -35,7 +36,8 @@ public class ScheduleEventListener {
         log.info("Quartz Job 등록 완료 - scheduleId={}, ticketingTime={}, reviewAuthTime={}, startTime={}, endTime={}",
                 event.scheduleId(), event.ticketingTime(), reviewAuthTime, event.startTime(), event.endTime());
 
-        Duration ttl = Duration.between(LocalDateTime.now(), event.ticketingTime().minusMinutes(3));//minusHours(24)
+        // cart:count TTL도 CartClose와 동일 오프셋. 운영 복원 시 minusHours(24).
+        Duration ttl = Duration.between(LocalDateTime.now(), event.ticketingTime().minusMinutes(3));
         String cartCountKey = RedisKeys.CART_COUNT + event.scheduleId();
         if (!ttl.isNegative() && !ttl.isZero()) {
             cachePort.setCounter(cartCountKey, 0, ttl);
