@@ -26,6 +26,7 @@ import com.example.userservice.presentation.dto.req.DeductCookieRequest;
 import com.example.userservice.presentation.dto.req.JoinRequest;
 import com.example.userservice.presentation.dto.req.LoginRequest;
 import com.example.userservice.presentation.dto.req.RefundCookieRequest;
+import com.example.userservice.presentation.dto.res.CookieLogResponse;
 import com.example.userservice.presentation.dto.res.DeductCookieResponse;
 import com.example.userservice.presentation.dto.res.RefundCookieResponse;
 import com.example.userservice.presentation.dto.res.TokenResponse;
@@ -270,6 +271,13 @@ public class UserService implements UserUseCase {
         );
 
         return new TokenResponse(accessToken, rawRefreshToken);
+    }
+
+    @Override
+    public List<CookieLogResponse> getMyCookieLogs(String userId) {
+        return cookieLogRepository.findByUserId(toUUID(userId)).stream()
+                .map(CookieLogResponse::from)
+                .toList();
     }
 
     private UUID toUUID(String userId) {

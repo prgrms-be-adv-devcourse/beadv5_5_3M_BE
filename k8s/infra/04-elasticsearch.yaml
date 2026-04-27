@@ -1,0 +1,68 @@
+# Elasticsearch 8.13.4 — single-node, 한글 분석기 (nori) 포함
+# 조원이 K3s master(ip-172-31-42-216, t3.medium)에 띄우는 매니페스트.
+# - master 에 taint(dedicated=es:NoSchedule) 추가 후 toleration 으로 매칭
+# - heap 1Gi (medium 4GB 한계 고려)
+# - nori 플러그인은 init container 로 emptyDir 에 설치 후 main 컨테이너가 마운트
+# - movie-service 가 ES_URIS=http://elasticsearch.dev.svc.cluster.local:9200 으로 접근
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      tolerations:
+        - key: dedicated
+          value: es
+          effect: NoSchedule
+      nodeSelector:
+        kubernetes.io/hostname: ip-172-31-42-216
+      initContainers:
+        - name: install-nori
+          image: elasticsearch:8.13.4
+          command: ["sh", "-c", "bin/elasticsearch-plugin install --batch analysis-nori"]
+          volumeMounts:
+            - mountPath: /usr/share/elasticsearch/plugins
+              name: es-plugins
+      containers:
+        - name: elasticsearch
+          image: elasticsearch:8.13.4
+          env:
+            - name: discovery.type
+              value: single-node
+            - name: ES_JAVA_OPTS
+              value: "-Xms1g -Xmx1g"
+            - name: xpack.security.enabled
+              value: "false"
+          resources:
+            requests:
+              memory: "1.5Gi"
+            limits:
+              memory: "2Gi"
+          ports:
+            - containerPort: 9200
+          volumeMounts:
+            - mountPath: /usr/share/elasticsearch/plugins
+              name: es-plugins
+      volumes:
+        - name: es-plugins
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  namespace: dev
+spec:
+  selector:
+    app: elasticsearch
+  ports:
+    - port: 9200
+      targetPort: 9200

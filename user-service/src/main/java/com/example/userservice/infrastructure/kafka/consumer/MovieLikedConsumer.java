@@ -41,7 +41,7 @@ public class MovieLikedConsumer {
                 log.info("[movie.liked] 이미 좋아요한 영화 - userId: {}, movieId: {}", msg.userId(), msg.movieId());
                 return;
             }
-            Like like = Like.create(msg.movieId(), msg.userId());
+            Like like = Like.create(msg.movieId(), msg.userId(), msg.imageUrl(), msg.title());
             likeRepository.save(like);
             log.info("[movie.liked] 좋아요 저장 완료 - userId: {}, movieId: {}", msg.userId(), msg.movieId());
         } else if ("UNLIKED".equals(msg.action())) {

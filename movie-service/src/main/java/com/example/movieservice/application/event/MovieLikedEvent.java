@@ -5,5 +5,7 @@ import java.util.UUID;
 public record MovieLikedEvent(
         UUID userId,
         Long movieId,
-        String action  // "LIKED" | "UNLIKED"
+        String action,  // "LIKED" | "UNLIKED"
+        String title,
+        String imageUrl
 ) {}
