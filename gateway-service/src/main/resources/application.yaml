@@ -3,4 +3,6 @@ spring:
     name: gateway-service
   profiles:
     active: dev
+  main:
+    web-application-type: reactive
 
