@@ -4,7 +4,7 @@
 # - 메모리 1Gi (OpenAI 호출 + 임베딩 처리 부하)
 
 image:
-  repository: y0000h/ai-service
+  repository: qor7777777/ai-service
   tag: latest
   pullPolicy: IfNotPresent
 
@@ -16,13 +16,13 @@ env:
   SPRING_PROFILES_ACTIVE: prod
   JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=192m"
   SERVER_PORT: "8089"
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.dev.svc.cluster.local:5432/ai_db"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgresql.dev.svc.cluster.local:5432/ai_db"
   SPRING_DATASOURCE_USERNAME: "postgres"
   SPRING_DATASOURCE_PASSWORD: "_OVERRIDE_FROM_SECRET_"
   SPRING_KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
-  SPRING_DATA_REDIS_HOST: "redis-master.dev.svc.cluster.local"
+  SPRING_DATA_REDIS_HOST: "redis.dev.svc.cluster.local"
   SPRING_DATA_REDIS_PORT: "6379"
-  DDL_AUTO: "validate"
+  DDL_AUTO: "update"
 
 sharedEnv: {}
 

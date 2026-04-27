@@ -45,9 +45,9 @@ env:
 # 클러스터 내부 의존성 (모든 서비스 공통)
 sharedEnv:
   KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
-  REDIS_HOST: "redis-master.dev.svc.cluster.local"
+  REDIS_HOST: "redis.dev.svc.cluster.local"
   REDIS_PORT: "6379"
-  DB_HOST: "postgres.dev.svc.cluster.local"
+  DB_HOST: "postgresql.dev.svc.cluster.local"
   DB_PORT: "5432"
 
 # ──────────────────────────────────────────

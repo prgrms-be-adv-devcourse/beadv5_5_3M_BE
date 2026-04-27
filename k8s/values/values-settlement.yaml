@@ -3,7 +3,7 @@
 # - creator-service HTTP 호출 의존
 
 image:
-  repository: y0000h/settlement-service
+  repository: qor7777777/settlement-service
   tag: latest
   pullPolicy: IfNotPresent
 
@@ -15,7 +15,7 @@ env:
   SPRING_PROFILES_ACTIVE: prod
   JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m"
   SERVER_PORT: "8083"
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.dev.svc.cluster.local:5432/settlement_db"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgresql.dev.svc.cluster.local:5432/settlement_db"
   SPRING_DATASOURCE_USERNAME: "postgres"
   SPRING_DATASOURCE_PASSWORD: "_OVERRIDE_FROM_SECRET_"
   SPRING_KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
@@ -25,7 +25,7 @@ env:
   SETTLEMENT_DLQ_FALLBACK_PATH: "/tmp/settlement-dlq"
   SETTLEMENT_DLQ_MAX_RETRY: "5"
   SPRING_TASK_SCHEDULING_TIMEZONE: "Asia/Seoul"
-  DDL_AUTO: "validate"
+  DDL_AUTO: "update"
 
 sharedEnv: {}
 

@@ -3,7 +3,7 @@
 # - DB: user_db
 
 image:
-  repository: y0000h/user-service
+  repository: qor7777777/user-service
   tag: latest
   pullPolicy: IfNotPresent
 
@@ -15,13 +15,13 @@ env:
   SPRING_PROFILES_ACTIVE: prod
   JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m"
   SERVER_PORT: "8085"
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.dev.svc.cluster.local:5432/user_db"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgresql.dev.svc.cluster.local:5432/user_db"
   SPRING_DATASOURCE_USERNAME: "postgres"
   SPRING_DATASOURCE_PASSWORD: "_OVERRIDE_FROM_SECRET_"
   SPRING_KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
-  SPRING_DATA_REDIS_HOST: "redis-master.dev.svc.cluster.local"
+  SPRING_DATA_REDIS_HOST: "redis.dev.svc.cluster.local"
   SPRING_DATA_REDIS_PORT: "6379"
-  DDL_AUTO: "validate"
+  DDL_AUTO: "update"
   # MinIO (사용 안 하면 빈 값 — S3 로 통일)
   MINIO_ENDPOINT: ""
   MINIO_ACCESS_KEY: ""

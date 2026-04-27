@@ -33,12 +33,21 @@ kubectl create secret generic postgres-secret \
   --from-literal=DB_PASSWORD="$POSTGRES_PASSWORD" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-echo "[2/5] jwt-secret (JWT 발급/검증 키 — RSA 키쌍, docker-compose 와 동일 변수명)"
+echo "[2/5] jwt-secret (RSA 키는 .env.k3s 의 \\n 을 진짜 줄바꿈으로 변환 후 PEM 파일로 등록)"
+
+# JWT 키들을 임시 PEM 파일로 추출 (printf %b 가 \n 을 진짜 줄바꿈으로 변환)
+TMP_DIR=$(mktemp -d)
+trap "rm -rf $TMP_DIR" EXIT
+
+printf '%b' "$JWT_PRIVATE_KEY" > "$TMP_DIR/jwt-private.pem"
+printf '%b' "$JWT_PUBLIC_KEY"  > "$TMP_DIR/jwt-public.pem"
+printf '%b' "$JWT_TOKEN_PUBLIC" > "$TMP_DIR/jwt-token-public.pem"
+
 kubectl create secret generic jwt-secret \
   --namespace="$NAMESPACE" \
-  --from-literal=JWT_PRIVATE_KEY="$JWT_PRIVATE_KEY" \
-  --from-literal=JWT_PUBLIC_KEY="$JWT_PUBLIC_KEY" \
-  --from-literal=JWT_TOKEN_PUBLIC="$JWT_TOKEN_PUBLIC" \
+  --from-file=JWT_PRIVATE_KEY="$TMP_DIR/jwt-private.pem" \
+  --from-file=JWT_PUBLIC_KEY="$TMP_DIR/jwt-public.pem" \
+  --from-file=JWT_TOKEN_PUBLIC="$TMP_DIR/jwt-token-public.pem" \
   --from-literal=JWT_ACCESS_TOKEN_EXPIRY="$JWT_ACCESS_TOKEN_EXPIRY" \
   --from-literal=JWT_REFRESH_TOKEN_EXPIRY="$JWT_REFRESH_TOKEN_EXPIRY" \
   --from-literal=STREAMING_JWT_SECRET="$STREAMING_JWT_SECRET" \

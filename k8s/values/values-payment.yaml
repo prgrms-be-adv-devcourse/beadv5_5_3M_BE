@@ -2,7 +2,7 @@
 # - DB: payment_db
 
 image:
-  repository: y0000h/payment-service
+  repository: qor7777777/payment-service
   tag: latest
   pullPolicy: IfNotPresent
 
@@ -14,11 +14,11 @@ env:
   SPRING_PROFILES_ACTIVE: prod
   JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m"
   SERVER_PORT: "8081"
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.dev.svc.cluster.local:5432/payment_db"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgresql.dev.svc.cluster.local:5432/payment_db"
   SPRING_DATASOURCE_USERNAME: "postgres"
   SPRING_DATASOURCE_PASSWORD: "_OVERRIDE_FROM_SECRET_"
   SPRING_KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
-  DDL_AUTO: "validate"
+  DDL_AUTO: "update"
 
 sharedEnv: {}
 
