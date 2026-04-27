@@ -1,0 +1,22 @@
+{{- if .Values.env }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.service.name }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "microservice.labels" . | nindent 4 }}
+data:
+  SPRING_PROFILES_ACTIVE: {{ .Values.profile | quote }}
+  SERVER_PORT: {{ .Values.service.targetPort | quote }}
+  KAFKA_BOOTSTRAP_SERVERS: "kafka.dev.svc.cluster.local:9092"
+  REDIS_HOST: "redis.dev.svc.cluster.local"
+  REDIS_PORT: "6379"
+  ES_URIS: "http://elasticsearch.dev.svc.cluster.local:9200"
+  DB_HOST: "postgresql.dev.svc.cluster.local"
+  DB_PORT: "5432"
+  DDL_AUTO: "validate"
+  {{- range $key, $value := .Values.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}
