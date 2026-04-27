@@ -41,7 +41,7 @@ public class LikeService {
             throw e;
         }
         movie.increaseLikeCount();
-        applicationEventPublisher.publishEvent(new MovieLikedEvent(userId, movieId, "LIKED"));
+        applicationEventPublisher.publishEvent(new MovieLikedEvent(userId, movieId, "LIKED", movie.getTitle(), movie.getImageUrl()));
         log.info("[Like] 좋아요 추가 - userId: {}, movieId: {}", userId, movieId);
     }
 
@@ -55,7 +55,7 @@ public class LikeService {
             throw new GeneralException(ErrorStatus.LIKE_NOT_FOUND);
         }
         movie.decreaseLikeCount();
-        applicationEventPublisher.publishEvent(new MovieLikedEvent(userId, movieId, "UNLIKED"));
+        applicationEventPublisher.publishEvent(new MovieLikedEvent(userId, movieId, "UNLIKED", movie.getTitle(), movie.getImageUrl()));
         log.info("[Like] 좋아요 취소 - userId: {}, movieId: {}", userId, movieId);
     }
 }
