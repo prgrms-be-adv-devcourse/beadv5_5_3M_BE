@@ -252,6 +252,7 @@ public class UserService implements UserUseCase {
             user.initWallet();
             userRepository.save(user);
             log.info("Google OAuth new user created: email={}", googleUser.email());
+            eventPublisher.publishEvent(UserCreatedEvent.from(user));
         }
 
         String accessToken = jwtProvider.generateAccessToken(user.getUserId());
