@@ -1,0 +1,3 @@
+3m-msa.p-e.kr {
+    reverse_proxy gateway-service:8000
+}
