@@ -77,7 +77,7 @@ public class MovieService implements MovieUseCase {
                 .filter(movie -> movie.getVisibility() == Movie.Visibility.PUBLIC)
                 .map(movie -> {
                     List<Long> categoryIds = movie.getCategories().stream().map(Category::getCategoryId).toList();
-                    return new MovieByCreatorResponse(movie.getMovieId(), movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds);
+                    return new MovieByCreatorResponse(movie.getMovieId(), movie.getTitle(), Math.round(movie.getAverageRating() * 10) / 10.0f, categoryIds, movie.getImageUrl());
                 })
                 .toList();
     }
