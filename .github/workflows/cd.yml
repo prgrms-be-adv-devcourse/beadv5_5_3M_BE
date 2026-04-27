@@ -116,7 +116,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose.yml,caddy/Caddyfile"
+          source: "docker-compose.yml,nginx/conf.d/default.conf"
           target: ~/app/
 
       - name: Deploy via SSH
@@ -154,7 +154,7 @@ jobs:
           else
             CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" 2>/dev/null || echo "")
           fi
-          if echo "$CHANGED" | grep -qE "^(docker-compose\.yml|\.env\.example|caddy/Caddyfile)$"; then
+          if echo "$CHANGED" | grep -qE "^(docker-compose\.yml|\.env\.example|nginx/conf\.d/default\.conf)$"; then
             echo "config_changed=true" >> "$GITHUB_OUTPUT"
             echo "::notice::root-level 설정 변경 감지 — 떠 있는 컨테이너 재생성 예정"
           else
@@ -181,7 +181,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose.yml,caddy/Caddyfile"
+          source: "docker-compose.yml,nginx/conf.d/default.conf"
           target: ~/app/
 
       - name: Force-recreate running containers (excluding already-deployed)
@@ -194,7 +194,7 @@ jobs:
             cd ~/app
             # 정상 deploy 가 다룬 서비스는 이미 새 env 로 떴으므로 제외
             ALREADY_DEPLOYED='${{ needs.detect-changes.outputs.services }}'
-            ALL_SERVICES="caddy gateway-service creator-service payment-service settlement-service ticket-service user-service movie-service streaming-service ai-service"
+            ALL_SERVICES="nginx gateway-service creator-service payment-service settlement-service ticket-service user-service movie-service streaming-service ai-service"
 
             for svc in $ALL_SERVICES; do
               # 정상 deploy 매트릭스에 포함됐으면 스킵 (이미 처리됨)
