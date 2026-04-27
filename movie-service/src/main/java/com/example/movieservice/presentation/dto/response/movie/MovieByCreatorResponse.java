@@ -16,7 +16,9 @@ public record MovieByCreatorResponse(
         Float averageRating,
 
         @Schema(description = "카테고리 ID 목록", example = "[1, 2]")
-        List<Long> categoryIds
-        // 나중에 이미지도 추가
+        List<Long> categoryIds,
+
+        @Schema(description = "포스터 이미지 URL", example = "https://example.com/image.jpg")
+        String imageUrl
 ) {
 }
