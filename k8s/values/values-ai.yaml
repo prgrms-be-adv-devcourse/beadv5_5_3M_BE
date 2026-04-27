@@ -1,0 +1,23 @@
+service:
+  name: ai-service
+  port: 8089
+  targetPort: 8089
+
+image:
+  repository: ${DOCKERHUB_USERNAME}/ai-service
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 640Mi
+
+env:
+  DB_NAME: "ai_db"
+  KAFKA_CONSUMER_GROUP_ID: "ai-service"
+
+secrets:
+  - db-secret
+  - openai-secret
