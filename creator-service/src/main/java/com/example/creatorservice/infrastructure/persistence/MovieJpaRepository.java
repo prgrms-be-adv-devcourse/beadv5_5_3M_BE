@@ -12,7 +12,7 @@ public interface MovieJpaRepository extends JpaRepository<Movie, Long> {
     long countByCreatorId(UUID creatorId);
     List<Movie> findAllByCreatorId(UUID creatorId);
 
-    @Query("SELECT COUNT(s) > 0 FROM Schedule s WHERE s.movie.movieId = :movieId AND s.isConfirmed = true")
+    @Query("SELECT COUNT(s) > 0 FROM Schedule s WHERE s.movie.movieId = :movieId AND s.isConfirmed = true AND s.status <> com.example.creatorservice.domain.model.Schedule.ScheduleStatus.COMPLETED")
     boolean existsConfirmedScheduleByMovieId(@Param("movieId") Long movieId);
 
 }
