@@ -118,7 +118,7 @@ public class MovieController {
             List<MovieCardResponse> cards = esResult.items().stream()
                     .map(item -> new MovieCardResponse(
                             item.movieId(), null, item.creatorNickname(),
-                            item.title(), null, null,
+                            item.title(), null, null, null,
                             item.highlightedTitle(),
                             item.highlightedCreatorNickname()))
                     .collect(Collectors.toList());
