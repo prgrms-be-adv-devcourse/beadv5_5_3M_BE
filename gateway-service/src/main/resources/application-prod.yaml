@@ -53,7 +53,7 @@ spring:
             - id: streaming-service
               uri: http://${BASE_IP}:${STREAMING_PORT}/
               predicates:
-                - Path=/api/streaming/**
+                - Path=/api/streaming/**, /ws/**
               filters:
             - id: ai-service
               uri: http://${BASE_IP}:${AI_PORT}/
