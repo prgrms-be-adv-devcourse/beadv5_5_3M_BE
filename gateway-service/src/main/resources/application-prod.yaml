@@ -58,7 +58,7 @@ spring:
             - id: ai-service
               uri: http://${BASE_IP}:${AI_PORT}/
               predicates:
-                - Path=/api/ai/**
+                - Path=/api/recommendations/**
               filters:
           #                  - RewritePath=/user-service/(?<segment>.*), /$\{segment} #/user-service(이 부분 제거)/api/users
           #                  - StripPrefix=1 #origin/endpoint 첫 번째 endpoint 제거 위 RewritePath랑 같은 효과
