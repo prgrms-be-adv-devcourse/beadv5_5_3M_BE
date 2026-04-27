@@ -1,0 +1,53 @@
+# ai-service (포트 8089) — OpenAI 임베딩/요약/리랭킹 + pgvector 추천
+# - DB: ai_db (pgvector 익스텐션 활성화 필요 — Phase 2 Task 2.2 Step 6)
+# - Kafka 이벤트 소비 (movie/ticket/user 토픽)
+# - 메모리 1Gi (OpenAI 호출 + 임베딩 처리 부하)
+
+image:
+  repository: qor7777777/ai-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8089
+  targetPort: 8089
+
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=192m"
+  SERVER_PORT: "8089"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgresql.dev.svc.cluster.local:5432/ai_db"
+  SPRING_DATASOURCE_USERNAME: "postgres"
+  SPRING_DATASOURCE_PASSWORD: "_OVERRIDE_FROM_SECRET_"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
+  SPRING_DATA_REDIS_HOST: "redis.dev.svc.cluster.local"
+  SPRING_DATA_REDIS_PORT: "6379"
+  DDL_AUTO: "update"
+
+sharedEnv: {}
+
+secretRefs:
+  postgres: true
+  jwt: false
+  toss: false
+  aws: false
+  openai: true     # OPENAI_API_KEY 자동 주입
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 768Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+healthcheck:
+  enabled: true
+  path: /actuator/health
+  livenessInitialDelay: 120
+  livenessPeriod: 30
+  readinessInitialDelay: 45
+  readinessPeriod: 10
+
+ingress:
+  enabled: false

@@ -1,0 +1,20 @@
+# Bitnami Redis 의 Service 이름이 'redis-master' 인데,
+# docker-compose / 조원 yaml 기준은 'redis'.
+# 이름 별칭만 만들어서 같은 Pod 을 'redis' 로도 접근 가능하게 함 (무중단, 데이터 안 건드림).
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: dev
+  labels:
+    app.kubernetes.io/managed-by: manual-alias
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/instance: redis
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: master
+  ports:
+    - name: tcp-redis
+      port: 6379
+      targetPort: 6379

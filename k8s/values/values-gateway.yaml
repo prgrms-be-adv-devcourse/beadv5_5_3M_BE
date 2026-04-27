@@ -1,0 +1,75 @@
+# gateway-service (포트 8000) — 외부 진입점, JWT 검증, Spring Cloud Gateway 라우팅
+# - DB 불필요 (Stateless)
+# - Ingress 활성 (Traefik via EIP)
+
+image:
+  repository: qor7777777/gateway-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8000
+  targetPort: 8000
+
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m"
+  SERVER_PORT: "8000"
+  # Spring Boot 4 + Spring Cloud Gateway 5 환경에서 자동 web type 결정 실패
+  # → 강제로 reactive 모드 명시 (Netty HTTP 서버 띄우기)
+  SPRING_MAIN_WEB_APPLICATION_TYPE: "reactive"
+  # Actuator K8s probes endpoint 활성화
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info"
+  MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
+  # 라우팅 대상 (K3s ClusterIP DNS)
+  USER_SERVICE_HOST: "http://user-service.dev.svc.cluster.local:8085"
+  CREATOR_SERVICE_HOST: "http://creator-service.dev.svc.cluster.local:8080"
+  # docker-compose 호환을 위해 BASE_IP / *_PORT 도 유지 (Task 6.1 에서 gateway 코드 조정과 함께 정리)
+  BASE_IP: "dev.svc.cluster.local"
+  CREATOR_PORT: "8080"
+  PAYMENT_PORT: "8081"
+  SETTLEMENT_PORT: "8083"
+  TICKET_PORT: "8084"
+  USER_PORT: "8085"
+  MOVIE_PORT: "8086"
+  STREAMING_PORT: "8088"
+  AI_PORT: "8089"
+
+sharedEnv: {}
+
+secretRefs:
+  postgres: false   # gateway DB 안 씀
+  jwt: true         # JWT_TOKEN_PUBLIC 검증
+  toss: false
+  aws: false
+  openai: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 384Mi   # docker-compose 와 동일
+
+healthcheck:
+  enabled: true
+  path: /actuator/health
+  livenessInitialDelay: 90
+  livenessPeriod: 30
+  readinessInitialDelay: 30
+  readinessPeriod: 10
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    # 큰 영상 업로드 대비 (gateway 가 streaming 으로 프록시)
+    traefik.ingress.kubernetes.io/buffering-max-request-bytes: "524288000"  # 500MB
+  hosts:
+    - host: ""      # 도메인 없음 → IP 직접 접근 (Traefik catch-all)
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

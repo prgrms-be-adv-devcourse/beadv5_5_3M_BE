@@ -1,0 +1,12 @@
+apiVersion: v2
+name: microservice
+description: beadv5 프로젝트 9개 마이크로서비스 공통 Helm 차트 (K3s on EC2)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - spring-boot
+  - microservice
+  - k3s
+maintainers:
+  - name: y0000h2

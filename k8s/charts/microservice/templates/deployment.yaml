@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "microservice.fullname" . }}
+  labels:
+    {{- include "microservice.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1   # 노드 1대라 maxSurge 0 (Pod 2개 띄울 메모리 없음)
+  selector:
+    matchLabels:
+      {{- include "microservice.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "microservice.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: {{ .Values.service.protocol }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "microservice.fullname" . }}-env
+            {{- if .Values.secretRefs.postgres }}
+            - secretRef:
+                name: postgres-secret
+            {{- end }}
+            {{- if .Values.secretRefs.jwt }}
+            - secretRef:
+                name: jwt-secret
+            {{- end }}
+            {{- if .Values.secretRefs.toss }}
+            - secretRef:
+                name: toss-secret
+            {{- end }}
+            {{- if .Values.secretRefs.aws }}
+            - secretRef:
+                name: aws-secret
+            {{- end }}
+            {{- if .Values.secretRefs.openai }}
+            - secretRef:
+                name: openai-secret
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.healthcheck.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthcheck.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.healthcheck.livenessInitialDelay }}
+            periodSeconds: {{ .Values.healthcheck.livenessPeriod }}
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthcheck.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.healthcheck.readinessInitialDelay }}
+            periodSeconds: {{ .Values.healthcheck.readinessPeriod }}
+            failureThreshold: 3
+          {{- end }}
+      {{- with .Values.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

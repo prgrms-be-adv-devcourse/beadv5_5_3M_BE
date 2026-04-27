@@ -1,0 +1,49 @@
+# payment-service (포트 8081) — Toss Payments + Outbox 패턴 (PR #161)
+# - DB: payment_db
+
+image:
+  repository: qor7777777/payment-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8081
+  targetPort: 8081
+
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m"
+  SERVER_PORT: "8081"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgresql.dev.svc.cluster.local:5432/payment_db"
+  SPRING_DATASOURCE_USERNAME: "postgres"
+  SPRING_DATASOURCE_PASSWORD: "_OVERRIDE_FROM_SECRET_"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
+  DDL_AUTO: "update"
+
+sharedEnv: {}
+
+secretRefs:
+  postgres: true
+  jwt: false
+  toss: true        # TOSS_PAYMENT_CK, TOSS_PAYMENT_SECRET 자동 주입
+  aws: false
+  openai: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    cpu: 500m
+    memory: 640Mi
+
+healthcheck:
+  enabled: true
+  path: /actuator/health
+  livenessInitialDelay: 90
+  livenessPeriod: 30
+  readinessInitialDelay: 30
+  readinessPeriod: 10
+
+ingress:
+  enabled: false

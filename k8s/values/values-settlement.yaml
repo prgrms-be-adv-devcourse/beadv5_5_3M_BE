@@ -1,0 +1,56 @@
+# settlement-service (포트 8083) — 정산 + DLQ 처리
+# - DB: settlement_db
+# - creator-service HTTP 호출 의존
+
+image:
+  repository: qor7777777/settlement-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8083
+  targetPort: 8083
+
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m"
+  SERVER_PORT: "8083"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgresql.dev.svc.cluster.local:5432/settlement_db"
+  SPRING_DATASOURCE_USERNAME: "postgres"
+  SPRING_DATASOURCE_PASSWORD: "_OVERRIDE_FROM_SECRET_"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
+  CLIENT_CREATOR_BASE_URL: "http://creator-service.dev.svc.cluster.local:8080"
+  SETTLEMENT_FEE_RATE: "0.1"
+  SETTLEMENT_COOKIE_TO_KRW_RATE: "100"
+  SETTLEMENT_DLQ_FALLBACK_PATH: "/tmp/settlement-dlq"
+  SETTLEMENT_DLQ_MAX_RETRY: "5"
+  SPRING_TASK_SCHEDULING_TIMEZONE: "Asia/Seoul"
+  DDL_AUTO: "update"
+
+sharedEnv: {}
+
+secretRefs:
+  postgres: true
+  jwt: false
+  toss: false
+  aws: false
+  openai: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    cpu: 500m
+    memory: 640Mi
+
+healthcheck:
+  enabled: true
+  path: /actuator/health
+  livenessInitialDelay: 90
+  livenessPeriod: 30
+  readinessInitialDelay: 30
+  readinessPeriod: 10
+
+ingress:
+  enabled: false
