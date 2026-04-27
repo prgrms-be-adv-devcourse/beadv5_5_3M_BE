@@ -66,6 +66,7 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.GET, "/api/movies/categories").permitAll()
                         .pathMatchers(HttpMethod.GET, "/files/**").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/streaming/*/*.m3u8", "/api/streaming/*/*.ts").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/ws/**").permitAll()
                         .pathMatchers(HttpMethod.POST, USER_SIGNUP_ANTPATTERNS).permitAll()
                         .pathMatchers(HttpMethod.POST, CREATOR_SIGNUP_ANTPATTERNS).permitAll()
                         .anyExchange().access(check)
