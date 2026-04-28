@@ -58,4 +58,12 @@ public class MovieDocument {
     // 검색 결과 카드에 포스터 표시용. 검색 대상 X (index = false).
     @Field(type = FieldType.Keyword, index = false)
     private String imageUrl;
+
+    // 검색 결과 카드에 별점 표시용. 검색 대상 X (FE 카드 정렬은 _score 기준).
+    @Field(type = FieldType.Float, index = false)
+    private Float averageRating;
+
+    // 검색 결과 카드의 creator 페이지 이동용. 검색 대상 X.
+    @Field(type = FieldType.Keyword, index = false)
+    private String creatorId;
 }
