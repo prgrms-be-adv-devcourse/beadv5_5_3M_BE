@@ -44,9 +44,9 @@ env:
   # 첫 배포: update (테이블 자동 생성). 안정 후 validate 로 전환 권장.
   DDL_AUTO: "update"
 
-# 클러스터 내부 의존성 (모든 서비스 공통)
+# 클러스터 내부 의존성 (모든 서비스 공통 — 서비스 values 파일에서 오버라이드 금지)
 sharedEnv:
-  KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka.dev.svc.cluster.local:9092"
   REDIS_HOST: "redis.dev.svc.cluster.local"
   REDIS_PORT: "6379"
   DB_HOST: "postgresql.dev.svc.cluster.local"
@@ -63,6 +63,8 @@ secretRefs:
   toss: false          # payment 만 true
   aws: false           # user, streaming 만 true
   openai: false        # ai 만 true
+  user: false          # user-service 만 true (Google OAuth + Mail)
+  streaming: false     # streaming-service 만 true
 
 # ──────────────────────────────────────────
 # 리소스 (일반 7개 서비스 기본값)
@@ -108,3 +110,6 @@ autoscaling:
   minReplicas: 1
   maxReplicas: 2
   targetCPUUtilizationPercentage: 80
+
+volumeMounts: []
+volumes: []
