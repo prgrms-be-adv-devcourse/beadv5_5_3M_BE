@@ -140,12 +140,6 @@ spec:
           volumeMounts:
             - mountPath: /var/lib/kafka/data
               name: kafka-data
-            - mountPath: /docker-init-topics
-              name: kafka-init
-          lifecycle:
-            postStart:
-              exec:
-                command: ["/bin/bash", "/docker-init-topics/init-topics.sh"]
   volumeClaimTemplates:
     - metadata:
         name: kafka-data

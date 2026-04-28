@@ -40,9 +40,9 @@ resources:
 healthcheck:
   enabled: true
   path: /actuator/health
-  livenessInitialDelay: 120      # OAuth/Mail 초기화 시간 고려 +30s
+  livenessInitialDelay: 240      # 실제 기동 177s + 여유 60s
   livenessPeriod: 30
-  readinessInitialDelay: 60
+  readinessInitialDelay: 200
   readinessPeriod: 10
 
 ingress:

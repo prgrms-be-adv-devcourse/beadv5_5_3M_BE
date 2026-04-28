@@ -47,9 +47,9 @@ resources:
 healthcheck:
   enabled: true
   path: /actuator/health
-  livenessInitialDelay: 90
+  livenessInitialDelay: 180
   livenessPeriod: 30
-  readinessInitialDelay: 30
+  readinessInitialDelay: 60
   readinessPeriod: 10
 
 ingress:

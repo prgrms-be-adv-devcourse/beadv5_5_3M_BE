@@ -13,7 +13,7 @@ service:
 
 env:
   SPRING_PROFILES_ACTIVE: prod
-  JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m"
+  JAVA_OPTS: "-Xms64m -Xmx180m -XX:MaxMetaspaceSize=80m"
   SERVER_PORT: "8000"
   # Spring Boot 4 + Spring Cloud Gateway 5 환경에서 자동 web type 결정 실패
   # → 강제로 reactive 모드 명시 (Netty HTTP 서버 띄우기)
@@ -51,9 +51,9 @@ resources:
 healthcheck:
   enabled: true
   path: /actuator/health
-  livenessInitialDelay: 90
+  livenessInitialDelay: 120
   livenessPeriod: 30
-  readinessInitialDelay: 30
+  readinessInitialDelay: 90
   readinessPeriod: 10
 
 ingress:
@@ -62,7 +62,7 @@ ingress:
   annotations:
     # 큰 영상 업로드 대비 (gateway 가 streaming 으로 프록시)
     traefik.ingress.kubernetes.io/buffering-max-request-bytes: "524288000"  # 500MB
-    # cert-manager 가 letsencrypt-prod ClusterIssuer 로 인증서 자동 발급
+    # DNS가 EC2 EIP로 변경된 후 아래 주석 해제
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
   hosts:
     - host: "3m-msa.p-e.kr"
@@ -70,6 +70,6 @@ ingress:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: gateway-tls    # cert-manager 가 인증서를 저장할 Secret 이름
+    - secretName: gateway-tls
       hosts:
         - 3m-msa.p-e.kr
