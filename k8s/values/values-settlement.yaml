@@ -15,7 +15,7 @@ env:
   SERVER_PORT: "8083"
   DB_NAME: "settlement_db"
   DDL_AUTO: "update"
-  CLIENT_CREATOR_BASE_URL: "http://creator-service.dev.svc.cluster.local:8080"
+  CLIENT_CREATOR_BASE_URL: "http://creator-service-microservice.dev.svc.cluster.local:8080"
   SETTLEMENT_FEE_RATE: "0.1"
   SETTLEMENT_COOKIE_TO_KRW_RATE: "100"
   SETTLEMENT_DLQ_FALLBACK_PATH: "/tmp/settlement-dlq"

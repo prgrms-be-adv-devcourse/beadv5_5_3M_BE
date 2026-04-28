@@ -15,7 +15,7 @@ env:
   SERVER_PORT: "8084"
   DB_NAME: "ticket_db"
   DDL_AUTO: "update"
-  CLIENT_USER_BASE_URL: "http://user-service.dev.svc.cluster.local:8085"
+  CLIENT_USER_BASE_URL: "http://user-service-microservice.dev.svc.cluster.local:8085"
 
 secretRefs:
   postgres: true
