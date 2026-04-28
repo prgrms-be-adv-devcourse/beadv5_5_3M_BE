@@ -78,15 +78,21 @@ resources:
     memory: 512Mi
 
 # ──────────────────────────────────────────
-# Liveness / Readiness Probe (Spring Boot Actuator 가정)
+# Startup / Liveness / Readiness Probe (Spring Boot Actuator 가정)
+# startupProbe 통과 후 liveness/readiness 시작 → 슬로우 부팅에 안전
 # ──────────────────────────────────────────
 healthcheck:
   enabled: true
   path: /actuator/health
-  livenessInitialDelay: 90
+  # startupProbe: 부팅 허용 시간 = startupPeriod × startupFailureThreshold
+  startupPeriod: 10              # 10초 간격
+  startupFailureThreshold: 30    # 30회 = 300초 (5분) 부팅 허용
+  timeoutSeconds: 3              # 모든 probe 의 HTTP 응답 대기 한도
+  # 기존 운영 probe (startupProbe 통과 후 활성화)
   livenessPeriod: 30
-  readinessInitialDelay: 30
   readinessPeriod: 10
+  # 옛 키 (이제 사용 안 함, values-*.yaml 호환 위해 무시):
+  #   livenessInitialDelay, readinessInitialDelay
 
 # ──────────────────────────────────────────
 # Ingress (gateway 만 enabled)
