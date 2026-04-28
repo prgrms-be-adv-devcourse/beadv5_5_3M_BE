@@ -72,22 +72,19 @@ spec:
           # 통과 후 비로소 liveness/readiness 활성화 (K8s 정석 패턴).
           # 예: gateway 가 80초 부팅 → livenessInitialDelay 120s 가 빠듯해 죽던 문제 해결.
           startupProbe:
-            httpGet:
-              path: {{ .Values.healthcheck.path }}
+            tcpSocket:
               port: http
             periodSeconds: {{ .Values.healthcheck.startupPeriod | default 10 }}
             failureThreshold: {{ .Values.healthcheck.startupFailureThreshold | default 30 }}   # default 30 × 10s = 300s 부팅 허용
             timeoutSeconds: {{ .Values.healthcheck.timeoutSeconds | default 3 }}
           livenessProbe:
-            httpGet:
-              path: {{ .Values.healthcheck.path }}
+            tcpSocket:
               port: http
             periodSeconds: {{ .Values.healthcheck.livenessPeriod }}
             failureThreshold: 3
             timeoutSeconds: {{ .Values.healthcheck.timeoutSeconds | default 3 }}
           readinessProbe:
-            httpGet:
-              path: {{ .Values.healthcheck.path }}
+            tcpSocket:
               port: http
             periodSeconds: {{ .Values.healthcheck.readinessPeriod }}
             failureThreshold: 3

@@ -1,4 +1,4 @@
-# Elasticsearch 8.13.4 — single-node, 한글 분석기 (nori) 포함
+# Elasticsearch 9.0.0 — single-node, 한글 분석기 (nori) 포함
 # 조원이 K3s master(ip-172-31-42-216, t3.medium)에 띄우는 매니페스트.
 # - master 에 taint(dedicated=es:NoSchedule) 추가 후 toleration 으로 매칭
 # - heap 1Gi (medium 4GB 한계 고려)
@@ -26,14 +26,14 @@ spec:
         kubernetes.io/hostname: ip-172-31-42-216
       initContainers:
         - name: install-nori
-          image: elasticsearch:8.13.4
+          image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
           command: ["sh", "-c", "bin/elasticsearch-plugin install --batch analysis-nori"]
           volumeMounts:
             - mountPath: /usr/share/elasticsearch/plugins
               name: es-plugins
       containers:
         - name: elasticsearch
-          image: elasticsearch:8.13.4
+          image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
           env:
             - name: discovery.type
               value: single-node
