@@ -10,7 +10,6 @@ set -euo pipefail
 helm upgrade --install redis bitnami/redis \
   --namespace dev \
   --create-namespace \
-  --version 19.6.4 \
   --set architecture=standalone \
   --set auth.enabled=false \
   --set master.resources.requests.cpu=50m \

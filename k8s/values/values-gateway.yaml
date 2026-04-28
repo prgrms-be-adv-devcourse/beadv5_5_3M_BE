@@ -21,22 +21,17 @@ env:
   # Actuator K8s probes endpoint 활성화
   MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info"
   MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
-  SPRING_KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
   # 라우팅 대상 (K3s ClusterIP DNS)
   USER_SERVICE_HOST: "http://user-service.dev.svc.cluster.local:8085"
   CREATOR_SERVICE_HOST: "http://creator-service.dev.svc.cluster.local:8080"
-  # docker-compose 호환을 위해 BASE_IP / *_PORT 도 유지 (Task 6.1 에서 gateway 코드 조정과 함께 정리)
-  BASE_IP: "dev.svc.cluster.local"
-  CREATOR_PORT: "8080"
-  PAYMENT_PORT: "8081"
-  SETTLEMENT_PORT: "8083"
-  TICKET_PORT: "8084"
-  USER_PORT: "8085"
-  MOVIE_PORT: "8086"
-  STREAMING_PORT: "8088"
-  AI_PORT: "8089"
-
-sharedEnv: {}
+  CREATOR_SERVICE_URL: "http://creator-service.dev.svc.cluster.local:8080"
+  PAYMENT_SERVICE_URL: "http://payment-service.dev.svc.cluster.local:8081"
+  SETTLEMENT_SERVICE_URL: "http://settlement-service.dev.svc.cluster.local:8083"
+  TICKET_SERVICE_URL: "http://ticket-service.dev.svc.cluster.local:8084"
+  USER_SERVICE_URL: "http://user-service.dev.svc.cluster.local:8085"
+  MOVIE_SERVICE_URL: "http://movie-service.dev.svc.cluster.local:8086"
+  STREAMING_SERVICE_URL: "http://streaming-service.dev.svc.cluster.local:8088"
+  AI_SERVICE_URL: "http://ai-service.dev.svc.cluster.local:8089"
 
 secretRefs:
   postgres: false   # gateway DB 안 씀
@@ -67,9 +62,14 @@ ingress:
   annotations:
     # 큰 영상 업로드 대비 (gateway 가 streaming 으로 프록시)
     traefik.ingress.kubernetes.io/buffering-max-request-bytes: "524288000"  # 500MB
+    # cert-manager 가 letsencrypt-prod ClusterIssuer 로 인증서 자동 발급
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
   hosts:
-    - host: ""      # 도메인 없음 → IP 직접 접근 (Traefik catch-all)
+    - host: "3m-msa.p-e.kr"
       paths:
         - path: /
           pathType: Prefix
-  tls: []
+  tls:
+    - secretName: gateway-tls    # cert-manager 가 인증서를 저장할 Secret 이름
+      hosts:
+        - 3m-msa.p-e.kr

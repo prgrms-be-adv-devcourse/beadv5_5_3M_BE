@@ -24,16 +24,14 @@ set -a
 source "$ENV_FILE"
 set +a
 
-echo "[1/5] postgres-secret (DB 접속 정보)"
+echo "[1/6] postgres-secret (DB 접속 정보)"
 kubectl create secret generic postgres-secret \
   --namespace="$NAMESPACE" \
-  --from-literal=POSTGRES_USER="$POSTGRES_USER" \
-  --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
-  --from-literal=DB_USERNAME="$POSTGRES_USER" \
-  --from-literal=DB_PASSWORD="$POSTGRES_PASSWORD" \
+  --from-literal=DB_USERNAME="$DB_USERNAME" \
+  --from-literal=DB_PASSWORD="$DB_PASSWORD" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-echo "[2/5] jwt-secret (RSA 키는 .env.k3s 의 \\n 을 진짜 줄바꿈으로 변환 후 PEM 파일로 등록)"
+echo "[2/7] jwt-secret (RSA 키는 .env.k3s 의 \\n 을 진짜 줄바꿈으로 변환 후 PEM 파일로 등록)"
 
 # JWT 키들을 임시 PEM 파일로 추출 (printf %b 가 \n 을 진짜 줄바꿈으로 변환)
 TMP_DIR=$(mktemp -d)
@@ -50,17 +48,27 @@ kubectl create secret generic jwt-secret \
   --from-file=JWT_TOKEN_PUBLIC="$TMP_DIR/jwt-token-public.pem" \
   --from-literal=JWT_ACCESS_TOKEN_EXPIRY="$JWT_ACCESS_TOKEN_EXPIRY" \
   --from-literal=JWT_REFRESH_TOKEN_EXPIRY="$JWT_REFRESH_TOKEN_EXPIRY" \
-  --from-literal=STREAMING_JWT_SECRET="$STREAMING_JWT_SECRET" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-echo "[3/5] toss-secret (Toss Payments)"
+echo "[3/7] streaming-secret (streaming-service 전용)"
+kubectl create secret generic streaming-secret \
+  --namespace="$NAMESPACE" \
+  --from-literal=STREAMING_JWT_SECRET="$STREAMING_JWT_SECRET" \
+  --from-literal=STREAMING_PUBLIC_BASE_URL="$STREAMING_PUBLIC_BASE_URL" \
+  --from-literal=STREAMING_ADDRESS_ADAPTER="$STREAMING_ADDRESS_ADAPTER" \
+  --from-literal=STORAGE_S3_PATH="$STORAGE_S3_PATH" \
+  --from-literal=CLIENT_CREATOR_BASE_URL="$CLIENT_CREATOR_BASE_URL" \
+  --from-literal=KAFKA_CONSUMER_GROUP_ID="$KAFKA_CONSUMER_GROUP_ID_STREAMING" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+echo "[4/7] toss-secret (Toss Payments)"
 kubectl create secret generic toss-secret \
   --namespace="$NAMESPACE" \
   --from-literal=TOSS_PAYMENT_CK="$TOSS_PAYMENT_CK" \
   --from-literal=TOSS_PAYMENT_SECRET="$TOSS_PAYMENT_SECRET" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-echo "[4/5] aws-secret (S3 + IAM, docker-compose 와 동일 변수명)"
+echo "[5/7] aws-secret (S3 + IAM, docker-compose 와 동일 변수명)"
 kubectl create secret generic aws-secret \
   --namespace="$NAMESPACE" \
   --from-literal=AWS_ACCESS_KEY="$AWS_ACCESS_KEY" \
@@ -69,11 +77,21 @@ kubectl create secret generic aws-secret \
   --from-literal=AWS_S3_BUCKET="$AWS_S3_BUCKET" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-echo "[5/5] openai-secret (ai-service)"
+echo "[6/7] openai-secret (ai-service)"
 kubectl create secret generic openai-secret \
   --namespace="$NAMESPACE" \
   --from-literal=OPENAI_API_KEY="$OPENAI_API_KEY" \
   --dry-run=client -o yaml | kubectl apply -f -
 
+echo "[7/7] user-secret (Google OAuth + Mail)"
+kubectl create secret generic user-secret \
+  --namespace="$NAMESPACE" \
+  --from-literal=GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
+  --from-literal=GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET" \
+  --from-literal=GOOGLE_REDIRECT_URI="$GOOGLE_REDIRECT_URI" \
+  --from-literal=MAIL_USERNAME="$MAIL_USERNAME" \
+  --from-literal=MAIL_PASSWORD="$MAIL_PASSWORD" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
 echo ""
-echo "✅ 모든 Secret 등록 완료. 확인: kubectl get secret -n $NAMESPACE"
+echo "✅ 모든 Secret 등록 완료 (7개). 확인: kubectl get secret -n $NAMESPACE"
