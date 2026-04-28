@@ -108,9 +108,22 @@ jobs:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.services) }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Compute short SHA
         id: sha
         run: echo "short=${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+
+      # 옵션 B: master 에 git repo 두지 않고, 매 배포마다 chart/values 만 잠깐 보냄
+      - name: SCP chart + values to master /tmp
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.K3S_MASTER_HOST }}
+          username: ${{ secrets.K3S_MASTER_USER }}
+          key: ${{ secrets.K3S_MASTER_SSH_KEY }}
+          source: "k8s/charts/microservice/**,k8s/values/values-*.yaml"
+          target: "/tmp/cd-${{ github.sha }}-${{ matrix.service }}/"
 
       - name: Helm upgrade via master SSH
         uses: appleboy/ssh-action@v1
@@ -120,12 +133,10 @@ jobs:
           key: ${{ secrets.K3S_MASTER_SSH_KEY }}
           script: |
             set -e
-            cd ~/beadv5_5_3M_BE
-            git fetch origin
-            git checkout dev/main
-            git pull origin dev/main
+            export KUBECONFIG=$HOME/.kube/config
 
-            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+            WORK=/tmp/cd-${{ github.sha }}-${{ matrix.service }}
+            cd "$WORK"
 
             SVC="${{ matrix.service }}"
             TAG="${{ steps.sha.outputs.short }}"
@@ -138,6 +149,9 @@ jobs:
               --wait --timeout 5m
 
             kubectl rollout status deploy/"${SVC}-microservice" -n dev --timeout=5m
+
+            # 작업 완료 후 본인 정리 (master 에 누적 X)
+            cd ~ && rm -rf "$WORK"
 
   # ─────────────────────────────────────────────
   # K8s 매니페스트만 변경된 경우 대응
@@ -196,6 +210,18 @@ jobs:
       (needs.detect-changes.outputs.has_changes == 'false' || needs.deploy-to-k3s.result != 'skipped')
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: SCP chart + values to master /tmp
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.K3S_MASTER_HOST }}
+          username: ${{ secrets.K3S_MASTER_USER }}
+          key: ${{ secrets.K3S_MASTER_SSH_KEY }}
+          source: "k8s/charts/microservice/**,k8s/values/values-*.yaml"
+          target: "/tmp/cd-${{ github.sha }}-redeploy/"
+
       - name: Helm upgrade for K8s-only changes (excluding already-deployed)
         uses: appleboy/ssh-action@v1
         with:
@@ -204,12 +230,10 @@ jobs:
           key: ${{ secrets.K3S_MASTER_SSH_KEY }}
           script: |
             set -e
-            cd ~/beadv5_5_3M_BE
-            git fetch origin
-            git checkout dev/main
-            git pull origin dev/main
+            export KUBECONFIG=$HOME/.kube/config
 
-            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+            WORK=/tmp/cd-${{ github.sha }}-redeploy
+            cd "$WORK"
 
             # 정상 deploy 가 다룬 서비스는 이미 새 이미지 + 새 values 로 떴으므로 제외
             ALREADY_DEPLOYED='${{ needs.detect-changes.outputs.services }}'
@@ -233,6 +257,9 @@ jobs:
 
               kubectl rollout status deploy/"${SVC}-microservice" -n dev --timeout=5m
             done
+
+            # 작업 완료 후 본인 정리
+            cd ~ && rm -rf "$WORK"
 
   cd-summary:
     name: CD Summary
