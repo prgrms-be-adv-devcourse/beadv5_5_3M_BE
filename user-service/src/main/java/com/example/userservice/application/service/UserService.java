@@ -5,6 +5,7 @@ import com.example.userservice.application.exception.*;
 import com.example.userservice.application.usecase.UserUseCase;
 import com.example.userservice.domain.model.CookieLog;
 import com.example.userservice.domain.model.Permission;
+import com.example.userservice.domain.model.Gender;
 import com.example.userservice.domain.model.User;
 import com.example.userservice.domain.model.Wallet;
 import com.example.userservice.domain.model.DeletedUser;
@@ -249,7 +250,7 @@ public class UserService implements UserUseCase {
         if (userRepository.existsByEmail(googleUser.email())) {
             user = userRepository.findByEmail(googleUser.email());
         } else {
-            user = User.create(googleUser.email(), UUID.randomUUID().toString(), googleUser.name(), null, null);
+            user = User.create(googleUser.email(), UUID.randomUUID().toString(), googleUser.name(), 0, Gender.MALE);
             user.initWallet();
             userRepository.save(user);
             log.info("Google OAuth new user created: email={}", googleUser.email());
