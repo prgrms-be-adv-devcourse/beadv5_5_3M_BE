@@ -196,6 +196,7 @@ public class MovieSearchService implements MovieSearchUseCase {
                 .title(movie.getTitle())
                 .description(movie.getDescription())
                 .creatorNickname(creatorNickname)
+                .imageUrl(movie.getImageUrl())
                 .categoryIds(categoryIds)
                 .categoryNames(categoryNames)
                 .visibility(movie.getVisibility().name())
@@ -211,6 +212,7 @@ public class MovieSearchService implements MovieSearchUseCase {
     @Override
     public void indexMovieFromMessage(Long movieId, String title, String description,
                                       String creatorId, String creatorNickname,
+                                      String imageUrl,
                                       List<Long> categoryIds, List<String> categoryNames) {
         MovieDocument doc = MovieDocument.builder()
                 .id(movieId.toString())
@@ -218,6 +220,7 @@ public class MovieSearchService implements MovieSearchUseCase {
                 .title(title)
                 .description(description)
                 .creatorNickname(creatorNickname)
+                .imageUrl(imageUrl)
                 .categoryIds(categoryIds != null ? new ArrayList<>(categoryIds) : new ArrayList<>())
                 .categoryNames(categoryNames != null ? new ArrayList<>(categoryNames) : new ArrayList<>())
                 .visibility("PUBLIC")
@@ -239,6 +242,7 @@ public class MovieSearchService implements MovieSearchUseCase {
                     .title(title)
                     .description(description)
                     .creatorNickname(doc.getCreatorNickname())
+                    .imageUrl(doc.getImageUrl())
                     .categoryIds(categoryIds != null ? new ArrayList<>(categoryIds) : doc.getCategoryIds())
                     .categoryNames(categoryNames != null ? new ArrayList<>(categoryNames) : doc.getCategoryNames())
                     .visibility(doc.getVisibility())
@@ -260,6 +264,7 @@ public class MovieSearchService implements MovieSearchUseCase {
                     .title(doc.getTitle())
                     .description(doc.getDescription())
                     .creatorNickname(doc.getCreatorNickname())
+                    .imageUrl(doc.getImageUrl())
                     .categoryIds(doc.getCategoryIds())
                     .categoryNames(doc.getCategoryNames())
                     .visibility(visibility)
