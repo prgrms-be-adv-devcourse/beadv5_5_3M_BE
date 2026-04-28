@@ -117,8 +117,13 @@ public class MovieController {
                     title.isBlank() ? null : title, categoryIds, pageable);
             List<MovieCardResponse> cards = esResult.items().stream()
                     .map(item -> new MovieCardResponse(
-                            item.movieId(), null, item.creatorNickname(),
-                            item.title(), null, null, null,
+                            item.movieId(),
+                            item.creatorId() != null ? java.util.UUID.fromString(item.creatorId()) : null,
+                            item.creatorNickname(),
+                            item.title(),
+                            item.imageUrl(),
+                            item.averageRating(),
+                            item.categoryIds(),
                             item.highlightedTitle(),
                             item.highlightedCreatorNickname()))
                     .collect(Collectors.toList());
