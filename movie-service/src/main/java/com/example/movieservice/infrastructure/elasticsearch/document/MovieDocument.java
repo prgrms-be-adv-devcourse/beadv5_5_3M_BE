@@ -54,4 +54,8 @@ public class MovieDocument {
 
     @Field(type = FieldType.Keyword)
     private String visibility;
+
+    // 검색 결과 카드에 포스터 표시용. 검색 대상 X (index = false).
+    @Field(type = FieldType.Keyword, index = false)
+    private String imageUrl;
 }
