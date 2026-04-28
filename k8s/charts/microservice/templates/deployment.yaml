@@ -69,15 +69,13 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- if .Values.healthcheck.enabled }}
           livenessProbe:
-            httpGet:
-              path: {{ .Values.healthcheck.path }}
+            tcpSocket:
               port: http
             initialDelaySeconds: {{ .Values.healthcheck.livenessInitialDelay }}
             periodSeconds: {{ .Values.healthcheck.livenessPeriod }}
             failureThreshold: 3
           readinessProbe:
-            httpGet:
-              path: {{ .Values.healthcheck.path }}
+            tcpSocket:
               port: http
             initialDelaySeconds: {{ .Values.healthcheck.readinessInitialDelay }}
             periodSeconds: {{ .Values.healthcheck.readinessPeriod }}
