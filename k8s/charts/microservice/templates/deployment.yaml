@@ -21,10 +21,14 @@ spec:
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      {{- with .Values.podAnnotations }}
       annotations:
+        # ConfigMap 내용 변경 시 hash 가 바뀌어 Pod template 갱신 → 자동 rolling restart 유도.
+        # values-*.yaml 의 env 변경 만으로도 helm upgrade 시 새 Pod 자동 부팅 (수동 rollout restart 불필요).
+        # Helm 공식 권장: https://helm.sh/docs/howto/charts_tips_and_tricks/#automatically-roll-deployments
+        checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
     spec:
       containers:
         - name: {{ .Chart.Name }}
