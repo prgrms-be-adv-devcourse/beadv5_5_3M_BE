@@ -22,16 +22,17 @@ env:
   MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info"
   MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
   # 라우팅 대상 (K3s ClusterIP DNS)
-  USER_SERVICE_HOST: "http://user-service.dev.svc.cluster.local:8085"
-  CREATOR_SERVICE_HOST: "http://creator-service.dev.svc.cluster.local:8080"
-  CREATOR_SERVICE_URL: "http://creator-service.dev.svc.cluster.local:8080"
-  PAYMENT_SERVICE_URL: "http://payment-service.dev.svc.cluster.local:8081"
-  SETTLEMENT_SERVICE_URL: "http://settlement-service.dev.svc.cluster.local:8083"
-  TICKET_SERVICE_URL: "http://ticket-service.dev.svc.cluster.local:8084"
-  USER_SERVICE_URL: "http://user-service.dev.svc.cluster.local:8085"
-  MOVIE_SERVICE_URL: "http://movie-service.dev.svc.cluster.local:8086"
-  STREAMING_SERVICE_URL: "http://streaming-service.dev.svc.cluster.local:8088"
-  AI_SERVICE_URL: "http://ai-service.dev.svc.cluster.local:8089"
+  # Service 실제 이름은 chart 의 fullname 헬퍼가 만든 "{release}-microservice" 형태
+  USER_SERVICE_HOST: "http://user-service-microservice.dev.svc.cluster.local:8085"
+  CREATOR_SERVICE_HOST: "http://creator-service-microservice.dev.svc.cluster.local:8080"
+  CREATOR_SERVICE_URL: "http://creator-service-microservice.dev.svc.cluster.local:8080"
+  PAYMENT_SERVICE_URL: "http://payment-service-microservice.dev.svc.cluster.local:8081"
+  SETTLEMENT_SERVICE_URL: "http://settlement-service-microservice.dev.svc.cluster.local:8083"
+  TICKET_SERVICE_URL: "http://ticket-service-microservice.dev.svc.cluster.local:8084"
+  USER_SERVICE_URL: "http://user-service-microservice.dev.svc.cluster.local:8085"
+  MOVIE_SERVICE_URL: "http://movie-service-microservice.dev.svc.cluster.local:8086"
+  STREAMING_SERVICE_URL: "http://streaming-service-microservice.dev.svc.cluster.local:8088"
+  AI_SERVICE_URL: "http://ai-service-microservice.dev.svc.cluster.local:8089"
 
 secretRefs:
   postgres: false   # gateway DB 안 씀
