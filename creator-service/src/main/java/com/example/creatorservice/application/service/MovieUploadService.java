@@ -146,7 +146,7 @@ public class MovieUploadService implements MovieUploadUseCase {
                     .map(c -> new MovieUploadedMessage.CategoryInfo(c.getCategoryId(), c.getName()))
                     .toList();
             applicationEventPublisher.publishEvent(new MovieUploadedEvent(
-                    new MovieUploadedMessage(movie.getMovieId(), movie.getTitle(), movie.getDescription(), movie.getCreatorId(), creatorNickname, categories)
+                    new MovieUploadedMessage(movie.getMovieId(), movie.getTitle(), movie.getDescription(), movie.getCreatorId(), creatorNickname, movie.getImageUrl(), movie.getAverageRating(), categories)
             ));
         } else {
             // 이후 visibility 변경 — ES visibility 필드만 업데이트
