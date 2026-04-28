@@ -49,7 +49,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MovieUploadService implements MovieUploadUseCase {
 
-    private static final int MAX_MOVIES_PER_CREATOR = 3;
+    private static final int MAX_MOVIES_PER_CREATOR = 6;
     private static final long BASE_COOKIE_UNIT_BYTES = 100L * 1024 * 1024; // 100MB
 
     private final MovieRepository movieRepository;
