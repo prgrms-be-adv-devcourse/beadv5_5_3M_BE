@@ -1,0 +1,28 @@
+# cert-manager ClusterIssuer — Let's Encrypt 인증서 자동 발급/갱신
+#
+# 사용법:
+#   1. cert-manager 설치 (클러스터에 1회)
+#      kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+#      kubectl wait --namespace cert-manager --for=condition=ready pod --selector=app.kubernetes.io/instance=cert-manager --timeout=120s
+#
+#   2. 이 파일 적용
+#      kubectl apply -f k8s/infra/07-cert-manager.yaml
+#
+# 확인:
+#   kubectl get clusterissuer letsencrypt-prod
+#   kubectl get certificate -n dev
+
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: abc@gmail.com   # ← 실제 이메일로 교체 (Let's Encrypt 만료 알림 수신용)
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: traefik   # K3s 기본 Ingress Controller
