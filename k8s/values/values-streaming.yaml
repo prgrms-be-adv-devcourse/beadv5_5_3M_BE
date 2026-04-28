@@ -14,32 +14,17 @@ service:
   targetPort: 8088
 
 env:
-  SPRING_PROFILES_ACTIVE: prod
-  JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=192m"     # 일반 서비스보다 +heap
   SERVER_PORT: "8088"
-  DB_HOST: "postgresql.dev.svc.cluster.local"
-  DB_PORT: "5432"
   DB_NAME: "streaming_db"
-  DB_USERNAME: "postgres"
-  DB_PASSWORD: "_OVERRIDE_FROM_SECRET_"
-  KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
-  KAFKA_CONSUMER_GROUP_ID: "streaming-service"
-  REDIS_HOST: "redis.dev.svc.cluster.local"
-  REDIS_PORT: "6379"
-  STREAMING_ADDRESS_ADAPTER: "k8s"
-  STREAMING_PUBLIC_BASE_URL: "http://REPLACE_EIP"              # Phase 6 에서 EIP 로 교체
-  CLIENT_CREATOR_BASE_URL: "http://creator-service.dev.svc.cluster.local:8080"
-  STORAGE_S3_PATH: "streaming/"
   DDL_AUTO: "update"
-
-sharedEnv: {}
 
 secretRefs:
   postgres: true
-  jwt: true        # STREAMING_JWT_SECRET 등
+  jwt: false
   toss: false
-  aws: true        # S3 영상/HLS
+  aws: true        # S3 마운트 자격증명
   openai: false
+  streaming: true  # STREAMING_JWT_SECRET, STREAMING_PUBLIC_BASE_URL 등
 
 resources:
   requests:
@@ -59,3 +44,13 @@ healthcheck:
 
 ingress:
   enabled: false
+
+volumeMounts:
+  - name: uploads
+    mountPath: /root/uploads
+
+volumes:
+  - name: uploads
+    hostPath:
+      path: /home/ubuntu/s3-bucket
+      type: DirectoryOrCreate

@@ -12,22 +12,15 @@ service:
   targetPort: 8083
 
 env:
-  SPRING_PROFILES_ACTIVE: prod
-  JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m"
   SERVER_PORT: "8083"
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgresql.dev.svc.cluster.local:5432/settlement_db"
-  SPRING_DATASOURCE_USERNAME: "postgres"
-  SPRING_DATASOURCE_PASSWORD: "_OVERRIDE_FROM_SECRET_"
-  SPRING_KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
+  DB_NAME: "settlement_db"
+  DDL_AUTO: "update"
   CLIENT_CREATOR_BASE_URL: "http://creator-service.dev.svc.cluster.local:8080"
   SETTLEMENT_FEE_RATE: "0.1"
   SETTLEMENT_COOKIE_TO_KRW_RATE: "100"
   SETTLEMENT_DLQ_FALLBACK_PATH: "/tmp/settlement-dlq"
   SETTLEMENT_DLQ_MAX_RETRY: "5"
   SPRING_TASK_SCHEDULING_TIMEZONE: "Asia/Seoul"
-  DDL_AUTO: "update"
-
-sharedEnv: {}
 
 secretRefs:
   postgres: true

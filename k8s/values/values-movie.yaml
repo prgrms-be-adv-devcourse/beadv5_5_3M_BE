@@ -1,4 +1,4 @@
-# movie-service (포트 8086) — Elasticsearch OFF, JPA 폴백 (PR #133)
+# movie-service (포트 8086) — Elasticsearch ON (K8s ES 사용)
 # - DB: docker-compose 가 creator_db 를 가리키고 있음 — 실제 데이터 위치 조원 확인 후 수정 가능
 
 image:
@@ -11,22 +11,11 @@ service:
   targetPort: 8086
 
 env:
-  SPRING_PROFILES_ACTIVE: prod
-  JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m"
   SERVER_PORT: "8086"
-  # ⚠️ docker-compose 가 creator_db 를 가리키는 상태 그대로. movie_db 로 바꿔야 한다면 조원 확인 후 여기만 수정.
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgresql.dev.svc.cluster.local:5432/creator_db"
-  SPRING_DATASOURCE_USERNAME: "postgres"
-  SPRING_DATASOURCE_PASSWORD: "_OVERRIDE_FROM_SECRET_"
-  SPRING_KAFKA_BOOTSTRAP_SERVERS: "52.78.88.98:9092"
-  SPRING_DATA_REDIS_HOST: "redis.dev.svc.cluster.local"
-  SPRING_DATA_REDIS_PORT: "6379"
   DDL_AUTO: "update"
-  # ★ ES 사용 모드 (조원이 K3s master 에 ES 8.13.4 + nori 띄움)
+  # ⚠️ docker-compose 가 creator_db 를 가리키는 상태 그대로. movie_db 로 바꿔야 한다면 조원 확인 후 여기만 수정.
+  DB_NAME: "creator_db"
   MOVIE_ES_ENABLED: "true"
-  ES_URIS: "http://elasticsearch.dev.svc.cluster.local:9200"
-
-sharedEnv: {}
 
 secretRefs:
   postgres: true
