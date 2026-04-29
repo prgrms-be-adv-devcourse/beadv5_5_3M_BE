@@ -10,7 +10,7 @@ public enum TicketErrorCode {
     INSUFFICIENT_BALANCE(HttpStatus.PAYMENT_REQUIRED, "쿠키 잔액이 부족합니다 (필요: %s)"),
     ALREADY_IN_CART(HttpStatus.CONFLICT, "이미 장바구니에 담긴 스케줄입니다: %s"),
     NOT_CONFIRMED(HttpStatus.CONFLICT, "확정(결제완료) 상태가 아닌 티켓입니다: %s"),
-    REFUND_DEADLINE_PASSED(HttpStatus.CONFLICT, "환불 가능 시간이 지났습니다 (시작 10분 전까지만 가능): %s");
+    REFUND_DEADLINE_PASSED(HttpStatus.CONFLICT, "환불 가능 시점이 지났습니다 (LOBBY 진입 이후 차단): %s");
 
     private final HttpStatus status;
     private final String messageTemplate;

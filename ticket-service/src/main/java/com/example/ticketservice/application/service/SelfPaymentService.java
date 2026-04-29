@@ -53,8 +53,9 @@ public class SelfPaymentService implements SelfPaymentUseCase {
 
         Schedule schedule = ticket.getSchedule();
 
-        // 영상 시작 10분 전부터(LOBBY 진입 후) 결제 차단
-        if (schedule.getStatus() != ScheduleStatus.TICKETING) {
+        // LOBBY 진입 시점부터 결제 차단 (IN_PROGRESSING / TICKETING 에서만 허용)
+        ScheduleStatus status = schedule.getStatus();
+        if (status != ScheduleStatus.IN_PROGRESSING && status != ScheduleStatus.TICKETING) {
             throw ScheduleErrorCode.NOT_IN_TICKETING.of(schedule.getId());
         }
 
