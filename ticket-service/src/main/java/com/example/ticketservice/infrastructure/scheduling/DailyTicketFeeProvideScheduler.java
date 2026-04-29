@@ -11,7 +11,7 @@ public class DailyTicketFeeProvideScheduler {
 
     private final ProvideTicketFeeUseCase provideTicketFeeUseCase;
 
-    @Scheduled(cron = "0 0 1 * * *") // 매일 오전 1시
+    @Scheduled(cron = "0 54 16 * * *") // 매일 오후 4시 54분
     public void run() {
         provideTicketFeeUseCase.provide();
     }
