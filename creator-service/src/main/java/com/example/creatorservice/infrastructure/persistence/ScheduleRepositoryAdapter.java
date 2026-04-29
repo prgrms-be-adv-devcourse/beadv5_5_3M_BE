@@ -33,6 +33,11 @@ public class ScheduleRepositoryAdapter implements ScheduleRepository {
     }
 
     @Override
+    public void deleteAllByMovieId(Long movieId) {
+        scheduleJpaRepository.deleteAllByMovieId(movieId);
+    }
+
+    @Override
     public boolean existsOverlapping(UUID creatorId, LocalDateTime startTime, LocalDateTime endTime) {
         return scheduleJpaRepository.existsOverlapping(creatorId, startTime, endTime);
     }
