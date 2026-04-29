@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface ScheduleRepository {
     Optional<Schedule> findById(Long scheduleId);
@@ -22,4 +23,6 @@ public interface ScheduleRepository {
     List<Schedule> findScheduledMovies();
 
     List<Schedule> findConfirmedByDate(LocalDate date);
+
+    List<Schedule> findConfirmedByDateAndCreator(LocalDate date, UUID creatorId);
 }
