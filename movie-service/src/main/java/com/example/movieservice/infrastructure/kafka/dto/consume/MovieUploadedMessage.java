@@ -11,6 +11,10 @@ public record MovieUploadedMessage(
         String description,
         UUID creatorId,
         String creatorNickname,
+        String imgUrl,
+        Float averageRating,
+        Integer likeCount,
+        Integer reviewCount,
         List<CategoryInfo> categories
 ) {
     public record CategoryInfo(
