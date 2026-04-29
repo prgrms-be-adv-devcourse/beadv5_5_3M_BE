@@ -27,4 +27,9 @@ public class LikeRepositoryAdapter implements LikeRepository {
     public void deleteByMovieIdAndUserId(Long movieId, UUID userId) {
         likeJpaRepository.deleteByMovieIdAndUserId(movieId, userId);
     }
+
+    @Override
+    public void deleteByMovieId(Long movieId) {
+        likeJpaRepository.deleteByMovieId(movieId);
+    }
 }
