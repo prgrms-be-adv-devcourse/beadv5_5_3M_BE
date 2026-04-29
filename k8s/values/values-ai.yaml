@@ -6,7 +6,7 @@
 image:
   repository: qor7777777/ai-service
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 service:
   port: 8089

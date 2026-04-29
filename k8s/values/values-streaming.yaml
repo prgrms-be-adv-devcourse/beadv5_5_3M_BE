@@ -7,7 +7,7 @@
 image:
   repository: qor7777777/streaming-service
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 service:
   port: 8088
@@ -19,6 +19,10 @@ env:
   DDL_AUTO: "update"
   SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: "3GB"
   SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: "3GB"
+  # 시연용 lifecycle 가속 (운영 default 는 PT10M / PT1M / PT3M)
+  STREAMING_LOBBY_LEAD: "PT2M"
+  STREAMING_SOON_LEAD: "PT30S"
+  STREAMING_POST_GRACE: "PT2M"
 
 secretRefs:
   postgres: true

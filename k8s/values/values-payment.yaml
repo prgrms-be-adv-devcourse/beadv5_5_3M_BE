@@ -4,7 +4,7 @@
 image:
   repository: qor7777777/payment-service
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 service:
   port: 8081

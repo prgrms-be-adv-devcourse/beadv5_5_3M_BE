@@ -7,7 +7,7 @@
 image:
   repository: qor7777777/creator-service
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 service:
   port: 8080
@@ -18,6 +18,11 @@ env:
   DDL_AUTO: "update"
   SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: "3GB"
   SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: "3GB"
+  # 시연용 lifecycle 가속 (운영 default 는 PT4M / PT4M / PT10M / PT10M)
+  CREATOR_MIN_REGISTRATION_LEAD: "PT1M"
+  CREATOR_MIN_TICKETING_WINDOW: "PT2M"
+  CREATOR_BATCH_WAITING_LEAD: "PT1M"
+  CREATOR_BATCH_COMPLETED_TOLERANCE: "PT2M"
 
 volumeMounts:
   - name: uploads
