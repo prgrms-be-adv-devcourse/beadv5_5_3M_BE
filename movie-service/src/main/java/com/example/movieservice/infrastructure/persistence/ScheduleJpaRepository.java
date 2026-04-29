@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -30,4 +31,7 @@ public interface ScheduleJpaRepository extends JpaRepository<Schedule, Long> {
             "WHERE s.status = 'SCHEDULED' " +
             "AND s.scheduleId = (SELECT MIN(s2.scheduleId) FROM Schedule s2 WHERE s2.movie = s.movie AND s2.status = 'SCHEDULED' AND s2.startTime = (SELECT MIN(s3.startTime) FROM Schedule s3 WHERE s3.movie = s.movie AND s3.status = 'SCHEDULED'))")
     List<Schedule> findScheduleMovies();
+
+    @Query("SELECT s FROM Schedule s JOIN FETCH s.movie WHERE CAST(s.startTime AS date) = :date AND s.isConfirmed = true")
+    List<Schedule> findConfirmedByDate(@Param("date") LocalDate date);
 }

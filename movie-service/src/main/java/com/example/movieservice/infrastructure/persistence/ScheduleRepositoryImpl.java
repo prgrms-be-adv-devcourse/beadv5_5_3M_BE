@@ -6,6 +6,7 @@ import com.example.movieservice.domain.repository.ScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -43,5 +44,10 @@ public class ScheduleRepositoryImpl implements ScheduleRepository {
     @Override
     public List<Schedule> findScheduledMovies() {
         return scheduleJpaRepository.findScheduleMovies();
+    }
+
+    @Override
+    public List<Schedule> findConfirmedByDate(LocalDate date) {
+        return scheduleJpaRepository.findConfirmedByDate(date);
     }
 }
