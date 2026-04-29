@@ -90,9 +90,17 @@ public class Schedule {
         this.status = ScheduleStatus.TICKETING;
     }
 
-    // 스트리밍 시작: TICKETING → STREAMING
-    public void startStreaming() {
+    // 티켓팅 마감: TICKETING → LOBBY (영상 시작 10분 전, 결제·큐 차단 구간)
+    public void closeTicketing() {
         if (this.status != ScheduleStatus.TICKETING) {
+            throw ScheduleErrorCode.NOT_IN_TICKETING.of(this.id);
+        }
+        this.status = ScheduleStatus.LOBBY;
+    }
+
+    // 스트리밍 시작: LOBBY → STREAMING
+    public void startStreaming() {
+        if (this.status != ScheduleStatus.LOBBY) {
             throw ScheduleErrorCode.NOT_IN_TICKETING.of(this.id);
         }
         this.status = ScheduleStatus.STREAMING;

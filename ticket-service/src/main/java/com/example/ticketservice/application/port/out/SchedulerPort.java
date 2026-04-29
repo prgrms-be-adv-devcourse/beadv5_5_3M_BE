@@ -8,6 +8,8 @@ public interface SchedulerPort {
 
     void scheduleTicketingStartJob(Long scheduleId, LocalDateTime triggerTime);
 
+    void scheduleTicketingCloseJob(Long scheduleId, LocalDateTime triggerTime);
+
     void scheduleReviewAuthJob(Long scheduleId, LocalDateTime triggerTime);
 
     void scheduleStreamingStartJob(Long scheduleId, LocalDateTime triggerTime);

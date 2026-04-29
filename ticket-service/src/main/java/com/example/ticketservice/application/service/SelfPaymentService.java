@@ -9,7 +9,9 @@ import com.example.ticketservice.application.port.out.CachePort;
 import com.example.ticketservice.application.port.out.EventPublisherPort;
 import com.example.ticketservice.application.port.out.UserPort;
 import com.example.ticketservice.application.usecase.SelfPaymentUseCase;
+import com.example.ticketservice.common.exception.ScheduleErrorCode;
 import com.example.ticketservice.common.exception.TicketErrorCode;
+import com.example.ticketservice.domain.enums.ScheduleStatus;
 import com.example.ticketservice.domain.enums.TicketStatus;
 import com.example.ticketservice.domain.model.Schedule;
 import com.example.ticketservice.domain.model.Ticket;
@@ -50,6 +52,11 @@ public class SelfPaymentService implements SelfPaymentUseCase {
         }
 
         Schedule schedule = ticket.getSchedule();
+
+        // 영상 시작 10분 전부터(LOBBY 진입 후) 결제 차단
+        if (schedule.getStatus() != ScheduleStatus.TICKETING) {
+            throw ScheduleErrorCode.NOT_IN_TICKETING.of(schedule.getId());
+        }
 
         // 쿠키 차감 먼저 — 실패 시 상태 전환 없이 예외 발생
         DeductCookieResponse response = userPort.deductTicketFee(
