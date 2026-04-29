@@ -62,6 +62,7 @@ public class MovieIndexEventConsumer {
                 msg.creatorId() != null ? msg.creatorId().toString() : null,
                 msg.creatorNickname(),
                 msg.imgUrl(), msg.averageRating(),
+                msg.likeCount(), msg.reviewCount(),
                 categoryIds, categoryNames);
         log.info("[Kafka → ES] 영화 색인 생성 완료 - movieId: {}", msg.movieId());
     }

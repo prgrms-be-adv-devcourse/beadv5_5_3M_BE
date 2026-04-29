@@ -1,5 +1,6 @@
 package com.example.movieservice.application.service;
 
+import com.example.movieservice.application.usecase.MovieSearchUseCase;
 import com.example.movieservice.application.usecase.ReviewUseCase;
 import com.example.movieservice.domain.model.Movie;
 import com.example.movieservice.domain.model.Review;
@@ -16,6 +17,7 @@ import com.example.movieservice.presentation.dto.request.review.WriteReviewReque
 import com.example.movieservice.presentation.dto.response.review.ReviewResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +42,8 @@ public class ReviewService implements ReviewUseCase {
     private final MovieRepository movieRepository;
     private final UserSyncRepository userSyncRepository;
     private final ReviewAuthorizationRepository reviewAuthorizationRepository;
+    // ES OFF 환경에서도 부팅되도록 ObjectProvider 로 옵셔널 주입 (없으면 skip)
+    private final ObjectProvider<MovieSearchUseCase> movieSearchUseCaseProvider;
 
     @Override
     @Transactional
@@ -80,6 +84,8 @@ public class ReviewService implements ReviewUseCase {
 
         movie.applyReviewCreated(request.rating());
 
+        syncMovieToEs(request.movieId());
+
         log.info("[Review] 작성 완료 - reviewId: {}, userId: {}, movieId: {}, scheduleId: {}",
                 saved.getReviewId(), userId, request.movieId(), authorization.getScheduleId());
         return ReviewResponse.of(saved, userSync.getNickname(), userSync.getUrl());
@@ -101,6 +107,8 @@ public class ReviewService implements ReviewUseCase {
         int oldRating = review.getRating();
         review.update(request.rating(), request.comment());
         movie.applyReviewUpdated(oldRating, request.rating());
+
+        syncMovieToEs(review.getMovieId());
 
         UserSync userSync = userSyncRepository.findById(userId).orElse(null);
         String nickname = userSync != null ? userSync.getNickname() : UNKNOWN_USER;
@@ -132,7 +140,21 @@ public class ReviewService implements ReviewUseCase {
                     reviewAuthorizationRepository.save(auth);
                 });
 
+        syncMovieToEs(review.getMovieId());
+
         log.info("[Review] 삭제 완료 - reviewId: {}, scheduleId: {}", reviewId, review.getScheduleId());
+    }
+
+    // ES 색인 동기화. ES OFF (movie.elasticsearch.enabled=false) 환경에서는 빈이 없어 skip.
+    // ES 호출 실패가 트랜잭션을 롤백시키지 않도록 catch.
+    private void syncMovieToEs(Long movieId) {
+        MovieSearchUseCase useCase = movieSearchUseCaseProvider.getIfAvailable();
+        if (useCase == null) return;
+        try {
+            useCase.indexMovie(movieId);
+        } catch (Exception e) {
+            log.warn("[Review→ES] 색인 동기화 실패 (스킵) - movieId: {}", movieId, e);
+        }
     }
 
     @Override
