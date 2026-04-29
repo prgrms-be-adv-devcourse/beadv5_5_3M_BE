@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 @RequiredArgsConstructor
@@ -49,5 +50,10 @@ public class ScheduleRepositoryImpl implements ScheduleRepository {
     @Override
     public List<Schedule> findConfirmedByDate(LocalDate date) {
         return scheduleJpaRepository.findConfirmedByDate(date);
+    }
+
+    @Override
+    public List<Schedule> findConfirmedByDateAndCreator(LocalDate date, UUID creatorId) {
+        return scheduleJpaRepository.findConfirmedByDateAndCreator(date, creatorId);
     }
 }

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Tag(name = "Schedule", description = "상영 일정 관련 API")
 @RestController
@@ -41,8 +42,10 @@ public class ScheduleController {
     })
     @GetMapping("/by-date")
     public ResponseEntity<List<ScheduleByDateResponse>> getSchedulesByDate(
+            @Parameter(description = "크리에이터 ID", required = true)
+            @RequestParam UUID creatorId,
             @Parameter(description = "조회할 날짜 (yyyy-MM-dd)", required = true)
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(scheduleUseCase.getSchedulesByDate(date));
+        return ResponseEntity.ok(scheduleUseCase.getSchedulesByDate(creatorId, date));
     }
 }
