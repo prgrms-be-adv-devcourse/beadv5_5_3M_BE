@@ -16,7 +16,5 @@ public interface ScheduleManageUseCase {
 
     void delete(UUID creatorId, Long scheduleId);
 
-    List<ScheduleResponse> getDraftByDate(UUID creatorId, LocalDate date);
-
-    List<ScheduleResponse> getConfirmedByDate(UUID creatorId, LocalDate date);
+    List<ScheduleResponse> getSchedulesByDate(UUID creatorId, LocalDate date);
 }
