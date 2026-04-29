@@ -10,4 +10,6 @@ public interface LikeJpaRepository extends JpaRepository<Like, Long> {
     boolean existsByMovieIdAndUserId(Long movieId, UUID userId);
 
     void deleteByMovieIdAndUserId(Long movieId, UUID userId);
+
+    void deleteByMovieId(Long movieId);
 }
