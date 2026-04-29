@@ -47,8 +47,8 @@ public class Ticket {
     @Column(name = "provide_flag")
     private boolean provideFlag;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "schedule_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "schedule_id", nullable = false)
     private Schedule schedule;
 
     // 장바구니 마감(Case A) 또는 대기열 구매 시 RESERVED 상태로 직접 생성
