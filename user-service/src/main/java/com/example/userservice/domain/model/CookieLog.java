@@ -14,8 +14,7 @@ import static lombok.AccessLevel.PROTECTED;
 @Entity
 @Table(uniqueConstraints = {
         @UniqueConstraint(name = "uq_cookie_log_payment", columnNames = {"userId", "paymentId"}),
-        @UniqueConstraint(name = "uq_cookie_log_refund", columnNames = {"userId", "refundId"}),
-        @UniqueConstraint(name = "uq_cookie_log_ticket", columnNames = {"userId", "ticketId"})
+        @UniqueConstraint(name = "uq_cookie_log_refund", columnNames = {"userId", "refundId"})
 })
 @Getter
 @NoArgsConstructor(access = PROTECTED)
