@@ -20,6 +20,18 @@ public record TicketResponse(
 ) {
     public static TicketResponse from(Ticket ticket) {
         Schedule schedule = ticket.getSchedule();
+        if (schedule == null) {
+            // dangling ticket (schedule 참조 없음) 방어. NPE 방지를 위해 schedule 의존 필드는 null.
+            return new TicketResponse(
+                    ticket.getId(),
+                    null,
+                    ticket.getUserId(),
+                    null,
+                    ticket.getStatus(),
+                    null,
+                    null
+            );
+        }
         return new TicketResponse(
                 ticket.getId(),
                 schedule.getId(),
