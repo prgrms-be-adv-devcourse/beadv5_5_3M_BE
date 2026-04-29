@@ -156,18 +156,8 @@ public class ScheduleManageService implements ScheduleManageUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ScheduleResponse> getDraftByDate(UUID creatorId, LocalDate date) {
+    public List<ScheduleResponse> getSchedulesByDate(UUID creatorId, LocalDate date) {
         return scheduleRepository.findAllByCreatorIdAndDate(creatorId, date).stream()
-                .filter(s -> !s.getIsConfirmed())
-                .map(ScheduleResponse::from)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ScheduleResponse> getConfirmedByDate(UUID creatorId, LocalDate date) {
-        return scheduleRepository.findAllByCreatorIdAndDate(creatorId, date).stream()
-                .filter(Schedule::getIsConfirmed)
                 .map(ScheduleResponse::from)
                 .toList();
     }
