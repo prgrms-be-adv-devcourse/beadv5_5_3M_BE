@@ -8,6 +8,7 @@ import com.example.creatorservice.domain.model.Movie.Visibility;
 import com.example.creatorservice.domain.repository.CategoryRepository;
 import com.example.creatorservice.domain.repository.CreatorRepository;
 import com.example.creatorservice.domain.repository.MovieRepository;
+import com.example.creatorservice.domain.repository.ScheduleRepository;
 import com.example.creatorservice.infrastructure.kafka.dto.MovieAiCreatedMessage;
 import com.example.creatorservice.infrastructure.kafka.dto.MovieAiUpdatedMessage;
 import com.example.creatorservice.infrastructure.kafka.dto.MovieDeletedMessage;
@@ -17,6 +18,7 @@ import com.example.creatorservice.infrastructure.kafka.dto.MovieVisibilityChange
 import com.example.creatorservice.infrastructure.kafka.event.MovieAiCreatedEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieAiUpdatedEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieDeletedEvent;
+import com.example.creatorservice.infrastructure.kafka.event.MovieFileDeleteEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieUpdatedEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieUploadedEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieVisibilityChangedEvent;
@@ -55,6 +57,7 @@ public class MovieUploadService implements MovieUploadUseCase {
     private final MovieRepository movieRepository;
     private final CategoryRepository categoryRepository;
     private final CreatorRepository creatorRepository;
+    private final ScheduleRepository scheduleRepository;
     private final FileStorageService fileStorageService;
     private final VideoProcessingService videoProcessingService;
     private final FfprobeVideoValidator ffprobeVideoValidator;
@@ -231,11 +234,10 @@ public class MovieUploadService implements MovieUploadUseCase {
         String imageUrl = movie.getImageUrl();
         String videoUrl = movie.getVideoUrl();
 
+        scheduleRepository.deleteAllByMovieId(movieId);
         movieRepository.delete(movie);
 
-        if (imageUrl != null) fileStorageService.delete(imageUrl);
-        if (videoUrl != null) fileStorageService.delete(videoUrl);
-
+        applicationEventPublisher.publishEvent(new MovieFileDeleteEvent(imageUrl, videoUrl));
         applicationEventPublisher.publishEvent(new MovieDeletedEvent(new MovieDeletedMessage(movie.getMovieId())));
 
         log.info("[Movie] 영화 삭제 완료 - movieId: {}, creatorId: {}", movieId, creatorId);
