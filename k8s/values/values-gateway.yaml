@@ -62,7 +62,7 @@ ingress:
   className: traefik
   annotations:
     # 큰 영상 업로드 대비 (gateway 가 streaming 으로 프록시)
-    traefik.ingress.kubernetes.io/buffering-max-request-bytes: "524288000"  # 500MB
+    traefik.ingress.kubernetes.io/buffering-max-request-bytes: "3221225472"  # 3GB
     # DNS가 EC2 EIP로 변경된 후 아래 주석 해제
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
   hosts:
