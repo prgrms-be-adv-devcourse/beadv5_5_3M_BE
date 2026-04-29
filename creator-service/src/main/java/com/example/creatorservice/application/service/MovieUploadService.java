@@ -18,6 +18,7 @@ import com.example.creatorservice.infrastructure.kafka.dto.MovieVisibilityChange
 import com.example.creatorservice.infrastructure.kafka.event.MovieAiCreatedEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieAiUpdatedEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieDeletedEvent;
+import com.example.creatorservice.infrastructure.kafka.event.MovieFileDeleteEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieUpdatedEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieUploadedEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieVisibilityChangedEvent;
@@ -236,9 +237,7 @@ public class MovieUploadService implements MovieUploadUseCase {
         scheduleRepository.deleteAllByMovieId(movieId);
         movieRepository.delete(movie);
 
-        if (imageUrl != null) fileStorageService.delete(imageUrl);
-        if (videoUrl != null) fileStorageService.delete(videoUrl);
-
+        applicationEventPublisher.publishEvent(new MovieFileDeleteEvent(imageUrl, videoUrl));
         applicationEventPublisher.publishEvent(new MovieDeletedEvent(new MovieDeletedMessage(movie.getMovieId())));
 
         log.info("[Movie] 영화 삭제 완료 - movieId: {}, creatorId: {}", movieId, creatorId);

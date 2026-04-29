@@ -4,10 +4,12 @@ import com.example.creatorservice.infrastructure.kafka.MovieEventPublisher;
 import com.example.creatorservice.infrastructure.kafka.event.MovieAiCreatedEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieAiUpdatedEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieDeletedEvent;
+import com.example.creatorservice.infrastructure.kafka.event.MovieFileDeleteEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieUpdatedEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieUploadedEvent;
 import com.example.creatorservice.infrastructure.kafka.event.MovieVisibilityChangedEvent;
 import com.example.creatorservice.infrastructure.kafka.event.ScheduleConfirmedEvent;
+import com.example.creatorservice.infrastructure.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -20,6 +22,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class MovieAiEventListener {
 
     private final MovieEventPublisher movieEventPublisher;
+    private final FileStorageService fileStorageService;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onMovieAiCreated(MovieAiCreatedEvent event) {
@@ -61,5 +64,15 @@ public class MovieAiEventListener {
     public void onScheduleConfirmed(ScheduleConfirmedEvent event) {
         log.info("[Schedule Event] movie.schedule.confirmed 발행 - scheduleId: {}", event.message().scheduleId());
         movieEventPublisher.publishScheduleConfirmed(event.message());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onMovieFileDelete(MovieFileDeleteEvent event) {
+        if (event.imageUrl() != null) {
+            fileStorageService.delete(event.imageUrl());
+        }
+        if (event.videoUrl() != null) {
+            fileStorageService.delete(event.videoUrl());
+        }
     }
 }
