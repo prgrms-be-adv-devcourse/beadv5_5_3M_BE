@@ -28,7 +28,7 @@ spec:
       initContainers:
         - name: install-nori
           image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
-          command: ["sh", "-c", "bin/elasticsearch-plugin install --batch analysis-nori"]
+          command: ["sh", "-c", "[ -d /usr/share/elasticsearch/plugins/analysis-nori ] || bin/elasticsearch-plugin install --batch analysis-nori"]
           volumeMounts:
             - mountPath: /usr/share/elasticsearch/plugins
               name: es-plugins

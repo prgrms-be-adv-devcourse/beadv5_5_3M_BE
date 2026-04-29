@@ -114,6 +114,17 @@ helm list -n dev
 # 특정 서비스 업그레이드 (예: gateway)
 helm upgrade gateway k8s/charts/microservice -n dev -f k8s/values/values-gateway.yaml
 
+# 전체 서비스 업그레이드
+helm upgrade --install gateway-service k8s/charts/microservice/ -f k8s/values/values-gateway.yaml -n dev                                                                                            
+helm upgrade --install creator-service k8s/charts/microservice/ -f k8s/values/values-creator.yaml -n dev                                                                                            
+helm upgrade --install payment-service k8s/charts/microservice/ -f k8s/values/values-payment.yaml -n dev                                                                                            
+helm upgrade --install settlement-service k8s/charts/microservice/ -f k8s/values/values-settlement.yaml -n dev                                                          
+helm upgrade --install ticket-service k8s/charts/microservice/ -f k8s/values/values-ticket.yaml -n dev                                                                                              
+helm upgrade --install user-service k8s/charts/microservice/ -f k8s/values/values-user.yaml -n dev
+helm upgrade --install movie-service k8s/charts/microservice/ -f k8s/values/values-movie.yaml -n dev                                                                                               
+helm upgrade --install streaming-service k8s/charts/microservice/ -f k8s/values/values-streaming.yaml -n dev                                                           
+helm upgrade --install ai-service k8s/charts/microservice/ -f k8s/values/values-ai.yaml -n dev 
+  
 # 전체 서비스 한번에 업그레이드
 for svc in gateway creator payment settlement ticket user movie streaming ai; do
   helm upgrade $svc k8s/charts/microservice -n dev -f k8s/values/values-$svc.yaml
