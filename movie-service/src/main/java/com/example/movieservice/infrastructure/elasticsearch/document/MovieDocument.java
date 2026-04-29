@@ -66,4 +66,12 @@ public class MovieDocument {
     // 검색 결과 카드의 creator 페이지 이동용. 검색 대상 X.
     @Field(type = FieldType.Keyword, index = false)
     private String creatorId;
+
+    // 검색 결과 카드의 좋아요 수 표시용. 검색 대상 X.
+    @Field(type = FieldType.Integer, index = false)
+    private Integer likeCount;
+
+    // 검색 결과 카드의 리뷰 수 표시용. 검색 대상 X.
+    @Field(type = FieldType.Integer, index = false)
+    private Integer reviewCount;
 }

@@ -24,6 +24,12 @@ public record MovieSearchItemResponse(
         @Schema(description = "평균 평점", example = "4.5")
         Float averageRating,
 
+        @Schema(description = "좋아요 수", example = "12")
+        Integer likeCount,
+
+        @Schema(description = "리뷰 수", example = "3")
+        Integer reviewCount,
+
         @Schema(description = "카테고리 ID 목록", example = "[1, 2]")
         List<Long> categoryIds,
 

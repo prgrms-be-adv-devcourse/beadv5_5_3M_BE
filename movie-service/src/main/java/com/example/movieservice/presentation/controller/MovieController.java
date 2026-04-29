@@ -123,6 +123,8 @@ public class MovieController {
                             item.title(),
                             item.imageUrl(),
                             item.averageRating(),
+                            item.likeCount(),
+                            item.reviewCount(),
                             item.categoryIds(),
                             item.highlightedTitle(),
                             item.highlightedCreatorNickname()))

@@ -19,6 +19,7 @@ public interface MovieSearchUseCase {
     void indexMovieFromMessage(Long movieId, String title, String description,
                                String creatorId, String creatorNickname,
                                String imageUrl, Float averageRating,
+                               Integer likeCount, Integer reviewCount,
                                List<Long> categoryIds, List<String> categoryNames);
 
     void updateMovieIndex(Long movieId, String title, String description,
