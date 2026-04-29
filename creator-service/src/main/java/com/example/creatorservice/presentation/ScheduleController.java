@@ -54,19 +54,11 @@ public class ScheduleController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "특정 날짜 미확정 일정 조회", description = "특정 날짜의 미확정 일정 목록을 조회합니다.")
-    @GetMapping("/draft")
-    public ResponseEntity<List<ScheduleResponse>> getDraftByDate(
+    @Operation(summary = "특정 날짜 일정 조회", description = "특정 날짜의 미확정/확정 일정을 모두 조회합니다. isConfirmed 필드로 확정 여부를 구분합니다.")
+    @GetMapping
+    public ResponseEntity<List<ScheduleResponse>> getSchedulesByDate(
             @RequestHeader("X-Creator-Id") String creatorId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(scheduleManageUseCase.getDraftByDate(UUID.fromString(creatorId), date));
-    }
-
-    @Operation(summary = "특정 날짜 확정 일정 조회", description = "특정 날짜의 확정된 상영 일정 목록을 조회합니다.")
-    @GetMapping("/confirmed")
-    public ResponseEntity<List<ScheduleResponse>> getConfirmedByDate(
-            @RequestHeader("X-Creator-Id") String creatorId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(scheduleManageUseCase.getConfirmedByDate(UUID.fromString(creatorId), date));
+        return ResponseEntity.ok(scheduleManageUseCase.getSchedulesByDate(UUID.fromString(creatorId), date));
     }
 }
