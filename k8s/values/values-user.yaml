@@ -5,7 +5,7 @@
 image:
   repository: qor7777777/user-service
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 service:
   port: 8085

@@ -5,7 +5,7 @@
 image:
   repository: qor7777777/ticket-service
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 service:
   port: 8084
@@ -16,6 +16,9 @@ env:
   DB_NAME: "ticket_db"
   DDL_AUTO: "update"
   CLIENT_USER_BASE_URL: "http://user-service-microservice.dev.svc.cluster.local:8085"
+  # 시연용 lifecycle 가속 (운영 default 는 PT24H / PT10M)
+  TICKET_CART_CLOSE_LEAD: "PT1M"
+  TICKET_TICKETING_CLOSE_LEAD: "PT2M"
 
 secretRefs:
   postgres: true
