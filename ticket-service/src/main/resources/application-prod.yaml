@@ -66,6 +66,13 @@ client:
   user:
     base-url: ${CLIENT_USER_BASE_URL:http://user-service:8085}
 
+# 스케줄 라이프사이클 오프셋 (ISO-8601 Duration)
+# 시연용으로 짧게 override 하려면 환경변수 주입 (e.g. TICKET_CART_CLOSE_LEAD=PT1M)
+ticket:
+  lifecycle:
+    cart-close-lead: ${TICKET_CART_CLOSE_LEAD:PT24H}
+    ticketing-close-lead: ${TICKET_TICKETING_CLOSE_LEAD:PT10M}
+
 server:
   port: ${SERVER_PORT:8084}
 

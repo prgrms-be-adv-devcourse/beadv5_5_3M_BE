@@ -12,12 +12,13 @@ import com.example.creatorservice.infrastructure.kafka.event.ScheduleConfirmedEv
 import com.example.creatorservice.presentation.dto.req.ConfirmScheduleRequest;
 import com.example.creatorservice.presentation.dto.req.RegisterScheduleRequest;
 import com.example.creatorservice.presentation.dto.res.ScheduleResponse;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -28,12 +29,26 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ScheduleManageService implements ScheduleManageUseCase {
 
     private final MovieRepository movieRepository;
     private final ScheduleRepository scheduleRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final Duration minRegistrationLead;
+    private final Duration minTicketingWindow;
+
+    public ScheduleManageService(
+            MovieRepository movieRepository,
+            ScheduleRepository scheduleRepository,
+            ApplicationEventPublisher applicationEventPublisher,
+            @Value("${creator.schedule.min-registration-lead:PT4M}") Duration minRegistrationLead,
+            @Value("${creator.schedule.min-ticketing-window:PT4M}") Duration minTicketingWindow) {
+        this.movieRepository = movieRepository;
+        this.scheduleRepository = scheduleRepository;
+        this.applicationEventPublisher = applicationEventPublisher;
+        this.minRegistrationLead = minRegistrationLead;
+        this.minTicketingWindow = minTicketingWindow;
+    }
 
     @Override
     @Transactional
@@ -105,9 +120,7 @@ public class ScheduleManageService implements ScheduleManageUseCase {
                 throw ScheduleException.alreadyConfirmed();
             }
 
-            // 테스트용
-            // if (!schedule.getTicketingTime().isAfter(now.plusDays(2))) {
-            if (!schedule.getTicketingTime().isAfter(now.plusMinutes(4))) {
+            if (!schedule.getTicketingTime().isAfter(now.plus(minRegistrationLead))) {
                 throw ScheduleException.invalidTicketingStart();
             }
 
@@ -173,17 +186,9 @@ public class ScheduleManageService implements ScheduleManageUseCase {
     }
 
     private void validateSlot(RegisterScheduleRequest.ScheduleSlot slot, Integer runningTimeSeconds) {
-        // 테스트용 정각 등록 제거
-//        if (slot.startTime().getMinute() != 0 || slot.startTime().getSecond() != 0) {
-//            throw ScheduleException.invalidStartTime();
-//        }
+        Duration ticketingWindow = Duration.between(slot.ticketingTime(), slot.startTime());
 
-        LocalDateTime endTime = slot.startTime().plusSeconds(runningTimeSeconds);
-        long minutesBetween = java.time.Duration.between(slot.ticketingTime(), slot.startTime()).toMinutes();
-
-        // 테스트용
-        // if (minutesBetween < 10) {
-        if (minutesBetween < 4) {
+        if (ticketingWindow.compareTo(minTicketingWindow) < 0) {
             throw ScheduleException.invalidTicketingWindow();
         }
 
@@ -191,9 +196,7 @@ public class ScheduleManageService implements ScheduleManageUseCase {
             throw ScheduleException.invalidTicketingWindow();
         }
 
-        // 테스트용
-        // if (!slot.ticketingTime().isAfter(LocalDateTime.now().plusDays(2))) {
-        if (!slot.ticketingTime().isAfter(LocalDateTime.now().plusMinutes(4))) {
+        if (!slot.ticketingTime().isAfter(LocalDateTime.now().plus(minRegistrationLead))) {
             throw ScheduleException.invalidTicketingStart();
         }
     }
