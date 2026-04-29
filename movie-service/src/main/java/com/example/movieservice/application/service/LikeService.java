@@ -1,6 +1,7 @@
 package com.example.movieservice.application.service;
 
 import com.example.movieservice.application.event.MovieLikedEvent;
+import com.example.movieservice.application.usecase.MovieSearchUseCase;
 import com.example.movieservice.domain.model.Movie;
 import com.example.movieservice.domain.model.MovieLike;
 import com.example.movieservice.domain.repository.MovieLikeRepository;
@@ -10,6 +11,7 @@ import com.example.movieservice.global.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,8 @@ public class LikeService {
     private final MovieRepository movieRepository;
     private final MovieLikeRepository movieLikeRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
+    // ES OFF 환경에서도 부팅되도록 ObjectProvider 로 옵셔널 주입 (없으면 skip)
+    private final ObjectProvider<MovieSearchUseCase> movieSearchUseCaseProvider;
 
     @Transactional
     public void like(UUID userId, Long movieId) {
@@ -41,6 +45,7 @@ public class LikeService {
             throw e;
         }
         movie.increaseLikeCount();
+        syncMovieToEs(movieId);
         applicationEventPublisher.publishEvent(new MovieLikedEvent(userId, movieId, "LIKED", movie.getTitle(), movie.getImageUrl()));
         log.info("[Like] 좋아요 추가 - userId: {}, movieId: {}", userId, movieId);
     }
@@ -55,7 +60,20 @@ public class LikeService {
             throw new GeneralException(ErrorStatus.LIKE_NOT_FOUND);
         }
         movie.decreaseLikeCount();
+        syncMovieToEs(movieId);
         applicationEventPublisher.publishEvent(new MovieLikedEvent(userId, movieId, "UNLIKED", movie.getTitle(), movie.getImageUrl()));
         log.info("[Like] 좋아요 취소 - userId: {}, movieId: {}", userId, movieId);
+    }
+
+    // ES 색인 동기화. ES OFF (movie.elasticsearch.enabled=false) 환경에서는 빈이 없어 skip.
+    // ES 호출 실패가 트랜잭션을 롤백시키지 않도록 catch.
+    private void syncMovieToEs(Long movieId) {
+        MovieSearchUseCase useCase = movieSearchUseCaseProvider.getIfAvailable();
+        if (useCase == null) return;
+        try {
+            useCase.indexMovie(movieId);
+        } catch (Exception e) {
+            log.warn("[Like→ES] 색인 동기화 실패 (스킵) - movieId: {}", movieId, e);
+        }
     }
 }
