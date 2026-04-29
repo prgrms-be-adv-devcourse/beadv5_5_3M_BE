@@ -3,6 +3,7 @@ package com.example.movieservice.domain.repository;
 import com.example.movieservice.domain.model.Movie;
 import com.example.movieservice.domain.model.Schedule;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -19,4 +20,6 @@ public interface ScheduleRepository {
     List<Movie> findOnAirMovies();
 
     List<Schedule> findScheduledMovies();
+
+    List<Schedule> findConfirmedByDate(LocalDate date);
 }
