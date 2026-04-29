@@ -4,6 +4,7 @@
 # - heap 1Gi (medium 4GB 한계 고려)
 # - nori 플러그인은 init container 로 emptyDir 에 설치 후 main 컨테이너가 마운트
 # - movie-service 가 ES_URIS=http://elasticsearch.dev.svc.cluster.local:9200 으로 접근
+# - es-data PVC 10Gi (local-path) 로 인덱스 데이터 영속성 확보
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -51,9 +52,19 @@ spec:
           volumeMounts:
             - mountPath: /usr/share/elasticsearch/plugins
               name: es-plugins
+            - mountPath: /usr/share/elasticsearch/data
+              name: es-data
       volumes:
         - name: es-plugins
           emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: es-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
 ---
 apiVersion: v1
 kind: Service
