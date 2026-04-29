@@ -154,6 +154,8 @@ public class MovieSearchService implements MovieSearchUseCase {
                             doc.getTitle(),
                             doc.getImageUrl(),
                             doc.getAverageRating(),
+                            doc.getLikeCount(),
+                            doc.getReviewCount(),
                             doc.getCategoryIds(),
                             highlightedTitle,
                             highlightedNickname
@@ -204,6 +206,8 @@ public class MovieSearchService implements MovieSearchUseCase {
                 .creatorId(movie.getCreatorId() != null ? movie.getCreatorId().toString() : null)
                 .imageUrl(movie.getImageUrl())
                 .averageRating(movie.getAverageRating())
+                .likeCount(movie.getLikeCount())
+                .reviewCount(movie.getReviewCount())
                 .categoryIds(categoryIds)
                 .categoryNames(categoryNames)
                 .visibility(movie.getVisibility().name())
@@ -220,6 +224,7 @@ public class MovieSearchService implements MovieSearchUseCase {
     public void indexMovieFromMessage(Long movieId, String title, String description,
                                       String creatorId, String creatorNickname,
                                       String imageUrl, Float averageRating,
+                                      Integer likeCount, Integer reviewCount,
                                       List<Long> categoryIds, List<String> categoryNames) {
         MovieDocument doc = MovieDocument.builder()
                 .id(movieId.toString())
@@ -230,6 +235,8 @@ public class MovieSearchService implements MovieSearchUseCase {
                 .creatorId(creatorId)
                 .imageUrl(imageUrl)
                 .averageRating(averageRating)
+                .likeCount(likeCount != null ? likeCount : 0)
+                .reviewCount(reviewCount != null ? reviewCount : 0)
                 .categoryIds(categoryIds != null ? new ArrayList<>(categoryIds) : new ArrayList<>())
                 .categoryNames(categoryNames != null ? new ArrayList<>(categoryNames) : new ArrayList<>())
                 .visibility("PUBLIC")
@@ -254,6 +261,8 @@ public class MovieSearchService implements MovieSearchUseCase {
                     .creatorId(doc.getCreatorId())
                     .imageUrl(doc.getImageUrl())
                     .averageRating(doc.getAverageRating())
+                    .likeCount(doc.getLikeCount())
+                    .reviewCount(doc.getReviewCount())
                     .categoryIds(categoryIds != null ? new ArrayList<>(categoryIds) : doc.getCategoryIds())
                     .categoryNames(categoryNames != null ? new ArrayList<>(categoryNames) : doc.getCategoryNames())
                     .visibility(doc.getVisibility())
@@ -278,6 +287,8 @@ public class MovieSearchService implements MovieSearchUseCase {
                     .creatorId(doc.getCreatorId())
                     .imageUrl(doc.getImageUrl())
                     .averageRating(doc.getAverageRating())
+                    .likeCount(doc.getLikeCount())
+                    .reviewCount(doc.getReviewCount())
                     .categoryIds(doc.getCategoryIds())
                     .categoryNames(doc.getCategoryNames())
                     .visibility(visibility)
