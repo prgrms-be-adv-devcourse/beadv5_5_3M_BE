@@ -3,6 +3,7 @@ package com.example.creatorservice.infrastructure.persistence;
 import com.example.creatorservice.domain.model.Schedule;
 import com.example.creatorservice.domain.model.Schedule.ScheduleStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -31,4 +32,8 @@ public interface ScheduleJpaRepository extends JpaRepository<Schedule, Long> {
 
     @Query("SELECT s FROM Schedule s WHERE s.status = 'ON_AIR' AND s.endTime <= :tenMinutesAgo")
     List<Schedule> findOnAirToCompleted(@Param("tenMinutesAgo") LocalDateTime tenMinutesAgo);
+
+    @Modifying
+    @Query("DELETE FROM Schedule s WHERE s.movie.movieId = :movieId")
+    void deleteAllByMovieId(@Param("movieId") Long movieId);
 }
