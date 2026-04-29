@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -41,9 +42,9 @@ public class ScheduleService implements ScheduleUseCase {
     }
 
     @Override
-    public List<ScheduleByDateResponse> getSchedulesByDate(LocalDate date) {
-        log.info("[getSchedulesByDate] date={}", date);
-        return scheduleRepository.findConfirmedByDate(date).stream()
+    public List<ScheduleByDateResponse> getSchedulesByDate(UUID creatorId, LocalDate date) {
+        log.info("[getSchedulesByDate] creatorId={}, date={}", creatorId, date);
+        return scheduleRepository.findConfirmedByDateAndCreator(date, creatorId).stream()
                 .map(ScheduleByDateResponse::from)
                 .toList();
     }

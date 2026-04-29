@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface ScheduleJpaRepository extends JpaRepository<Schedule, Long> {
 
@@ -34,4 +35,7 @@ public interface ScheduleJpaRepository extends JpaRepository<Schedule, Long> {
 
     @Query("SELECT s FROM Schedule s JOIN FETCH s.movie WHERE CAST(s.startTime AS date) = :date AND s.isConfirmed = true")
     List<Schedule> findConfirmedByDate(@Param("date") LocalDate date);
+
+    @Query("SELECT s FROM Schedule s JOIN FETCH s.movie WHERE CAST(s.startTime AS date) = :date AND s.isConfirmed = true AND s.movie.creatorId = :creatorId")
+    List<Schedule> findConfirmedByDateAndCreator(@Param("date") LocalDate date, @Param("creatorId") UUID creatorId);
 }

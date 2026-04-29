@@ -5,12 +5,13 @@ import com.example.movieservice.presentation.dto.response.schedule.ScheduleForUs
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 public interface ScheduleUseCase {
 
     List<ScheduleForUserResponse> getSpecificMovieSchedule(Long movieId);
 
-    List<ScheduleByDateResponse> getSchedulesByDate(LocalDate date);
+    List<ScheduleByDateResponse> getSchedulesByDate(UUID creatorId, LocalDate date);
 
     void decreaseSeat(Long scheduleId);
 
