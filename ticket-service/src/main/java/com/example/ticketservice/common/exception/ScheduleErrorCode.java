@@ -11,7 +11,7 @@ public enum ScheduleErrorCode {
     CART_CLOSED(HttpStatus.CONFLICT, "장바구니가 마감된 스케줄입니다: %s"),
     NOT_IN_TICKETING(HttpStatus.CONFLICT, "티켓팅 기간이 아닌 스케줄입니다: %s"),
     NOT_IN_STREAMING(HttpStatus.CONFLICT, "스트리밍 중이 아닌 스케줄입니다: %s"),
-    INVALID_STATUS_FILTER(HttpStatus.BAD_REQUEST, "조회 가능한 status는 CART/IN_PROGRESSING/TICKETING만 허용됩니다.");
+    INVALID_STATUS_FILTER(HttpStatus.BAD_REQUEST, "조회 가능한 status는 CART/IN_PROGRESSING/TICKETING/LOBBY만 허용됩니다.");
 
     private final HttpStatus status;
     private final String messageTemplate;

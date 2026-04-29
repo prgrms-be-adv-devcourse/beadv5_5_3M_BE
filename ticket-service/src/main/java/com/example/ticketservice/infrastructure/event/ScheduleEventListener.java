@@ -24,20 +24,22 @@ public class ScheduleEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleScheduleInitialized(ScheduleInitializedEvent event) {
-        // ReviewAuth는 streaming LobbyOpen과 동시 발행해야 Entitlement가 WS CONNECT 전에 도달.
-        // 관측용: startTime - 6m (streaming LOBBY_LEAD와 동기화). 운영 복원 시 minusMinutes(10).
-        LocalDateTime reviewAuthTime = event.startTime().minusMinutes(6);
-        // 관측용: ticketingTime - 3m. 운영 복원 시 minusHours(24).
-        schedulerPort.scheduleCartCloseJob(event.scheduleId(), event.ticketingTime().minusMinutes(3));
+        // 영상 시작 10분 전: 티켓팅 마감 + 리뷰권한 발행. streaming LOBBY_LEAD(10m)와 동일 시점.
+        LocalDateTime ticketingCloseTime = event.startTime().minusMinutes(10);
+        LocalDateTime cartCloseTime = event.ticketingTime().minusHours(24);
+
+        schedulerPort.scheduleCartCloseJob(event.scheduleId(), cartCloseTime);
         schedulerPort.scheduleTicketingStartJob(event.scheduleId(), event.ticketingTime());
-        schedulerPort.scheduleReviewAuthJob(event.scheduleId(), reviewAuthTime);
+        schedulerPort.scheduleTicketingCloseJob(event.scheduleId(), ticketingCloseTime);
+        schedulerPort.scheduleReviewAuthJob(event.scheduleId(), ticketingCloseTime);
         schedulerPort.scheduleStreamingStartJob(event.scheduleId(), event.startTime());
         schedulerPort.scheduleStreamingFinishJob(event.scheduleId(), event.endTime());
-        log.info("Quartz Job 등록 완료 - scheduleId={}, ticketingTime={}, reviewAuthTime={}, startTime={}, endTime={}",
-                event.scheduleId(), event.ticketingTime(), reviewAuthTime, event.startTime(), event.endTime());
+        log.info("Quartz Job 등록 완료 - scheduleId={}, cartCloseTime={}, ticketingTime={}, ticketingCloseTime={}, startTime={}, endTime={}",
+                event.scheduleId(), cartCloseTime, event.ticketingTime(), ticketingCloseTime,
+                event.startTime(), event.endTime());
 
-        // cart:count TTL도 CartClose와 동일 오프셋. 운영 복원 시 minusHours(24).
-        Duration ttl = Duration.between(LocalDateTime.now(), event.ticketingTime().minusMinutes(3));
+        // cart:count TTL은 CartClose 시점까지(=ticketingTime - 24h) 유효
+        Duration ttl = Duration.between(LocalDateTime.now(), cartCloseTime);
         String cartCountKey = RedisKeys.CART_COUNT + event.scheduleId();
         if (!ttl.isNegative() && !ttl.isZero()) {
             cachePort.setCounter(cartCountKey, 0, ttl);

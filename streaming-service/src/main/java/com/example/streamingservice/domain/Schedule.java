@@ -27,7 +27,7 @@ import lombok.NoArgsConstructor;
 public class Schedule {
 
 	private static final Duration LOBBY_LEAD = Duration.ofMinutes(10);
-	private static final Duration POST_GRACE = Duration.ofMinutes(10);
+	private static final Duration POST_GRACE = Duration.ofMinutes(3);
 
 	@Id
 	@Column(name = "schedule_id", nullable = false)

@@ -8,6 +8,7 @@ import com.example.ticketservice.application.event.TicketPaidEvent;
 import com.example.ticketservice.application.port.out.CachePort;
 import com.example.ticketservice.application.port.out.UserPort;
 import com.example.ticketservice.common.exception.ScheduleErrorCode;
+import com.example.ticketservice.domain.enums.ScheduleStatus;
 import com.example.ticketservice.domain.model.Schedule;
 import com.example.ticketservice.domain.model.Ticket;
 import com.example.ticketservice.domain.repository.ScheduleRepository;
@@ -42,6 +43,12 @@ public class QueuePurchaseProcessor {
     public Optional<TicketResponse> tryPurchase(Long scheduleId, UUID userId, int ticketNum) {
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> ScheduleErrorCode.NOT_FOUND.of(scheduleId));
+
+        // 영상 시작 10분 전부터(LOBBY) 큐 처리도 중단 — 외부 트리거가 늦어 들어와도 신규 구매 금지
+        if (schedule.getStatus() != ScheduleStatus.TICKETING) {
+            log.info("큐 구매 스킵(티켓팅 종료) - scheduleId={}, status={}", scheduleId, schedule.getStatus());
+            return Optional.empty();
+        }
 
         Ticket ticket = Ticket.createReserved(schedule, ticketNum, userId);
         ticketRepository.save(ticket); // ID 확보를 위해 먼저 저장

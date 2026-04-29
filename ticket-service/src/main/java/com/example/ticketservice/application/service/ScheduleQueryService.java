@@ -26,11 +26,12 @@ import java.util.Set;
 public class ScheduleQueryService implements ScheduleQueryUseCase {
 
     private static final Set<ScheduleStatus> DEFAULT_OPEN_STATUSES =
-            EnumSet.of(ScheduleStatus.CART, ScheduleStatus.IN_PROGRESSING, ScheduleStatus.TICKETING);
+            EnumSet.of(ScheduleStatus.CART, ScheduleStatus.IN_PROGRESSING,
+                    ScheduleStatus.TICKETING, ScheduleStatus.LOBBY);
 
     private static final Set<ScheduleStatus> MOVIE_DETAIL_STATUSES =
             EnumSet.of(ScheduleStatus.CART, ScheduleStatus.IN_PROGRESSING,
-                    ScheduleStatus.TICKETING, ScheduleStatus.STREAMING);
+                    ScheduleStatus.TICKETING, ScheduleStatus.LOBBY, ScheduleStatus.STREAMING);
 
     private final ScheduleRepository scheduleRepository;
     private final CachePort cachePort;

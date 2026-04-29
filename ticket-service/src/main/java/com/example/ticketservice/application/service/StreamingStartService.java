@@ -22,7 +22,7 @@ public class StreamingStartService implements StreamingStartUseCase {
     public void execute(Long scheduleId) {
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> ScheduleErrorCode.NOT_FOUND.of(scheduleId));
-        if (schedule.getStatus() != ScheduleStatus.TICKETING) {
+        if (schedule.getStatus() != ScheduleStatus.LOBBY) {
             log.warn("스트리밍 시작 스킵 - scheduleId={}, currentStatus={}", scheduleId, schedule.getStatus());
             return;
         }

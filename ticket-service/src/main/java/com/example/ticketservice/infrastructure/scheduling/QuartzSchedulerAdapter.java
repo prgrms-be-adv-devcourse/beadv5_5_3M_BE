@@ -31,6 +31,11 @@ public class QuartzSchedulerAdapter implements SchedulerPort {
     }
 
     @Override
+    public void scheduleTicketingCloseJob(Long scheduleId, LocalDateTime triggerTime) {
+        scheduleJobForSchedule(TicketingCloseQuartzJob.class, "TicketingClose", scheduleId, triggerTime);
+    }
+
+    @Override
     public void scheduleReviewAuthJob(Long scheduleId, LocalDateTime triggerTime) {
         scheduleJobForSchedule(ReviewAuthQuartzJob.class, "ReviewAuth", scheduleId, triggerTime);
     }
@@ -49,6 +54,7 @@ public class QuartzSchedulerAdapter implements SchedulerPort {
     public void cancelScheduledJobs(Long scheduleId) {
         deleteJob("CartCloseJob_" + scheduleId, "CART_CLOSE", scheduleId);
         deleteJob("TicketingStartJob_" + scheduleId, "TICKETING_START", scheduleId);
+        deleteJob("TicketingCloseJob_" + scheduleId, "TICKETING_CLOSE", scheduleId);
         deleteJob("ReviewAuthJob_" + scheduleId, "REVIEW_AUTH", scheduleId);
         deleteJob("StreamingStartJob_" + scheduleId, "STREAMING_START", scheduleId);
         deleteJob("StreamingFinishJob_" + scheduleId, "STREAMING_FINISH", scheduleId);
