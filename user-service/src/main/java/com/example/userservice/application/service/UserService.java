@@ -234,6 +234,10 @@ public class UserService implements UserUseCase {
     @Override
     @Transactional
     public RefundCookieResponse refundCookie(RefundCookieRequest request) {
+        if (cookieLogRepository.existsByTicketIdAndAmountGreaterThan(request.ticketId(), 0)) {
+            log.warn("[refund/cookie] 중복 처리 방지 - ticketId: {}", request.ticketId());
+            return new RefundCookieResponse(request.userId(), request.ticketId(), request.amount(), true);
+        }
         Wallet wallet = walletRepository.findByUserId(request.userId());
         wallet.add(request.amount());
         CookieLog cookieLog = CookieLog.create(request.userId(), request.amount(), request.ticketId());

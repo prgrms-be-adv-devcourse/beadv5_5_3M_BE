@@ -35,6 +35,11 @@ public class CookieLogRepositoryAdapter implements CookieLogRepository {
     }
 
     @Override
+    public boolean existsByTicketIdAndAmountGreaterThan(Long ticketId, Integer amount) {
+        return cookieLogJpaRepository.existsByTicketIdAndAmountGreaterThan(ticketId, amount);
+    }
+
+    @Override
     public List<CookieLog> findByUserId(UUID userId) {
         return cookieLogJpaRepository.findByUserIdOrderByCreateAtDesc(userId);
     }

@@ -15,5 +15,7 @@ public interface CookieLogRepository {
 
     boolean existsByTicketId(Long ticketId);
 
+    boolean existsByTicketIdAndAmountGreaterThan(Long ticketId, Integer amount);
+
     List<CookieLog> findByUserId(UUID userId);
 }

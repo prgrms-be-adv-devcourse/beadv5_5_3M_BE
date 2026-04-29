@@ -14,5 +14,7 @@ public interface CookieLogJpaRepository extends JpaRepository<CookieLog, Long> {
 
     boolean existsByTicketId(Long ticketId);
 
+    boolean existsByTicketIdAndAmountGreaterThan(Long ticketId, Integer amount);
+
     List<CookieLog> findByUserIdOrderByCreateAtDesc(UUID userId);
 }
