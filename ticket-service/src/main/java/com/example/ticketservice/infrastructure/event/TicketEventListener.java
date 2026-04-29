@@ -49,7 +49,7 @@ public class TicketEventListener {
         //    실패해도 stock 복구/Kafka 발행은 반드시 진행해야 대기자 처리가 지연되지 않음
         try {
             userPort.refundCookie(new RefundCookieRequest(event.ticketId(), event.cookie(), event.userId()));
-            log.debug("쿠키 환불 완료 - ticketId={}, cookie={}", event.ticketId(), event.cookie());
+            log.info("쿠키 환불 완료 - ticketId={}, cookie={}", event.ticketId(), event.cookie());
         } catch (Exception e) {
             log.error("쿠키 환불 실패 - ticketId={}, userId={}, 수동 처리 필요", event.ticketId(), event.userId(), e);
         }
