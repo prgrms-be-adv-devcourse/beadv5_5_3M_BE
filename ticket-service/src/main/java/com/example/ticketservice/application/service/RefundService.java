@@ -3,6 +3,7 @@ package com.example.ticketservice.application.service;
 import com.example.ticketservice.application.event.TicketRefundedEvent;
 import com.example.ticketservice.application.usecase.RefundUseCase;
 import com.example.ticketservice.common.exception.TicketErrorCode;
+import com.example.ticketservice.domain.enums.ScheduleStatus;
 import com.example.ticketservice.domain.enums.TicketStatus;
 import com.example.ticketservice.domain.model.Ticket;
 import com.example.ticketservice.domain.repository.TicketRepository;
@@ -12,7 +13,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Slf4j
@@ -37,9 +37,9 @@ public class RefundService implements RefundUseCase {
             throw TicketErrorCode.NOT_CONFIRMED.of(ticketId);
         }
 
-        // 시작 10분 전까지만 환불 가능
-        LocalDateTime refundDeadline = ticket.getSchedule().getStartTime().minusMinutes(10);
-        if (LocalDateTime.now().isAfter(refundDeadline)) {
+        // LOBBY 진입 시점부터 환불 차단 (IN_PROGRESSING / TICKETING 에서만 허용)
+        ScheduleStatus status = ticket.getSchedule().getStatus();
+        if (status != ScheduleStatus.IN_PROGRESSING && status != ScheduleStatus.TICKETING) {
             throw TicketErrorCode.REFUND_DEADLINE_PASSED.of(ticketId);
         }
 
