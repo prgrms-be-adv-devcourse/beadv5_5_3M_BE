@@ -61,4 +61,12 @@ public class ScheduleController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(scheduleManageUseCase.getDraftByDate(UUID.fromString(creatorId), date));
     }
+
+    @Operation(summary = "특정 날짜 확정 일정 조회", description = "특정 날짜의 확정된 상영 일정 목록을 조회합니다.")
+    @GetMapping("/confirmed")
+    public ResponseEntity<List<ScheduleResponse>> getConfirmedByDate(
+            @RequestHeader("X-Creator-Id") String creatorId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(scheduleManageUseCase.getConfirmedByDate(UUID.fromString(creatorId), date));
+    }
 }

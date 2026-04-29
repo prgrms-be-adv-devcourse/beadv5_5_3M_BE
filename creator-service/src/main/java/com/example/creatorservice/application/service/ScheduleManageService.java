@@ -163,6 +163,15 @@ public class ScheduleManageService implements ScheduleManageUseCase {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<ScheduleResponse> getConfirmedByDate(UUID creatorId, LocalDate date) {
+        return scheduleRepository.findAllByCreatorIdAndDate(creatorId, date).stream()
+                .filter(Schedule::getIsConfirmed)
+                .map(ScheduleResponse::from)
+                .toList();
+    }
+
     private record TimeRange(LocalDateTime start, LocalDateTime end) {
         static TimeRange of(LocalDateTime start, Integer runningTimeSeconds) {
             return new TimeRange(start, start.plusSeconds(runningTimeSeconds));
