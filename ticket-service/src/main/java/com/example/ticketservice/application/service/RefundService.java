@@ -12,6 +12,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Slf4j
@@ -34,6 +35,12 @@ public class RefundService implements RefundUseCase {
 
         if (ticket.getStatus() != TicketStatus.CONFIRMED) {
             throw TicketErrorCode.NOT_CONFIRMED.of(ticketId);
+        }
+
+        // 시작 10분 전까지만 환불 가능
+        LocalDateTime refundDeadline = ticket.getSchedule().getStartTime().minusMinutes(10);
+        if (LocalDateTime.now().isAfter(refundDeadline)) {
+            throw TicketErrorCode.REFUND_DEADLINE_PASSED.of(ticketId);
         }
 
         Long scheduleId = ticket.getSchedule().getId();
