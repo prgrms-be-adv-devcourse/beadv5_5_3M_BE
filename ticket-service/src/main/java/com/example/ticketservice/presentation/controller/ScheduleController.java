@@ -46,7 +46,7 @@ public class ScheduleController {
     @GetMapping("/open")
     public ResponseEntity<PageResult<TicketableScheduleResponse>> listOpenSchedules(
             @RequestHeader("X-User-Id") UUID userId,
-            @Parameter(description = "필터링할 status (CART, IN_PROGRESSING, TICKETING). 미지정 시 3개 모두 포함.")
+            @Parameter(description = "필터링할 status (CART, IN_PROGRESSING, TICKETING, LOBBY). 미지정 시 4개 모두 포함.")
             @RequestParam(required = false) Set<ScheduleStatus> status,
             @PageableDefault(size = 20, sort = "ticketingTime", direction = Sort.Direction.ASC) Pageable pageable
     ) {
