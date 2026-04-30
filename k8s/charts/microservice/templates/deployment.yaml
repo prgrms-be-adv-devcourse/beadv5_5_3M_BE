@@ -26,6 +26,9 @@ spec:
         # values-*.yaml 의 env 변경 만으로도 helm upgrade 시 새 Pod 자동 부팅 (수동 rollout restart 불필요).
         # Helm 공식 권장: https://helm.sh/docs/howto/charts_tips_and_tricks/#automatically-roll-deployments
         checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        # latest 태그 환경에서 helm upgrade 마다 spec change 를 유발해
+        # 자동 rolling restart 를 트리거 (imagePullPolicy: Always 와 결합 → 새 latest pull).
+        cinestream.io/release-revision: {{ .Release.Revision | quote }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
