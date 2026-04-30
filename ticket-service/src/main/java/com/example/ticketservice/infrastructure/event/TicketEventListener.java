@@ -16,8 +16,8 @@ import com.example.ticketservice.infrastructure.messaging.dto.event.TicketingSta
 import com.example.ticketservice.infrastructure.messaging.dto.event.TicketPaidMessage;
 import com.example.ticketservice.infrastructure.messaging.dto.event.TicketRefundedMessage;
 import com.example.ticketservice.infrastructure.messaging.KafkaTopics;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -27,12 +27,23 @@ import java.time.LocalDateTime;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class TicketEventListener {
 
     private final EventPublisherPort eventPublisherPort;
     private final CachePort cachePort;
     private final UserPort userPort;
+    private final Duration ticketingCloseLead;
+
+    public TicketEventListener(
+            EventPublisherPort eventPublisherPort,
+            CachePort cachePort,
+            UserPort userPort,
+            @Value("${ticket.lifecycle.ticketing-close-lead:PT10M}") Duration ticketingCloseLead) {
+        this.eventPublisherPort = eventPublisherPort;
+        this.cachePort = cachePort;
+        this.userPort = userPort;
+        this.ticketingCloseLead = ticketingCloseLead;
+    }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleTicketPaid(TicketPaidEvent event) {
@@ -87,7 +98,7 @@ public class TicketEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleTicketingStarted(TicketingStartedEvent event) {
         // Redis 키 설정 — DB 커밋 후 실행하여 DB 롤백 시 Redis 잔류 방지
-        Duration ttl = Duration.between(LocalDateTime.now(), event.startTime().minusMinutes(10));
+        Duration ttl = Duration.between(LocalDateTime.now(), event.startTime().minus(ticketingCloseLead));
         if (!ttl.isNegative() && !ttl.isZero()) {
             cachePort.setCounter(RedisKeys.STOCK + event.scheduleId(), event.remaining(), ttl);
             cachePort.setCounter(RedisKeys.PAYING + event.scheduleId(), 0, ttl);

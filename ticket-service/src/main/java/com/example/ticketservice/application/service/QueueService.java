@@ -8,8 +8,8 @@ import com.example.ticketservice.application.port.out.CachePort;
 import com.example.ticketservice.application.usecase.QueueUseCase;
 import com.example.ticketservice.common.exception.QueueErrorCode;
 import com.example.ticketservice.common.exception.TicketErrorCode;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -19,11 +19,20 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class QueueService implements QueueUseCase {
 
     private final CachePort cachePort;
     private final QueuePurchaseProcessor purchaseProcessor;
+    private final Duration ticketingCloseLead;
+
+    public QueueService(
+            CachePort cachePort,
+            QueuePurchaseProcessor purchaseProcessor,
+            @Value("${ticket.lifecycle.ticketing-close-lead:PT10M}") Duration ticketingCloseLead) {
+        this.cachePort = cachePort;
+        this.purchaseProcessor = purchaseProcessor;
+        this.ticketingCloseLead = ticketingCloseLead;
+    }
 
     // @Transactional 없음: DB 조회 없음, 실제 트랜잭션은 QueuePurchaseProcessor가 관리
     @Override
@@ -80,10 +89,10 @@ public class QueueService implements QueueUseCase {
 
         cachePort.addToZSetWithTimestamp(queueKey, userIdStr);
 
-        // 대기열 TTL: 공연 시작 10분 전 (이미 지난 경우 1초 후 만료)
+        // 대기열 TTL: LOBBY 진입 시점(startTime - ticketingCloseLead)까지 (이미 지난 경우 1초 후 만료)
         String startTimeStr = cachePort.get(RedisKeys.START_TIME + scheduleId, String.class).orElse(null);
         LocalDateTime startTime = startTimeStr != null ? LocalDateTime.parse(startTimeStr) : LocalDateTime.now();
-        Duration ttl = Duration.between(LocalDateTime.now(), startTime.minusMinutes(10));
+        Duration ttl = Duration.between(LocalDateTime.now(), startTime.minus(ticketingCloseLead));
         cachePort.expireKey(queueKey, ttl.isNegative() || ttl.isZero() ? Duration.ofSeconds(1) : ttl);
 
         Long rank = cachePort.getZSetRank(queueKey, userIdStr);
