@@ -42,7 +42,7 @@ env:
   SPRING_PROFILES_ACTIVE: prod
   JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m"
   # 첫 배포: update (테이블 자동 생성). 안정 후 validate 로 전환 권장.
-  DDL_AUTO: "update"
+  DDL_AUTO: "create"
 
 # 클러스터 내부 의존성 (모든 서비스 공통 — 서비스 values 파일에서 오버라이드 금지)
 sharedEnv:
