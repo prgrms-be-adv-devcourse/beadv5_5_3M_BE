@@ -15,7 +15,7 @@ service:
 env:
   SERVER_PORT: "8089"
   DB_NAME: "ai_db"
-  DDL_AUTO: "update"
+  # DDL_AUTO: "update"  # 템플릿 기본값(validate) 사용
   KAFKA_CONSUMER_GROUP_ID: "ai-service"
 
 secretRefs:

@@ -15,7 +15,7 @@ service:
 
 env:
   SERVER_PORT: "8080"
-  DDL_AUTO: "update"
+  # DDL_AUTO: "update"  # 템플릿 기본값(validate) 사용
   SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: "3GB"
   SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: "3GB"
   # 시연용 lifecycle 가속 (운영 default 는 PT4M / PT4M / PT10M / PT10M)
