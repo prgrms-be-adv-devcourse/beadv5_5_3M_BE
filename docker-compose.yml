@@ -1,6 +1,43 @@
 services:
 
   # ──────────────────────────────────────────
+  # nginx (TLS 종료 + reverse proxy)
+  # - apex 도메인 3m-msa.p-e.kr 노출, gateway-service:8000 으로 프록시
+  # - WebSocket upgrade 헤더 통과 (wss://3m-msa.p-e.kr/ws/stream)
+  # - 인증서는 옆 certbot 컨테이너가 webroot 방식으로 발급/갱신
+  # ──────────────────────────────────────────
+  nginx:
+    profiles: [nginx]
+    image: nginx:1-alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot_conf:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    networks: [app-network]
+
+  # ──────────────────────────────────────────
+  # certbot (Let's Encrypt 자동 발급/갱신)
+  # - webroot 모드 — nginx의 .well-known/acme-challenge/ 경로 공유
+  # - 12시간마다 renew 시도, 만료 30일 이내일 때 실제 갱신
+  # - 첫 발급은 사용자가 수동 1회 실행
+  # ──────────────────────────────────────────
+  certbot:
+    profiles: [nginx]
+    image: certbot/certbot
+    container_name: certbot
+    restart: unless-stopped
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: ["sh", "-c", "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"]
+    networks: [app-network]
+
+  # ──────────────────────────────────────────
   # Gateway Service (포트 8000)
   # - 모든 외부 요청의 진입점 (JWT 인증/인가 처리)
   # - DB 불필요 (Stateless)
@@ -180,6 +217,11 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       MINIO_BUCKET: ${MINIO_BUCKET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
       DDL_AUTO: ${DDL_AUTO}
     mem_limit: 640m
     mem_reservation: 384m
@@ -202,6 +244,10 @@ services:
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
+      MOVIE_ES_ENABLED: ${MOVIE_ES_ENABLED:-false}
+      ES_URIS: ${ES_URIS:-http://localhost:9200}
       SPRING_PROFILES_ACTIVE: prod
       DDL_AUTO: ${DDL_AUTO}
     mem_limit: 640m
@@ -220,6 +266,8 @@ services:
     container_name: streaming-service
     ports:
       - "${STREAMING_PORT}:${STREAMING_PORT}"
+    volumes:
+      - /home/ubuntu/s3-bucket:/root/uploads
     environment:
       SERVER_PORT: ${STREAMING_PORT}
       DB_HOST: ${DB_HOST}
@@ -278,3 +326,12 @@ services:
 networks:
   app-network:
     driver: bridge
+
+# ──────────────────────────────────────────
+# Volumes
+# - certbot_conf: Let's Encrypt 인증서·ACME 계정 키·갱신 메타데이터 보존
+# - certbot_www: HTTP-01 challenge 토큰 공유 (nginx → certbot)
+# ──────────────────────────────────────────
+volumes:
+  certbot_conf:
+  certbot_www:

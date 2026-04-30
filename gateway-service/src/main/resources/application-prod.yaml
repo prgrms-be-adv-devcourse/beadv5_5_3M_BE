@@ -4,51 +4,54 @@
 # ============================================================
 
 spring:
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
   cloud:
     gateway:
       server:
         webflux:
           routes:
             - id: creator-service
-              uri: http://${BASE_IP}:${CREATOR_PORT}/
+              uri: ${CREATOR_SERVICE_URL}
               predicates:
                 - Path=/api/creators/**
               filters:
+            - id: creator-service-files
+              uri: ${CREATOR_SERVICE_URL}
+              predicates:
+                - Path=/files/**
+              filters:
             - id: payment-service
-              uri: http://${BASE_IP}:${PAYMENT_PORT}/
+              uri: ${PAYMENT_SERVICE_URL}
               predicates:
                 - Path=/api/payments/**
               filters:
             - id: settlement-service
-              uri: http://${BASE_IP}:${SETTLEMENT_PORT}/
+              uri: ${SETTLEMENT_SERVICE_URL}
               predicates:
                 - Path=/api/settlements/**, /api/wallets/**
               filters:
             - id: ticket-service
-              uri: http://${BASE_IP}:${TICKET_PORT}/
+              uri: ${TICKET_SERVICE_URL}
               predicates:
-                - Path=/api/tickets/**
+                - Path=/api/tickets/**, /api/cart/**, /api/queue/**
               filters:
             - id: user-service
-              uri: http://${BASE_IP}:${USER_PORT}/
+              uri: ${USER_SERVICE_URL}
               predicates:
                 - Path=/api/users/**
               filters:
             - id: movie-service
-              uri: http://${BASE_IP}:${MOVIE_PORT}/
+              uri: ${MOVIE_SERVICE_URL}
               predicates:
-                - Path=/api/movies/**
+                - Path=/api/movies/**, /api/reviews/**
             - id: streaming-service
-              uri: http://${BASE_IP}:${STREAMING_PORT}/
+              uri: ${STREAMING_SERVICE_URL}
               predicates:
-                - Path=/api/streaming/**
+                - Path=/api/streaming/**, /ws/**
               filters:
             - id: ai-service
-              uri: http://${BASE_IP}:${AI_PORT}/
+              uri: ${AI_SERVICE_URL}
               predicates:
-                - Path=/api/ai/**
+                - Path=/api/recommendations/**
               filters:
           #                  - RewritePath=/user-service/(?<segment>.*), /$\{segment} #/user-service(이 부분 제거)/api/users
           #                  - StripPrefix=1 #origin/endpoint 첫 번째 endpoint 제거 위 RewritePath랑 같은 효과

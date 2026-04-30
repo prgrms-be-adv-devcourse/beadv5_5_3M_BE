@@ -12,6 +12,7 @@ public interface ScheduleRepository {
     Schedule save(Schedule schedule);
     Optional<Schedule> findById(Long scheduleId);
     void delete(Schedule schedule);
+    void deleteAllByMovieId(Long movieId);
     boolean existsOverlapping(UUID creatorId, LocalDateTime startTime, LocalDateTime endTime);
     List<Schedule> findAllByCreatorIdAndDate(UUID creatorId, LocalDate date);
     List<Schedule> findScheduledToWaiting(LocalDateTime now, LocalDateTime tenMinutesLater);

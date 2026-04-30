@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "microservice.fullname" . }}
+  labels:
+    {{- include "microservice.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1   # 노드 1대라 maxSurge 0 (Pod 2개 띄울 메모리 없음)
+  selector:
+    matchLabels:
+      {{- include "microservice.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "microservice.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        # ConfigMap 내용 변경 시 hash 가 바뀌어 Pod template 갱신 → 자동 rolling restart 유도.
+        # values-*.yaml 의 env 변경 만으로도 helm upgrade 시 새 Pod 자동 부팅 (수동 rollout restart 불필요).
+        # Helm 공식 권장: https://helm.sh/docs/howto/charts_tips_and_tricks/#automatically-roll-deployments
+        checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: {{ .Values.service.protocol }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "microservice.fullname" . }}-env
+            {{- if .Values.secretRefs.postgres }}
+            - secretRef:
+                name: postgres-secret
+            {{- end }}
+            {{- if .Values.secretRefs.jwt }}
+            - secretRef:
+                name: jwt-secret
+            {{- end }}
+            {{- if .Values.secretRefs.toss }}
+            - secretRef:
+                name: toss-secret
+            {{- end }}
+            {{- if .Values.secretRefs.aws }}
+            - secretRef:
+                name: aws-secret
+            {{- end }}
+            {{- if .Values.secretRefs.openai }}
+            - secretRef:
+                name: openai-secret
+            {{- end }}
+            {{- if .Values.secretRefs.user }}
+            - secretRef:
+                name: user-secret
+            {{- end }}
+            {{- if .Values.secretRefs.streaming }}
+            - secretRef:
+                name: streaming-secret
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.healthcheck.enabled }}
+          # startupProbe: 슬로우 부팅 동안 liveness/readiness 를 막아 죽음 방지.
+          # 통과 후 비로소 liveness/readiness 활성화 (K8s 정석 패턴).
+          # 예: gateway 가 80초 부팅 → livenessInitialDelay 120s 가 빠듯해 죽던 문제 해결.
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: {{ .Values.healthcheck.startupPeriod | default 10 }}
+            failureThreshold: {{ .Values.healthcheck.startupFailureThreshold | default 30 }}   # default 30 × 10s = 300s 부팅 허용
+            timeoutSeconds: {{ .Values.healthcheck.timeoutSeconds | default 3 }}
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: {{ .Values.healthcheck.livenessPeriod }}
+            failureThreshold: 3
+            timeoutSeconds: {{ .Values.healthcheck.timeoutSeconds | default 3 }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: {{ .Values.healthcheck.readinessPeriod }}
+            failureThreshold: 3
+            timeoutSeconds: {{ .Values.healthcheck.timeoutSeconds | default 3 }}
+          {{- end }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

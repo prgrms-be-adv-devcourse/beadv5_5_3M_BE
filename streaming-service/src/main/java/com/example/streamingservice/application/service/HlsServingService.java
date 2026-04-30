@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 @Transactional(readOnly = true)
@@ -31,6 +32,7 @@ public class HlsServingService implements HlsServingUseCase {
 	private static final String MANIFEST_CACHE_CONTROL = "no-store";
 	private static final String SEGMENT_CACHE_CONTROL = "public, max-age=3600";
 	private static final String MANIFEST_SUFFIX = ".m3u8";
+	private static final Pattern PUBLIC_BASE_URL_SCHEME = Pattern.compile("(?i)^https?://.+");
 
 	private final StreamTokenPort streamToken;
 	private final SessionCachePort sessionCache;
@@ -44,11 +46,17 @@ public class HlsServingService implements HlsServingUseCase {
 	                         ScheduleRepository scheduleRepository,
 	                         StreamAddressPort streamAddress,
 	                         @Value("${streaming.address.public-base-url}") String publicBaseUrl) {
+		if (publicBaseUrl == null || !PUBLIC_BASE_URL_SCHEME.matcher(publicBaseUrl).matches()) {
+			throw new IllegalStateException(
+				"streaming.address.public-base-url must start with http:// or https://. Got: " + publicBaseUrl);
+		}
 		this.streamToken = streamToken;
 		this.sessionCache = sessionCache;
 		this.scheduleRepository = scheduleRepository;
 		this.streamAddress = streamAddress;
-		this.publicBaseUrl = publicBaseUrl;
+		this.publicBaseUrl = publicBaseUrl.endsWith("/")
+			? publicBaseUrl.substring(0, publicBaseUrl.length() - 1)
+			: publicBaseUrl;
 	}
 
 	@Override

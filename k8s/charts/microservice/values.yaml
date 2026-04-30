@@ -1,0 +1,121 @@
+# beadv5 microservice 차트 기본값.
+# 각 서비스는 values/values-{서비스명}.yaml 에서 일부만 오버라이드합니다.
+
+# ──────────────────────────────────────────
+# 이름
+# ──────────────────────────────────────────
+nameOverride: ""
+fullnameOverride: ""
+
+# ──────────────────────────────────────────
+# 이미지
+# ──────────────────────────────────────────
+image:
+  repository: qor7777777/CHANGE_ME_IN_VALUES   # 반드시 values-*.yaml 에서 오버라이드
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# ──────────────────────────────────────────
+# Pod
+# ──────────────────────────────────────────
+replicaCount: 1   # 단일 노드라 사실상 1만 사용 (HA 불가)
+
+podAnnotations: {}
+podLabels: {}
+
+securityContext:
+  runAsNonRoot: false
+
+# ──────────────────────────────────────────
+# 컨테이너 포트 / Service
+# ──────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+  protocol: TCP
+
+# ──────────────────────────────────────────
+# 환경변수 (비밀 아닌 것)
+# ──────────────────────────────────────────
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m"
+  # 첫 배포: update (테이블 자동 생성). 안정 후 validate 로 전환 권장.
+  DDL_AUTO: "update"
+
+# 클러스터 내부 의존성 (모든 서비스 공통 — 서비스 values 파일에서 오버라이드 금지)
+sharedEnv:
+  KAFKA_BOOTSTRAP_SERVERS: "kafka.dev.svc.cluster.local:9092"
+  REDIS_HOST: "redis.dev.svc.cluster.local"
+  REDIS_PORT: "6379"
+  DB_HOST: "postgresql.dev.svc.cluster.local"
+  DB_PORT: "5432"
+  ES_URIS: "http://elasticsearch.dev.svc.cluster.local:9200"
+
+# ──────────────────────────────────────────
+# Secret 참조 (envFrom)
+# values-*.yaml 에서 true/false 오버라이드
+# ──────────────────────────────────────────
+secretRefs:
+  postgres: true       # 모든 서비스 (gateway 도 일단 true)
+  jwt: true            # 인증 사용 서비스 모두
+  toss: false          # payment 만 true
+  aws: false           # user, streaming 만 true
+  openai: false        # ai 만 true
+  user: false          # user-service 만 true (Google OAuth + Mail)
+  streaming: false     # streaming-service 만 true
+
+# ──────────────────────────────────────────
+# 리소스 (일반 7개 서비스 기본값)
+# ──────────────────────────────────────────
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# ──────────────────────────────────────────
+# Startup / Liveness / Readiness Probe (Spring Boot Actuator 가정)
+# startupProbe 통과 후 liveness/readiness 시작 → 슬로우 부팅에 안전
+# ──────────────────────────────────────────
+healthcheck:
+  enabled: true
+  path: /actuator/health
+  # startupProbe: 부팅 허용 시간 = startupPeriod × startupFailureThreshold
+  startupPeriod: 10              # 10초 간격
+  startupFailureThreshold: 30    # 30회 = 300초 (5분) 부팅 허용
+  timeoutSeconds: 3              # 모든 probe 의 HTTP 응답 대기 한도
+  # 기존 운영 probe (startupProbe 통과 후 활성화)
+  livenessPeriod: 30
+  readinessPeriod: 10
+  # 옛 키 (이제 사용 안 함, values-*.yaml 호환 위해 무시):
+  #   livenessInitialDelay, readinessInitialDelay
+
+# ──────────────────────────────────────────
+# Ingress (gateway 만 enabled)
+# ──────────────────────────────────────────
+ingress:
+  enabled: false
+  className: traefik
+  annotations: {}
+  hosts:
+    - host: ""
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# ──────────────────────────────────────────
+# HPA (선택, 노드 1대라 사실상 inactive)
+# ──────────────────────────────────────────
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 80
+
+volumeMounts: []
+volumes: []

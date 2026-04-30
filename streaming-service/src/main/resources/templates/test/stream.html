@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+	<meta charset="UTF-8">
+	<title>Streaming Test</title>
+	<style>
+		* { box-sizing: border-box; }
+		body { font-family: -apple-system, sans-serif; margin: 0; padding: 16px; background: #111; color: #eee; }
+		h1 { margin: 0 0 12px; font-size: 18px; }
+		.wrap { display: flex; gap: 16px; height: calc(100vh - 60px); }
+		.left, .right { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+		.form { display: flex; gap: 8px; flex-wrap: wrap; }
+		.form input { flex: 1; min-width: 120px; padding: 8px; background: #222; color: #eee; border: 1px solid #444; border-radius: 4px; }
+		.form button, .send button { padding: 8px 16px; background: #3a7; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+		.form button:disabled, .send button:disabled { background: #555; cursor: not-allowed; }
+		#status { padding: 8px; background: #222; border-radius: 4px; font-size: 12px; white-space: pre-wrap; word-break: break-all; min-height: 20px; }
+		#status.error { background: #612; }
+		#status.ok { background: #162; }
+		video { width: 100%; background: #000; border-radius: 4px; max-height: calc(100% - 140px); }
+		#messages { flex: 1; overflow-y: auto; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 8px; font-size: 14px; }
+		#messages > div { margin-bottom: 4px; }
+		#messages .err { color: #f77; }
+		#messages .sys { color: #7af; }
+		.send { display: flex; gap: 8px; }
+		.send input { flex: 1; padding: 8px; background: #222; color: #eee; border: 1px solid #444; border-radius: 4px; }
+	</style>
+</head>
+<body>
+	<h1>Streaming Test — <span id="state">disconnected</span></h1>
+	<div class="wrap">
+		<div class="left">
+			<div class="form">
+				<input id="userId" placeholder="userId (UUID)" />
+				<input id="scheduleId" type="number" placeholder="scheduleId" />
+				<button id="connect">접속</button>
+				<button id="disconnect" disabled>연결 해제</button>
+			</div>
+			<div id="status"></div>
+			<video id="player" controls></video>
+		</div>
+		<div class="right">
+			<div id="messages"></div>
+			<div class="send">
+				<input id="chatInput" placeholder="메시지 입력 (Enter)" disabled />
+				<button id="sendBtn" disabled>전송</button>
+			</div>
+		</div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+	<script>
+		const $ = (id) => document.getElementById(id);
+		const stateEl = $('state');
+		const statusEl = $('status');
+		const messagesEl = $('messages');
+		const video = $('player');
+		const chatInput = $('chatInput');
+		const sendBtn = $('sendBtn');
+		const connectBtn = $('connect');
+		const disconnectBtn = $('disconnect');
+
+		let hls = null;
+		let stompClient = null;
+		let currentScheduleId = null;
+
+		function setStatus(text, kind) {
+			statusEl.textContent = text;
+			statusEl.className = kind || '';
+		}
+
+		function appendMessage(text, cls) {
+			const div = document.createElement('div');
+			if (cls) div.className = cls;
+			div.textContent = text;
+			messagesEl.appendChild(div);
+			messagesEl.scrollTop = messagesEl.scrollHeight;
+		}
+
+		function setConnected(connected) {
+			stateEl.textContent = connected ? 'connected' : 'disconnected';
+			chatInput.disabled = !connected;
+			sendBtn.disabled = !connected;
+			connectBtn.disabled = connected;
+			disconnectBtn.disabled = !connected;
+		}
+
+		async function connect() {
+			const userId = $('userId').value.trim();
+			const scheduleId = $('scheduleId').value.trim();
+			if (!userId || !scheduleId) {
+				setStatus('userId와 scheduleId를 모두 입력하세요', 'error');
+				return;
+			}
+			currentScheduleId = scheduleId;
+			setStatus('세션 발급 중...', '');
+			connectBtn.disabled = true;
+
+			let result;
+			try {
+				const res = await fetch('/api/streaming/sessions', {
+					method: 'POST',
+					headers: { 'X-User-Id': userId, 'Content-Type': 'application/json' },
+					body: JSON.stringify({ scheduleId: Number(scheduleId) })
+				});
+				const text = await res.text();
+				if (!res.ok) {
+					setStatus('세션 발급 실패 (' + res.status + '): ' + text, 'error');
+					connectBtn.disabled = false;
+					return;
+				}
+				result = JSON.parse(text);
+			} catch (e) {
+				setStatus('네트워크 오류: ' + e.message, 'error');
+				connectBtn.disabled = false;
+				return;
+			}
+
+			setStatus('세션 발급 성공. sessionId=' + result.sessionId + ' / manifestUrl=' + result.manifestUrl, 'ok');
+
+			// HLS 재생 — 테스트 페이지는 gateway 우회, 페이지 origin으로 강제
+			if (hls) { hls.destroy(); hls = null; }
+			const pathOnly = result.manifestUrl.replace(/^(?:https?:\/\/)?[^\/]+/, '');
+			const manifestUrl = location.origin + (pathOnly.startsWith('/') ? pathOnly : '/' + pathOnly);
+			if (video.canPlayType('application/vnd.apple.mpegurl')) {
+				video.src = manifestUrl;
+				video.play().catch(() => {});
+			} else if (window.Hls && Hls.isSupported()) {
+				hls = new Hls();
+				hls.loadSource(manifestUrl);
+				hls.attachMedia(video);
+				hls.on(Hls.Events.ERROR, (_, data) => {
+					if (data.fatal) appendMessage('[HLS ERROR] ' + data.type + ' / ' + data.details, 'err');
+				});
+				video.play().catch(() => {});
+			} else {
+				appendMessage('[HLS] 이 브라우저는 HLS를 지원하지 않습니다', 'err');
+			}
+
+			// STOMP 연결
+			const brokerURL = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws/stream';
+			stompClient = new StompJs.Client({
+				brokerURL: brokerURL,
+				connectHeaders: { token: result.sessionToken },
+				reconnectDelay: 0,
+				heartbeatIncoming: 10000,
+				heartbeatOutgoing: 10000
+			});
+			stompClient.onConnect = () => {
+				appendMessage('[STOMP] 연결됨', 'sys');
+				setConnected(true);
+				stompClient.subscribe('/topic/chat/schedule/' + scheduleId, (msg) => {
+					try {
+						const m = JSON.parse(msg.body);
+						appendMessage((m.nickname || '?') + ': ' + (m.content || msg.body));
+					} catch {
+						appendMessage(msg.body);
+					}
+				});
+				stompClient.subscribe('/topic/state/schedule/' + scheduleId, (msg) => {
+					appendMessage('[STATE] ' + msg.body, 'sys');
+				});
+				stompClient.subscribe('/user/queue/errors', (msg) => {
+					appendMessage('[ERROR] ' + msg.body, 'err');
+				});
+				stompClient.subscribe('/user/queue/kick', (msg) => {
+					appendMessage('[KICK] ' + msg.body, 'err');
+				});
+			};
+			stompClient.onStompError = (frame) => {
+				appendMessage('[STOMP ERROR] ' + (frame.headers && frame.headers.message) + ' / ' + frame.body, 'err');
+				setConnected(false);
+			};
+			stompClient.onWebSocketClose = () => {
+				appendMessage('[STOMP] 연결 종료', 'sys');
+				setConnected(false);
+			};
+			stompClient.activate();
+		}
+
+		function disconnect() {
+			if (stompClient) { stompClient.deactivate(); stompClient = null; }
+			if (hls) { hls.destroy(); hls = null; }
+			video.removeAttribute('src');
+			video.load();
+			setConnected(false);
+		}
+
+		function sendChat() {
+			const content = chatInput.value.trim();
+			if (!content || !stompClient || !currentScheduleId) return;
+			stompClient.publish({
+				destination: '/app/chat/schedule/' + currentScheduleId,
+				body: JSON.stringify({ content: content })
+			});
+			chatInput.value = '';
+		}
+
+		connectBtn.addEventListener('click', connect);
+		disconnectBtn.addEventListener('click', disconnect);
+		sendBtn.addEventListener('click', sendChat);
+		chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(); });
+	</script>
+</body>
+</html>

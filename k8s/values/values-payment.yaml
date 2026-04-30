@@ -1,0 +1,42 @@
+# payment-service (포트 8081) — Toss Payments + Outbox 패턴 (PR #161)
+# - DB: payment_db
+
+image:
+  repository: qor7777777/payment-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8081
+  targetPort: 8081
+
+env:
+  SERVER_PORT: "8081"
+  DB_NAME: "payment_db"
+  DDL_AUTO: "update"
+
+secretRefs:
+  postgres: true
+  jwt: false
+  toss: true        # TOSS_PAYMENT_CK, TOSS_PAYMENT_SECRET 자동 주입
+  aws: false
+  openai: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    cpu: 500m
+    memory: 640Mi
+
+healthcheck:
+  enabled: true
+  path: /actuator/health
+  livenessInitialDelay: 180
+  livenessPeriod: 30
+  readinessInitialDelay: 60
+  readinessPeriod: 10
+
+ingress:
+  enabled: false

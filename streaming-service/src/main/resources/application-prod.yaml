@@ -70,6 +70,12 @@ streaming:
     max-message-length: 500
   viewer:
     broadcast-interval-seconds: 5
+  # Quartz 라이프사이클 오프셋 (ISO-8601 Duration)
+  # 시연용으로 짧게 override 하려면 환경변수 주입 (e.g. STREAMING_LOBBY_LEAD=PT1M)
+  lifecycle:
+    lobby-lead: ${STREAMING_LOBBY_LEAD:PT10M}
+    soon-lead: ${STREAMING_SOON_LEAD:PT1M}
+    post-grace: ${STREAMING_POST_GRACE:PT3M}
 
 client:
   creator:

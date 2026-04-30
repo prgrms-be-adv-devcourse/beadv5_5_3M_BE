@@ -97,61 +97,201 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
-  deploy-to-ec2:
-    name: Deploy to EC2 — ${{ matrix.service }}
+  deploy-to-k3s:
+    name: Deploy to K3s — ${{ matrix.service }}
     needs: [detect-changes, docker-build-push]
     if: needs.detect-changes.outputs.has_changes == 'true' && needs.docker-build-push.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      max-parallel: 1   # helm 동시 실행 충돌 방지 (한 노드 메모리 압박도 완화)
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.services) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Copy docker-compose.yml to EC2
+      - name: Compute short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+
+      # 옵션 B: master 에 git repo 두지 않고, 매 배포마다 chart/values 만 잠깐 보냄
+      - name: SCP chart + values to master /tmp
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: docker-compose.yml
-          target: ~/app/
+          host: ${{ secrets.K3S_MASTER_HOST }}
+          username: ${{ secrets.K3S_MASTER_USER }}
+          key: ${{ secrets.K3S_MASTER_SSH_KEY }}
+          source: "k8s/charts/microservice/**,k8s/values/values-*.yaml"
+          target: "/tmp/cd-${{ github.sha }}-${{ matrix.service }}/"
 
-      - name: Deploy via SSH
+      - name: Helm upgrade via master SSH
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          host: ${{ secrets.K3S_MASTER_HOST }}
+          username: ${{ secrets.K3S_MASTER_USER }}
+          key: ${{ secrets.K3S_MASTER_SSH_KEY }}
           script: |
-            cd ~/app
-            docker compose --profile ${{ matrix.service }} pull
-            docker compose --profile ${{ matrix.service }} up -d --remove-orphans
-            docker image prune -f
+            set -e
+            export KUBECONFIG=$HOME/.kube/config
+
+            WORK=/tmp/cd-${{ github.sha }}-${{ matrix.service }}
+            cd "$WORK"
+
+            SVC="${{ matrix.service }}"
+            TAG="${{ steps.sha.outputs.short }}"
+            VALUES_NAME="${SVC%-service}"   # creator-service → creator
+
+            helm upgrade --install "$SVC" k8s/charts/microservice/ \
+              -f "k8s/values/values-${VALUES_NAME}.yaml" \
+              --set image.tag="$TAG" \
+              -n dev \
+              --wait --timeout 5m
+
+            kubectl rollout status deploy/"${SVC}-microservice" -n dev --timeout=5m
+
+            # 작업 완료 후 본인 정리 (master 에 누적 X)
+            cd ~ && rm -rf "$WORK"
+
+  # ─────────────────────────────────────────────
+  # K8s 매니페스트만 변경된 경우 대응
+  # → 이미지 재빌드 없이 변경된 values-*.yaml 의 helm release 만 upgrade
+  # → chart (k8s/charts/) 변경 시 모든 서비스 영향 → 전체 재배포
+  # ─────────────────────────────────────────────
+  detect-k8s-changes:
+    name: Detect K8s Manifest Changes
+    runs-on: ubuntu-latest
+    outputs:
+      k8s_changed: ${{ steps.detect.outputs.k8s_changed }}
+      changed_services: ${{ steps.detect.outputs.changed_services }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect k8s/values/*.yaml or chart changes
+        id: detect
+        run: |
+          if [[ "${{ github.event.before }}" =~ ^0+$ ]]; then
+            CHANGED=$(git diff-tree --no-commit-id -r --name-only HEAD 2>/dev/null || echo "")
+          else
+            CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" 2>/dev/null || echo "")
+          fi
+
+          # 변경된 values-*.yaml → 서비스 이름 추출 (creator → creator-service)
+          VALUES_RAW=$(echo "$CHANGED" | grep -oE '^k8s/values/values-[a-z]+\.yaml$' \
+            | sed 's|k8s/values/values-||;s|\.yaml||' | sort -u || true)
+
+          # chart 자체 변경 → 9개 서비스 모두 영향
+          if echo "$CHANGED" | grep -qE '^k8s/charts/'; then
+            echo "::notice::chart 변경 감지 — 9개 서비스 전체 재배포 대상"
+            VALUES_RAW=$(printf '%s\n' creator payment settlement ticket user movie streaming ai gateway | sort -u)
+          fi
+
+          if [[ -z "$VALUES_RAW" ]]; then
+            echo "k8s_changed=false" >> "$GITHUB_OUTPUT"
+            echo "changed_services=[]" >> "$GITHUB_OUTPUT"
+          else
+            SERVICES=$(echo "$VALUES_RAW" | sed 's/$/-service/' | jq -R . | jq -sc .)
+            echo "k8s_changed=true" >> "$GITHUB_OUTPUT"
+            echo "changed_services=$SERVICES" >> "$GITHUB_OUTPUT"
+            echo "::notice::K8s 매니페스트 변경 → 재배포 대상: $SERVICES"
+          fi
+
+  k8s-redeploy:
+    name: K8s Manifest Redeploy
+    needs: [detect-changes, detect-k8s-changes, deploy-to-k3s]
+    # 정상 deploy 가 끝난 뒤 (또는 변경 서비스 자체가 없을 때) 실행
+    # 정상 deploy 가 실패해도 K8s 매니페스트 재적용은 시도
+    if: |
+      always() &&
+      needs.detect-k8s-changes.outputs.k8s_changed == 'true' &&
+      (needs.detect-changes.outputs.has_changes == 'false' || needs.deploy-to-k3s.result != 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: SCP chart + values to master /tmp
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.K3S_MASTER_HOST }}
+          username: ${{ secrets.K3S_MASTER_USER }}
+          key: ${{ secrets.K3S_MASTER_SSH_KEY }}
+          source: "k8s/charts/microservice/**,k8s/values/values-*.yaml"
+          target: "/tmp/cd-${{ github.sha }}-redeploy/"
+
+      - name: Helm upgrade for K8s-only changes (excluding already-deployed)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.K3S_MASTER_HOST }}
+          username: ${{ secrets.K3S_MASTER_USER }}
+          key: ${{ secrets.K3S_MASTER_SSH_KEY }}
+          script: |
+            set -e
+            export KUBECONFIG=$HOME/.kube/config
+
+            WORK=/tmp/cd-${{ github.sha }}-redeploy
+            cd "$WORK"
+
+            # 정상 deploy 가 다룬 서비스는 이미 새 이미지 + 새 values 로 떴으므로 제외
+            ALREADY_DEPLOYED='${{ needs.detect-changes.outputs.services }}'
+            K8S_TARGETS='${{ needs.detect-k8s-changes.outputs.changed_services }}'
+
+            for SVC in $(echo "$K8S_TARGETS" | jq -r '.[]'); do
+              # 정상 deploy 매트릭스에 포함됐으면 스킵 (이미 처리됨)
+              if echo "$ALREADY_DEPLOYED" | grep -q "\"$SVC\""; then
+                echo "⏭  $SVC — 정상 deploy 에서 이미 처리됨"
+                continue
+              fi
+
+              VALUES_NAME="${SVC%-service}"
+
+              # release 가 이미 있으면 upgrade, 없으면 install (둘 다 처리)
+              echo "♻️  $SVC — values/chart 변경 → helm upgrade"
+              helm upgrade --install "$SVC" k8s/charts/microservice/ \
+                -f "k8s/values/values-${VALUES_NAME}.yaml" \
+                -n dev \
+                --wait --timeout 5m
+
+              kubectl rollout status deploy/"${SVC}-microservice" -n dev --timeout=5m
+            done
+
+            # 작업 완료 후 본인 정리
+            cd ~ && rm -rf "$WORK"
 
   cd-summary:
     name: CD Summary
-    needs: [detect-changes, docker-build-push, deploy-to-ec2]
-    if: always() && needs.detect-changes.outputs.has_changes == 'true'
+    needs: [detect-changes, docker-build-push, deploy-to-k3s, detect-k8s-changes, k8s-redeploy]
+    if: always() && (needs.detect-changes.outputs.has_changes == 'true' || needs.detect-k8s-changes.outputs.k8s_changed == 'true')
     runs-on: ubuntu-latest
     steps:
       - name: Write summary
         run: |
           SERVICES='${{ needs.detect-changes.outputs.services }}'
           DOCKER_RESULT="${{ needs.docker-build-push.result }}"
-          DEPLOY_RESULT="${{ needs.deploy-to-ec2.result }}"
+          DEPLOY_RESULT="${{ needs.deploy-to-k3s.result }}"
+          K8S_CHANGED="${{ needs.detect-k8s-changes.outputs.k8s_changed }}"
+          REDEPLOY_RESULT="${{ needs.k8s-redeploy.result }}"
           SHA="${{ github.sha }}"
           SHORT_SHA="${SHA:0:7}"
 
           echo "## CD 결과 — \`$SHORT_SHA\`" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| 서비스 | Docker Hub | EC2 배포 |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|--------|-----------|---------|" >> "$GITHUB_STEP_SUMMARY"
 
-          for svc in $(echo "$SERVICES" | jq -r '.[]'); do
-            DOCKER_ICON=$([[ "$DOCKER_RESULT" == "success" ]] && echo "✅" || echo "❌")
-            DEPLOY_ICON=$([[ "$DEPLOY_RESULT" == "success" ]] && echo "✅" || echo "❌")
-            echo "| \`$svc\` | $DOCKER_ICON | $DEPLOY_ICON |" >> "$GITHUB_STEP_SUMMARY"
-          done
+          if [[ -n "$SERVICES" && "$SERVICES" != "" && "$SERVICES" != "[]" ]]; then
+            echo "| 서비스 | Docker Hub | K3s 배포 |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|--------|-----------|---------|" >> "$GITHUB_STEP_SUMMARY"
+            for svc in $(echo "$SERVICES" | jq -r '.[]'); do
+              DOCKER_ICON=$([[ "$DOCKER_RESULT" == "success" ]] && echo "✅" || echo "❌")
+              DEPLOY_ICON=$([[ "$DEPLOY_RESULT" == "success" ]] && echo "✅" || echo "❌")
+              echo "| \`$svc\` | $DOCKER_ICON | $DEPLOY_ICON |" >> "$GITHUB_STEP_SUMMARY"
+            done
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [[ "$K8S_CHANGED" == "true" ]]; then
+            REDEPLOY_ICON=$([[ "$REDEPLOY_RESULT" == "success" ]] && echo "✅" || echo "❌")
+            echo "**K8s-only redeploy** (values/chart 변경): $REDEPLOY_ICON" >> "$GITHUB_STEP_SUMMARY"
+          fi

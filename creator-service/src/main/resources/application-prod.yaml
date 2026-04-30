@@ -52,12 +52,22 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: ${SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE:500MB}
-      max-request-size: ${SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE:500MB}
+      max-file-size: ${SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE:4096MB}
+      max-request-size: ${SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE:4096MB}
 
 file:
   upload:
     base-path: ${FILE_UPLOAD_BASE_PATH:/root/uploads}
+
+# 스케줄 검증/배치 오프셋 (ISO-8601 Duration)
+# 시연용으로 짧게 override 하려면 환경변수 주입 (e.g. CREATOR_MIN_REGISTRATION_LEAD=PT1M)
+creator:
+  schedule:
+    min-registration-lead: ${CREATOR_MIN_REGISTRATION_LEAD:PT4M}
+    min-ticketing-window: ${CREATOR_MIN_TICKETING_WINDOW:PT4M}
+    batch:
+      waiting-lead: ${CREATOR_BATCH_WAITING_LEAD:PT10M}
+      completed-tolerance: ${CREATOR_BATCH_COMPLETED_TOLERANCE:PT10M}
 
 # RSA 키페어 — JWT 토큰 발급 (JwtProvider.java)
 jwt:

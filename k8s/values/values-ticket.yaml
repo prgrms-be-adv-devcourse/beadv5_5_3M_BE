@@ -1,0 +1,44 @@
+# ticket-service (포트 8084) — Redis 동시성 제어
+# - DB: ticket_db
+# - user-service HTTP 호출 의존
+
+image:
+  repository: qor7777777/ticket-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8084
+  targetPort: 8084
+
+env:
+  SERVER_PORT: "8084"
+  DB_NAME: "ticket_db"
+  DDL_AUTO: "update"
+  CLIENT_USER_BASE_URL: "http://user-service-microservice.dev.svc.cluster.local:8085"
+
+secretRefs:
+  postgres: true
+  jwt: false
+  toss: false
+  aws: false
+  openai: false
+
+resources:
+  requests:
+    cpu: 150m
+    memory: 448Mi     # 동시성 처리 메모리 +
+  limits:
+    cpu: 600m
+    memory: 768Mi     # docker-compose 와 동일
+
+healthcheck:
+  enabled: true
+  path: /actuator/health
+  livenessInitialDelay: 180
+  livenessPeriod: 30
+  readinessInitialDelay: 60
+  readinessPeriod: 10
+
+ingress:
+  enabled: false

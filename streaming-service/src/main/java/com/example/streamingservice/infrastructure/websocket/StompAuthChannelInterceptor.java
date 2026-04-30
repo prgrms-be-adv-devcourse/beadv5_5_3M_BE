@@ -6,6 +6,7 @@ import com.example.streamingservice.application.exception.SessionException;
 import com.example.streamingservice.application.exception.StreamTokenException;
 import com.example.streamingservice.application.port.SessionCachePort;
 import com.example.streamingservice.application.port.StreamTokenPort;
+import com.example.streamingservice.application.port.ViewerCachePort;
 import com.example.streamingservice.domain.Entitlement;
 import com.example.streamingservice.domain.EntitlementRepository;
 import com.example.streamingservice.domain.Schedule;
@@ -44,6 +45,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 	private final SessionCachePort sessionCache;
 	private final ScheduleRepository scheduleRepository;
 	private final EntitlementRepository entitlementRepository;
+	private final ViewerCachePort viewerCache;
 
 	@Override
 	public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -87,6 +89,15 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 		attrs.put(ATTR_NICKNAME, "관람객#" + entitlement.getTicketId());
 
 		acc.setUser(new StreamingPrincipal(meta.userId().toString()));
+
+		// SessionConnectedEvent 의존성 우회 — handleConnect 시점에 viewer SET 에 직접 SADD.
+		// ViewerCountUseCase 를 주입하면 WebSocketConfig ↔ broker config ↔ ViewerCountService
+		// → WebSocketStateBroadcastAdapter 사이클이 생기므로 ViewerCachePort 만 주입한다.
+		// 즉시 broadcast 는 안 일어나지만 ViewerCountService.broadcastScheduled 가
+		// 5 초 주기로 활성 schedule 모두에 viewer count 를 push 하므로 5 초 내 갱신.
+		// SADD 는 idempotent 라 SessionPresenceListener 동시 호출 무해.
+		viewerCache.add(meta.scheduleId(), meta.userId());
+
 		return MessageBuilder.createMessage(message.getPayload(), acc.getMessageHeaders());
 	}
 

@@ -51,6 +51,9 @@ public class Movie {
     @Column(name = "additional_cookie", nullable = false)
     private Integer additionalCookie;
 
+    @Column(name = "total_cookie", nullable = false)
+    private Integer totalCookie;
+
     @Column(name = "average_rating")
     private Float averageRating;
 
@@ -95,6 +98,7 @@ public class Movie {
                 .description(description)
                 .baseCookie(baseCookie)
                 .additionalCookie(additionalCookie)
+                .totalCookie(baseCookie + additionalCookie)
                 .runningTime(runningTime)
                 .imageUrl(imageUrl)
                 .videoUrl(videoUrl)
@@ -116,6 +120,7 @@ public class Movie {
         this.title = title;
         this.description = description;
         this.additionalCookie = additionalCookie;
+        this.totalCookie = this.baseCookie + additionalCookie;
     }
 
     public void addCategory(Category category) {

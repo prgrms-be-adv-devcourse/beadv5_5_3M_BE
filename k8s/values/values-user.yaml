@@ -1,0 +1,49 @@
+# user-service (포트 8085) — review-service 통합
+# - 사용자 관리, JWT 발급, S3 프로필 이미지, OAuth, Mail
+# - DB: user_db
+
+image:
+  repository: qor7777777/user-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8085
+  targetPort: 8085
+
+env:
+  SERVER_PORT: "8085"
+  DB_NAME: "user_db"
+  DDL_AUTO: "update"
+  # MinIO (K8s 미사용 — 빈 생성은 되어야 하므로 더미 값 유지, 실제 호출 안 함)
+  MINIO_ENDPOINT: "http://localhost:9000"
+  MINIO_ACCESS_KEY: "dummy"
+  MINIO_SECRET_KEY: "dummy"
+  MINIO_BUCKET: "dummy"
+
+secretRefs:
+  postgres: true
+  jwt: true
+  toss: false
+  aws: true       # S3 프로필 이미지
+  openai: false
+  user: true      # Google OAuth + Mail
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    cpu: 500m
+    memory: 640Mi
+
+healthcheck:
+  enabled: true
+  path: /actuator/health
+  livenessInitialDelay: 240      # 실제 기동 177s + 여유 60s
+  livenessPeriod: 30
+  readinessInitialDelay: 200
+  readinessPeriod: 10
+
+ingress:
+  enabled: false

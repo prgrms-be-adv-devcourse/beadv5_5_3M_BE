@@ -5,12 +5,14 @@ import com.example.userservice.presentation.dto.req.DeductCookieRequest;
 import com.example.userservice.presentation.dto.req.JoinRequest;
 import com.example.userservice.presentation.dto.req.LoginRequest;
 import com.example.userservice.presentation.dto.req.RefundCookieRequest;
+import com.example.userservice.presentation.dto.res.CookieLogResponse;
 import com.example.userservice.presentation.dto.res.DeductCookieResponse;
 import com.example.userservice.presentation.dto.res.RefundCookieResponse;
 import com.example.userservice.presentation.dto.res.TokenResponse;
 import com.example.userservice.presentation.dto.res.UserInfoResponse;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface UserUseCase {
@@ -30,4 +32,5 @@ public interface UserUseCase {
     void logout(String userId);
     TokenResponse oauthLogin(String code);
     void withdraw(String userId);
+    List<CookieLogResponse> getMyCookieLogs(String userId);
 }

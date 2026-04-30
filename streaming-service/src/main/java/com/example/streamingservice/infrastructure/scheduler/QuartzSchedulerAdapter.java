@@ -2,7 +2,6 @@ package com.example.streamingservice.infrastructure.scheduler;
 
 import com.example.streamingservice.application.port.SchedulerPort;
 import com.example.streamingservice.domain.Schedule;
-import lombok.RequiredArgsConstructor;
 import org.quartz.Job;
 import org.quartz.JobBuilder;
 import org.quartz.JobDataMap;
@@ -13,6 +12,7 @@ import org.quartz.SchedulerException;
 import org.quartz.SimpleScheduleBuilder;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -21,21 +21,30 @@ import java.util.Date;
 import java.util.Set;
 
 @Component
-@RequiredArgsConstructor
 public class QuartzSchedulerAdapter implements SchedulerPort {
 
 	static final String JOB_DATA_SCHEDULE_ID = "scheduleId";
 	private static final String GROUP = "streaming";
-
-	private static final Duration LOBBY_LEAD = Duration.ofMinutes(10);
-	private static final Duration SOON_LEAD = Duration.ofMinutes(1);
-	private static final Duration POST_GRACE = Duration.ofMinutes(10);
 
 	private static final String[] KINDS = {
 		"lobbyOpen", "startingSoon", "started", "endingSoon", "ended", "forceExit"
 	};
 
 	private final Scheduler scheduler;
+	private final Duration lobbyLead;
+	private final Duration soonLead;
+	private final Duration postGrace;
+
+	public QuartzSchedulerAdapter(
+			Scheduler scheduler,
+			@Value("${streaming.lifecycle.lobby-lead:PT10M}") Duration lobbyLead,
+			@Value("${streaming.lifecycle.soon-lead:PT1M}") Duration soonLead,
+			@Value("${streaming.lifecycle.post-grace:PT3M}") Duration postGrace) {
+		this.scheduler = scheduler;
+		this.lobbyLead = lobbyLead;
+		this.soonLead = soonLead;
+		this.postGrace = postGrace;
+	}
 
 	@Override
 	public void scheduleLifecycle(Schedule schedule) {
@@ -43,12 +52,12 @@ public class QuartzSchedulerAdapter implements SchedulerPort {
 		Instant startTime = schedule.getStartTime();
 		Instant endTime = schedule.getEndTime();
 
-		register(id, "lobbyOpen", startTime.minus(LOBBY_LEAD), LobbyOpenJob.class);
-		register(id, "startingSoon", startTime.minus(SOON_LEAD), StartingSoonJob.class);
+		register(id, "lobbyOpen", startTime.minus(lobbyLead), LobbyOpenJob.class);
+		register(id, "startingSoon", startTime.minus(soonLead), StartingSoonJob.class);
 		register(id, "started", startTime, StartedJob.class);
-		register(id, "endingSoon", endTime.minus(SOON_LEAD), EndingSoonJob.class);
+		register(id, "endingSoon", endTime.minus(soonLead), EndingSoonJob.class);
 		register(id, "ended", endTime, EndedJob.class);
-		register(id, "forceExit", endTime.plus(POST_GRACE), ForceExitJob.class);
+		register(id, "forceExit", endTime.plus(postGrace), ForceExitJob.class);
 	}
 
 	@Override

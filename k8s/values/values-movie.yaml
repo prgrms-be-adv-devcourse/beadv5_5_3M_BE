@@ -1,0 +1,44 @@
+# movie-service (포트 8086) — Elasticsearch ON (K8s ES 사용)
+# - DB: docker-compose 가 creator_db 를 가리키고 있음 — 실제 데이터 위치 조원 확인 후 수정 가능
+
+image:
+  repository: qor7777777/movie-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8086
+  targetPort: 8086
+
+env:
+  SERVER_PORT: "8086"
+  DDL_AUTO: "update"
+  # ⚠️ docker-compose 가 creator_db 를 가리키는 상태 그대로. movie_db 로 바꿔야 한다면 조원 확인 후 여기만 수정.
+  DB_NAME: "creator_db"
+  MOVIE_ES_ENABLED: "true"
+
+secretRefs:
+  postgres: true
+  jwt: false        # gateway 에서 검증
+  toss: false
+  aws: false
+  openai: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    cpu: 500m
+    memory: 640Mi
+
+healthcheck:
+  enabled: true
+  path: /actuator/health
+  livenessInitialDelay: 180
+  livenessPeriod: 30
+  readinessInitialDelay: 60
+  readinessPeriod: 10
+
+ingress:
+  enabled: false

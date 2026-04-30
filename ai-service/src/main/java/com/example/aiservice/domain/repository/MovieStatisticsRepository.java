@@ -12,4 +12,8 @@ public interface MovieStatisticsRepository {
     void deleteByMovieId(Long movieId);
 
     void incrementWatchCount(Long movieId, int ageGroup, Gender gender);
+
+    List<Long> findDemographicCandidates(int ageGroup, Gender gender, int limit);
+
+    List<Long> findLowExposureCandidates(int limit);
 }

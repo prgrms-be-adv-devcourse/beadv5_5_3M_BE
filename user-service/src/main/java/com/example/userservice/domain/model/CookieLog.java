@@ -2,6 +2,7 @@ package com.example.userservice.domain.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
@@ -13,9 +14,9 @@ import static lombok.AccessLevel.PROTECTED;
 @Entity
 @Table(uniqueConstraints = {
         @UniqueConstraint(name = "uq_cookie_log_payment", columnNames = {"userId", "paymentId"}),
-        @UniqueConstraint(name = "uq_cookie_log_refund", columnNames = {"userId", "refundId"}),
-        @UniqueConstraint(name = "uq_cookie_log_ticket", columnNames = {"userId", "ticketId"})
+        @UniqueConstraint(name = "uq_cookie_log_refund", columnNames = {"userId", "refundId"})
 })
+@Getter
 @NoArgsConstructor(access = PROTECTED)
 public class CookieLog {
 

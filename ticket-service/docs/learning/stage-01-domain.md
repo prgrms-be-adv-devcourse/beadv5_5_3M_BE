@@ -162,6 +162,26 @@ public enum ScheduleStatus {
 }
 ```
 
+`domain/enums/SchedulePhase.java` (사용자 관점 단계, 외부 응답 격리용)
+
+```java
+public enum SchedulePhase {
+    CART_PERIOD,           // ScheduleStatus.CART
+    PROVISIONAL_PAYMENT,   // ScheduleStatus.IN_PROGRESSING (가결제기간)
+    TICKETING_PERIOD;      // ScheduleStatus.TICKETING
+
+    public static SchedulePhase from(ScheduleStatus status) { /* 1:1 매핑, STREAMING/FINISH는 IllegalArgumentException */ }
+}
+```
+
+| Phase | ScheduleStatus | 의미 |
+|-------|----------------|------|
+| `CART_PERIOD` | `CART` | 장바구니 |
+| `PROVISIONAL_PAYMENT` | `IN_PROGRESSING` | 가결제기간 (Case A 자율결제 대기) |
+| `TICKETING_PERIOD` | `TICKETING` | 티켓팅기간 (선착순 큐/구매 오픈) |
+
+내부 상태명(IN_PROGRESSING 등)을 외부 응답에 그대로 노출하지 않으려는 격리 enum. STREAMING/FINISH는 매핑 대상 아님 — 진입 가능한 3개 단계에만 한정. `GET /api/tickets/schedules/open` 응답의 `phase` 필드에 사용.
+
 왜 Ticket이 2-state인가? → **"결제 대기"와 "결제 완료"만 구분하면 비즈니스상 충분**.
 - "환불됨" 상태는 없음 → 환불은 **DELETE**로 처리.
 - "사용됨"도 없음 → 스트리밍이 끝나면 자연스럽게 의미 소멸.
@@ -238,6 +258,7 @@ Service 레이어에 `if (ticket.getStatus() == RESERVED) ticket.setStatus(CONFI
 - `src/main/java/com/example/ticketservice/domain/model/Cart.java`
 - `src/main/java/com/example/ticketservice/domain/enums/TicketStatus.java`
 - `src/main/java/com/example/ticketservice/domain/enums/ScheduleStatus.java`
+- `src/main/java/com/example/ticketservice/domain/enums/SchedulePhase.java`
 - `src/main/java/com/example/ticketservice/domain/repository/TicketRepository.java`
 - `docs/reference/domain/01-ticket-lifecycle.md` — 공식 라이프사이클 문서
 - `docs/reference/domain/02-error-codes-reference.md` — `NOT_RESERVED`, `CART_CLOSED` 등 에러 코드

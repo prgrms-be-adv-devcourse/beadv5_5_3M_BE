@@ -1,0 +1,45 @@
+# ai-service (포트 8089) — OpenAI 임베딩/요약/리랭킹 + pgvector 추천
+# - DB: ai_db (pgvector 익스텐션 활성화 필요 — Phase 2 Task 2.2 Step 6)
+# - Kafka 이벤트 소비 (movie/ticket/user 토픽)
+# - 메모리 1Gi (OpenAI 호출 + 임베딩 처리 부하)
+
+image:
+  repository: qor7777777/ai-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8089
+  targetPort: 8089
+
+env:
+  SERVER_PORT: "8089"
+  DB_NAME: "ai_db"
+  DDL_AUTO: "update"
+  KAFKA_CONSUMER_GROUP_ID: "ai-service"
+
+secretRefs:
+  postgres: true
+  jwt: false
+  toss: false
+  aws: false
+  openai: true     # OPENAI_API_KEY 자동 주입
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 768Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+healthcheck:
+  enabled: true
+  path: /actuator/health
+  livenessInitialDelay: 180
+  livenessPeriod: 30
+  readinessInitialDelay: 90
+  readinessPeriod: 10
+
+ingress:
+  enabled: false

@@ -1,0 +1,56 @@
+# creator-service (포트 8080)
+# - 영화/제작사 정보 관리
+# - DB: creator_db
+# - Redis 캐싱 사용
+# - JWT 인증 사용
+
+image:
+  repository: qor7777777/creator-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8080
+  targetPort: 8080
+
+env:
+  SERVER_PORT: "8080"
+  DDL_AUTO: "update"
+  SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: "3GB"
+  SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: "3GB"
+
+volumeMounts:
+  - name: uploads
+    mountPath: /root/uploads
+
+volumes:
+  - name: uploads
+    hostPath:
+      path: /home/ubuntu/s3-bucket
+      type: DirectoryOrCreate
+
+secretRefs:
+  postgres: true
+  jwt: true
+  toss: false
+  aws: false
+  openai: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    cpu: 500m
+    memory: 640Mi
+
+healthcheck:
+  enabled: true
+  path: /actuator/health
+  livenessInitialDelay: 180
+  livenessPeriod: 30
+  readinessInitialDelay: 60
+  readinessPeriod: 10
+
+ingress:
+  enabled: false

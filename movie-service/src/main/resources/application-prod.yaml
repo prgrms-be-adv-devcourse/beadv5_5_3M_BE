@@ -51,6 +51,10 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
+    elasticsearch:
+      repositories:
+        enabled: ${MOVIE_ES_ENABLED:true}
+
 # ES 기반 검색 기능 on/off 스위치 (false 면 JPA LIKE 로 동작)
 movie:
   elasticsearch:
@@ -63,7 +67,7 @@ logging:
   level:
     root: WARN
     com.example.movieservice: INFO
-    org.springframework.kafka: WARN
+    org.springframework.kafka: INFO
     org.hibernate: WARN
 
 springdoc:

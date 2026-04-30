@@ -1,0 +1,58 @@
+# streaming-service (포트 8088) — HLS 변환 + WebSocket 채팅 + Quartz JDBC
+# - DB: streaming_db
+# - creator-service HTTP 호출 의존
+# - S3: 영상/HLS 세그먼트 저장
+# - 메모리 1Gi (HLS 변환 부하) — §1.5 폴백 시 1.5Gi 상향 가능
+
+image:
+  repository: qor7777777/streaming-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8088
+  targetPort: 8088
+
+env:
+  SERVER_PORT: "8088"
+  DB_NAME: "streaming_db"
+  DDL_AUTO: "update"
+  SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: "3GB"
+  SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: "3GB"
+
+secretRefs:
+  postgres: true
+  jwt: false
+  toss: false
+  aws: true        # S3 마운트 자격증명
+  openai: false
+  streaming: true  # STREAMING_JWT_SECRET, STREAMING_PUBLIC_BASE_URL 등
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 768Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi    # ★ 일반 서비스의 2배
+
+healthcheck:
+  enabled: true
+  path: /actuator/health
+  livenessInitialDelay: 180
+  livenessPeriod: 30
+  readinessInitialDelay: 90
+  readinessPeriod: 10
+
+ingress:
+  enabled: false
+
+volumeMounts:
+  - name: uploads
+    mountPath: /root/uploads
+
+volumes:
+  - name: uploads
+    hostPath:
+      path: /home/ubuntu/s3-bucket
+      type: DirectoryOrCreate

@@ -33,7 +33,7 @@ import java.util.UUID;
 public class EnterStreamService implements EnterStreamUseCase {
 
 	private static final String WS_ENDPOINT = "/ws/stream";
-	private static final Duration POST_GRACE = Duration.ofMinutes(10);
+	private static final Duration POST_GRACE = Duration.ofMinutes(3);
 
 	private final ScheduleRepository scheduleRepository;
 	private final EntitlementRepository entitlementRepository;

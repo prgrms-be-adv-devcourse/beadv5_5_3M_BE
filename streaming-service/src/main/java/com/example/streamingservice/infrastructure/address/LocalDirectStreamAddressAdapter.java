@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 public class LocalDirectStreamAddressAdapter implements StreamAddressPort {
 
 	private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("^[a-zA-Z0-9_\\-]+\\.(m3u8|ts)$");
+	private static final Pattern PUBLIC_BASE_URL_SCHEME = Pattern.compile("(?i)^https?://.+");
 	private static final String APPLICATION_VND_APPLE_MPEGURL = "application/vnd.apple.mpegurl";
 	private static final String VIDEO_MP2T = "video/mp2t";
 
@@ -29,7 +30,13 @@ public class LocalDirectStreamAddressAdapter implements StreamAddressPort {
 		@Value("${streaming.address.public-base-url}") String publicBaseUrl,
 		@Value("${storage.s3-path}") String storageBase
 	) {
-		this.publicBaseUrl = publicBaseUrl;
+		if (publicBaseUrl == null || !PUBLIC_BASE_URL_SCHEME.matcher(publicBaseUrl).matches()) {
+			throw new IllegalStateException(
+				"streaming.address.public-base-url must start with http:// or https://. Got: " + publicBaseUrl);
+		}
+		this.publicBaseUrl = publicBaseUrl.endsWith("/")
+			? publicBaseUrl.substring(0, publicBaseUrl.length() - 1)
+			: publicBaseUrl;
 		this.storageBase = storageBase;
 	}
 

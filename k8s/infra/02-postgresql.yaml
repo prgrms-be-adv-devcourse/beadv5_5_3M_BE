@@ -1,0 +1,229 @@
+# PostgreSQL 18 + pgvector — 조원이 K3s worker 에 띄우는 매니페스트.
+# - 이미지: pgvector/pgvector:pg18 (pgvector 익스텐션 포함)
+# - init.sh (ConfigMap) 가 컨테이너 첫 기동 시 DB 7개 자동 생성:
+#     ai_db, user_db, creator_db, payment_db, ticket_db, settlement_db, streaming_db
+#     (movie-service 는 creator_db 공유 사용 — docker-compose 시절 그대로)
+# - ai_db 에 pgvector 익스텐션 자동 활성화
+# - 자격증명: postgres-secret 의 DB_USERNAME / DB_PASSWORD
+# - StatefulSet + PVC 20Gi (local-path)
+# - Service 이름: postgresql (값 변경 시 우리 values-*.yaml 의 DB_HOST 도 일치 필요)
+# - master 에 dedicated=es:NoSchedule taint 있으므로 worker(t3.large) 로 자동 스케줄
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-init
+  namespace: dev
+data:
+  init.sh: |
+    #!/bin/bash
+    set -e
+
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+      CREATE DATABASE ai_db;
+      CREATE DATABASE user_db;
+      CREATE DATABASE creator_db;
+      CREATE DATABASE payment_db;
+      CREATE DATABASE ticket_db;
+      CREATE DATABASE settlement_db;
+      CREATE DATABASE streaming_db;
+    EOSQL
+
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "ai_db" <<-EOSQL
+      CREATE EXTENSION IF NOT EXISTS vector;
+    EOSQL
+
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "ticket_db" <<-EOSQL
+      CREATE TABLE IF NOT EXISTS QRTZ_JOB_DETAILS (
+        SCHED_NAME        VARCHAR(120) NOT NULL,
+        JOB_NAME          VARCHAR(200) NOT NULL,
+        JOB_GROUP         VARCHAR(200) NOT NULL,
+        DESCRIPTION       VARCHAR(250) NULL,
+        JOB_CLASS_NAME    VARCHAR(250) NOT NULL,
+        IS_DURABLE        BOOL NOT NULL,
+        IS_NONCONCURRENT  BOOL NOT NULL,
+        IS_UPDATE_DATA    BOOL NOT NULL,
+        REQUESTS_RECOVERY BOOL NOT NULL,
+        JOB_DATA          BYTEA NULL,
+        PRIMARY KEY (SCHED_NAME,JOB_NAME,JOB_GROUP)
+      );
+      CREATE TABLE IF NOT EXISTS QRTZ_TRIGGERS (
+        SCHED_NAME     VARCHAR(120) NOT NULL,
+        TRIGGER_NAME   VARCHAR(200) NOT NULL,
+        TRIGGER_GROUP  VARCHAR(200) NOT NULL,
+        JOB_NAME       VARCHAR(200) NOT NULL,
+        JOB_GROUP      VARCHAR(200) NOT NULL,
+        DESCRIPTION    VARCHAR(250) NULL,
+        NEXT_FIRE_TIME BIGINT NULL,
+        PREV_FIRE_TIME BIGINT NULL,
+        PRIORITY       INTEGER NULL,
+        TRIGGER_STATE  VARCHAR(16) NOT NULL,
+        TRIGGER_TYPE   VARCHAR(8) NOT NULL,
+        START_TIME     BIGINT NOT NULL,
+        END_TIME       BIGINT NULL,
+        CALENDAR_NAME  VARCHAR(200) NULL,
+        MISFIRE_INSTR  SMALLINT NULL,
+        JOB_DATA       BYTEA NULL,
+        PRIMARY KEY (SCHED_NAME,TRIGGER_NAME,TRIGGER_GROUP),
+        FOREIGN KEY (SCHED_NAME,JOB_NAME,JOB_GROUP) REFERENCES QRTZ_JOB_DETAILS(SCHED_NAME,JOB_NAME,JOB_GROUP)
+      );
+      CREATE TABLE IF NOT EXISTS QRTZ_SIMPLE_TRIGGERS (
+        SCHED_NAME      VARCHAR(120) NOT NULL,
+        TRIGGER_NAME    VARCHAR(200) NOT NULL,
+        TRIGGER_GROUP   VARCHAR(200) NOT NULL,
+        REPEAT_COUNT    BIGINT NOT NULL,
+        REPEAT_INTERVAL BIGINT NOT NULL,
+        TIMES_TRIGGERED BIGINT NOT NULL,
+        PRIMARY KEY (SCHED_NAME,TRIGGER_NAME,TRIGGER_GROUP),
+        FOREIGN KEY (SCHED_NAME,TRIGGER_NAME,TRIGGER_GROUP) REFERENCES QRTZ_TRIGGERS(SCHED_NAME,TRIGGER_NAME,TRIGGER_GROUP)
+      );
+      CREATE TABLE IF NOT EXISTS QRTZ_CRON_TRIGGERS (
+        SCHED_NAME      VARCHAR(120) NOT NULL,
+        TRIGGER_NAME    VARCHAR(200) NOT NULL,
+        TRIGGER_GROUP   VARCHAR(200) NOT NULL,
+        CRON_EXPRESSION VARCHAR(120) NOT NULL,
+        TIME_ZONE_ID    VARCHAR(80),
+        PRIMARY KEY (SCHED_NAME,TRIGGER_NAME,TRIGGER_GROUP),
+        FOREIGN KEY (SCHED_NAME,TRIGGER_NAME,TRIGGER_GROUP) REFERENCES QRTZ_TRIGGERS(SCHED_NAME,TRIGGER_NAME,TRIGGER_GROUP)
+      );
+      CREATE TABLE IF NOT EXISTS QRTZ_SIMPROP_TRIGGERS (
+        SCHED_NAME    VARCHAR(120) NOT NULL,
+        TRIGGER_NAME  VARCHAR(200) NOT NULL,
+        TRIGGER_GROUP VARCHAR(200) NOT NULL,
+        STR_PROP_1    VARCHAR(512) NULL,
+        STR_PROP_2    VARCHAR(512) NULL,
+        STR_PROP_3    VARCHAR(512) NULL,
+        INT_PROP_1    INT NULL,
+        INT_PROP_2    INT NULL,
+        LONG_PROP_1   BIGINT NULL,
+        LONG_PROP_2   BIGINT NULL,
+        DEC_PROP_1    NUMERIC(13,4) NULL,
+        DEC_PROP_2    NUMERIC(13,4) NULL,
+        BOOL_PROP_1   BOOL NULL,
+        BOOL_PROP_2   BOOL NULL,
+        PRIMARY KEY (SCHED_NAME,TRIGGER_NAME,TRIGGER_GROUP),
+        FOREIGN KEY (SCHED_NAME,TRIGGER_NAME,TRIGGER_GROUP) REFERENCES QRTZ_TRIGGERS(SCHED_NAME,TRIGGER_NAME,TRIGGER_GROUP)
+      );
+      CREATE TABLE IF NOT EXISTS QRTZ_BLOB_TRIGGERS (
+        SCHED_NAME    VARCHAR(120) NOT NULL,
+        TRIGGER_NAME  VARCHAR(200) NOT NULL,
+        TRIGGER_GROUP VARCHAR(200) NOT NULL,
+        BLOB_DATA     BYTEA NULL,
+        PRIMARY KEY (SCHED_NAME,TRIGGER_NAME,TRIGGER_GROUP),
+        FOREIGN KEY (SCHED_NAME,TRIGGER_NAME,TRIGGER_GROUP) REFERENCES QRTZ_TRIGGERS(SCHED_NAME,TRIGGER_NAME,TRIGGER_GROUP)
+      );
+      CREATE TABLE IF NOT EXISTS QRTZ_CALENDARS (
+        SCHED_NAME    VARCHAR(120) NOT NULL,
+        CALENDAR_NAME VARCHAR(200) NOT NULL,
+        CALENDAR      BYTEA NOT NULL,
+        PRIMARY KEY (SCHED_NAME,CALENDAR_NAME)
+      );
+      CREATE TABLE IF NOT EXISTS QRTZ_PAUSED_TRIGGER_GRPS (
+        SCHED_NAME    VARCHAR(120) NOT NULL,
+        TRIGGER_GROUP VARCHAR(200) NOT NULL,
+        PRIMARY KEY (SCHED_NAME,TRIGGER_GROUP)
+      );
+      CREATE TABLE IF NOT EXISTS QRTZ_FIRED_TRIGGERS (
+        SCHED_NAME        VARCHAR(120) NOT NULL,
+        ENTRY_ID          VARCHAR(95) NOT NULL,
+        TRIGGER_NAME      VARCHAR(200) NOT NULL,
+        TRIGGER_GROUP     VARCHAR(200) NOT NULL,
+        INSTANCE_NAME     VARCHAR(200) NOT NULL,
+        FIRED_TIME        BIGINT NOT NULL,
+        SCHED_TIME        BIGINT NOT NULL,
+        PRIORITY          INTEGER NOT NULL,
+        STATE             VARCHAR(16) NOT NULL,
+        JOB_NAME          VARCHAR(200) NULL,
+        JOB_GROUP         VARCHAR(200) NULL,
+        IS_NONCONCURRENT  BOOL NULL,
+        REQUESTS_RECOVERY BOOL NULL,
+        PRIMARY KEY (SCHED_NAME,ENTRY_ID)
+      );
+      CREATE TABLE IF NOT EXISTS QRTZ_SCHEDULER_STATE (
+        SCHED_NAME        VARCHAR(120) NOT NULL,
+        INSTANCE_NAME     VARCHAR(200) NOT NULL,
+        LAST_CHECKIN_TIME BIGINT NOT NULL,
+        CHECKIN_INTERVAL  BIGINT NOT NULL,
+        PRIMARY KEY (SCHED_NAME,INSTANCE_NAME)
+      );
+      CREATE TABLE IF NOT EXISTS QRTZ_LOCKS (
+        SCHED_NAME VARCHAR(120) NOT NULL,
+        LOCK_NAME  VARCHAR(40) NOT NULL,
+        PRIMARY KEY (SCHED_NAME,LOCK_NAME)
+      );
+      CREATE INDEX IF NOT EXISTS IDX_QRTZ_J_REQ_RECOVERY ON QRTZ_JOB_DETAILS(SCHED_NAME,REQUESTS_RECOVERY);
+      CREATE INDEX IF NOT EXISTS IDX_QRTZ_J_GRP ON QRTZ_JOB_DETAILS(SCHED_NAME,JOB_GROUP);
+      CREATE INDEX IF NOT EXISTS IDX_QRTZ_T_J ON QRTZ_TRIGGERS(SCHED_NAME,JOB_NAME,JOB_GROUP);
+      CREATE INDEX IF NOT EXISTS IDX_QRTZ_T_JG ON QRTZ_TRIGGERS(SCHED_NAME,JOB_GROUP);
+      CREATE INDEX IF NOT EXISTS IDX_QRTZ_T_STATE ON QRTZ_TRIGGERS(SCHED_NAME,TRIGGER_STATE);
+      CREATE INDEX IF NOT EXISTS IDX_QRTZ_T_NEXT_FIRE_TIME ON QRTZ_TRIGGERS(SCHED_NAME,NEXT_FIRE_TIME);
+      CREATE INDEX IF NOT EXISTS IDX_QRTZ_FT_TRIG_INST_NAME ON QRTZ_FIRED_TRIGGERS(SCHED_NAME,INSTANCE_NAME);
+      CREATE INDEX IF NOT EXISTS IDX_QRTZ_FT_JG ON QRTZ_FIRED_TRIGGERS(SCHED_NAME,JOB_GROUP);
+      CREATE INDEX IF NOT EXISTS IDX_QRTZ_FT_TG ON QRTZ_FIRED_TRIGGERS(SCHED_NAME,TRIGGER_GROUP);
+    EOSQL
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql
+  namespace: dev
+spec:
+  serviceName: postgresql
+  selector:
+    matchLabels:
+      app: postgresql
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      containers:
+        - name: postgresql
+          image: pgvector/pgvector:pg18
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: DB_PASSWORD
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: DB_USERNAME
+          resources:
+            requests:
+              memory: "512Mi"
+            limits:
+              memory: "768Mi"
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - mountPath: /var/lib/postgresql
+              name: postgresql-data
+            - mountPath: /docker-entrypoint-initdb.d
+              name: postgresql-init
+      volumes:
+        - name: postgresql-init
+          configMap:
+            name: postgresql-init
+            defaultMode: 0755   # 실행 권한 부여
+  volumeClaimTemplates:
+    - metadata:
+        name: postgresql-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: dev
+spec:
+  selector:
+    app: postgresql
+  ports:
+    - port: 5432
+      targetPort: 5432

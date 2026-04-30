@@ -5,6 +5,7 @@ import com.example.userservice.application.exception.*;
 import com.example.userservice.application.usecase.UserUseCase;
 import com.example.userservice.domain.model.CookieLog;
 import com.example.userservice.domain.model.Permission;
+import com.example.userservice.domain.model.Gender;
 import com.example.userservice.domain.model.User;
 import com.example.userservice.domain.model.Wallet;
 import com.example.userservice.domain.model.DeletedUser;
@@ -26,6 +27,7 @@ import com.example.userservice.presentation.dto.req.DeductCookieRequest;
 import com.example.userservice.presentation.dto.req.JoinRequest;
 import com.example.userservice.presentation.dto.req.LoginRequest;
 import com.example.userservice.presentation.dto.req.RefundCookieRequest;
+import com.example.userservice.presentation.dto.res.CookieLogResponse;
 import com.example.userservice.presentation.dto.res.DeductCookieResponse;
 import com.example.userservice.presentation.dto.res.RefundCookieResponse;
 import com.example.userservice.presentation.dto.res.TokenResponse;
@@ -224,7 +226,7 @@ public class UserService implements UserUseCase {
     public DeductCookieResponse deductCookie(DeductCookieRequest request) {
         Wallet wallet = walletRepository.findByUserId(request.userId());
         wallet.deduct(request.amount());
-        CookieLog cookieLog = CookieLog.create(request.userId(), request.amount(), request.ticketId());
+        CookieLog cookieLog = CookieLog.create(request.userId(), -request.amount(), request.ticketId());
         cookieLogRepository.save(cookieLog);
         return new DeductCookieResponse(request.userId(), request.ticketId(), request.amount(), true);
     }
@@ -240,9 +242,20 @@ public class UserService implements UserUseCase {
     }
 
     @Override
+    @Transactional
     public TokenResponse oauthLogin(String code) {
         GoogleUserInfo googleUser = googleOAuthService.exchangeCodeForUserInfo(code);
-        User user = findOrCreateOAuthUser(googleUser);
+
+        User user;
+        if (userRepository.existsByEmail(googleUser.email())) {
+            user = userRepository.findByEmail(googleUser.email());
+        } else {
+            user = User.create(googleUser.email(), UUID.randomUUID().toString(), googleUser.name(), 0, Gender.MALE);
+            user.initWallet();
+            userRepository.save(user);
+            log.info("Google OAuth new user created: email={}", googleUser.email());
+            eventPublisher.publishEvent(UserCreatedEvent.from(user));
+        }
 
         String accessToken = jwtProvider.generateAccessToken(user.getUserId());
         String rawRefreshToken = jwtProvider.generateRefreshToken(user.getUserId());
@@ -261,16 +274,11 @@ public class UserService implements UserUseCase {
         return new TokenResponse(accessToken, rawRefreshToken);
     }
 
-    @Transactional
-    protected User findOrCreateOAuthUser(GoogleUserInfo googleUser) {
-        if (userRepository.existsByEmail(googleUser.email())) {
-            return userRepository.findByEmail(googleUser.email());
-        }
-        User user = User.create(googleUser.email(), UUID.randomUUID().toString(), googleUser.name(), null, null);
-        user.initWallet();
-        userRepository.save(user);
-        log.info("Google OAuth new user created: email={}", googleUser.email());
-        return user;
+    @Override
+    public List<CookieLogResponse> getMyCookieLogs(String userId) {
+        return cookieLogRepository.findByUserId(toUUID(userId)).stream()
+                .map(CookieLogResponse::from)
+                .toList();
     }
 
     private UUID toUUID(String userId) {
