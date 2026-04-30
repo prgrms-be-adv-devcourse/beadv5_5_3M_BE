@@ -12,7 +12,7 @@ service:
 
 env:
   SERVER_PORT: "8086"
-  DDL_AUTO: "update"
+  # DDL_AUTO: "update"  # 템플릿 기본값(validate) 사용
   # ⚠️ docker-compose 가 creator_db 를 가리키는 상태 그대로. movie_db 로 바꿔야 한다면 조원 확인 후 여기만 수정.
   DB_NAME: "creator_db"
   MOVIE_ES_ENABLED: "true"

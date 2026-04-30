@@ -14,7 +14,7 @@ service:
 env:
   SERVER_PORT: "8084"
   DB_NAME: "ticket_db"
-  DDL_AUTO: "update"
+  # DDL_AUTO: "update"  # 템플릿 기본값(validate) 사용
   CLIENT_USER_BASE_URL: "http://user-service-microservice.dev.svc.cluster.local:8085"
   # 시연용 lifecycle 가속 (운영 default 는 PT24H / PT10M)
   TICKET_CART_CLOSE_LEAD: "PT1M"

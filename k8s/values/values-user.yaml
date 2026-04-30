@@ -14,7 +14,7 @@ service:
 env:
   SERVER_PORT: "8085"
   DB_NAME: "user_db"
-  DDL_AUTO: "update"
+  # DDL_AUTO: "update"  # 템플릿 기본값(validate) 사용
   # MinIO (K8s 미사용 — 빈 생성은 되어야 하므로 더미 값 유지, 실제 호출 안 함)
   MINIO_ENDPOINT: "http://localhost:9000"
   MINIO_ACCESS_KEY: "dummy"

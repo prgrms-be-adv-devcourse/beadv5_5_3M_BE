@@ -13,7 +13,7 @@ service:
 env:
   SERVER_PORT: "8081"
   DB_NAME: "payment_db"
-  DDL_AUTO: "update"
+  # DDL_AUTO: "update"  # 템플릿 기본값(validate) 사용
 
 secretRefs:
   postgres: true
