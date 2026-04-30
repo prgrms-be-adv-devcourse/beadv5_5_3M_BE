@@ -48,3 +48,5 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// rolling rebuild marker — 2026-04-30
