@@ -210,4 +210,3 @@ SPRING_PROFILES_ACTIVE=prod ./gradlew bootRun
 - `docs/TROUBLESHOOTING.md` — 운영 문제 / 해결
 - `docs/ONBOARDING.md` — 신규 팀원 1시간 가이드
 - `docs/adr/` — 핵심 결정 5건 (0002 / 0003 / 0005 / 0010 / 0012)
-- Claude 가이드 — [CLAUDE.md](CLAUDE.md)
