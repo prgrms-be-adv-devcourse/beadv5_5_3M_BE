@@ -10,7 +10,7 @@ CineStream 의 추천 엔진. 사용자의 시청·좋아요 이력을 학습해
 
 ## Responsibilities
 
-- 영화 임베딩 생성 (`text-embedding-3-small`, 1536 dim, pgvector)
+- 영화 임베딩 생성 (`text-embedding-3-small`, 1536 dim, pgvector + hibernate-vector)
 - K-Means 클러스터링으로 유저 취향 벡터 갱신
 - ε-greedy 탐색·착취 비율 동적 조정
 - ANN 벡터 검색(착취) + 신작·저노출 후보(탐색)
@@ -24,7 +24,7 @@ CineStream 의 추천 엔진. 사용자의 시청·좋아요 이력을 학습해
 
 ![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.4-6DB33F?logo=spring&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-4169E1?logo=postgresql&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18%20%2B%20pgvector-4169E1?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
 ![Kafka](https://img.shields.io/badge/Kafka-Event%20Bus-231F20?logo=apachekafka&logoColor=white)
 ![OpenAI](https://img.shields.io/badge/OpenAI-Embedding%20%2B%20gpt--4o--mini-412991?logo=openai&logoColor=white)
@@ -88,7 +88,9 @@ flowchart TB
         B4 --> NORM[일반 유저: ANN 착취 + 탐색]
         NORM --> RR[LLM Re-ranking gpt-4o-mini]
         COLD --> UP[recommended_movie UPSERT]
-        RR --> UP
+        RR --> SUBMIT[OpenAI Batch API 제출]
+        SUBMIT --> UP
+        B5[02:00 Batch 결과 수령 + UPSERT]
     end
 
     subgraph API[추천 API]
@@ -105,7 +107,7 @@ flowchart TB
 
 - **Cold start 판단** — 시청·좋아요 가중치 합계가 임계치 미만이면 cold start. 인구통계·신작·저노출 후보로 채운다.
 - **K-Means + ε-greedy** — 매일 윈도(`window-size=100`) 안의 최근 인터랙션으로 K-Means 재계산. ε 은 매일 조정해 신규 영화 노출(탐색) 과 취향 매칭(착취) 의 균형을 맞춘다.
-- **ANN 벡터 검색** — pgvector 의 IVFFlat / HNSW 인덱스로 유저 취향 벡터 ↔ 영화 임베딩 cosine 검색.
+- **ANN 벡터 검색** — pgvector 의 IVFFlat / HNSW 인덱스로 유저 취향 벡터 ↔ 영화 임베딩 cosine 검색. ORM 레이어는 `hibernate-vector` 를 사용한다.
 - **LLM Re-ranking** — 상위 N 후보를 `gpt-4o-mini` 로 재정렬. OpenAI Batch API 를 사용해 비용을 절감하고, 02:00 에 결과를 수령.
 
 ---
@@ -122,7 +124,7 @@ flowchart TB
 | `user.created` | user | 취향 프로필 생성 |
 | `user.deleted` | user | 유저 데이터 전체 삭제 |
 
-이 서비스는 **HTTP outbound 없음** — 외부 서비스 호출은 OpenAI API 만, 내부 통신은 Kafka 단방향이다.
+이 서비스는 **내부 서비스 간 HTTP outbound 없음** — 외부 호출은 OpenAI API 한정이며, 내부 서비스 간 통신은 Kafka 단방향이다.
 
 ---
 
@@ -130,8 +132,29 @@ flowchart TB
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| `GET` | `/recommendations` | 유저 추천 목록 (Redis 캐시 우선) |
-| `PATCH` | `/recommendations/click` | 추천 클릭 이벤트 기록 |
+| `GET` | `/api/recommendations` | 유저 추천 목록 (Redis 캐시 우선) |
+| `PATCH` | `/api/recommendations/click` | 추천 클릭 이벤트 기록 |
+
+**공통 헤더**
+
+| 헤더 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| `X-User-Id` | UUID | ✅ | 게이트웨이가 주입하는 유저 식별자 |
+
+**GET `/api/recommendations` Response**
+
+```json
+[
+  { "logId": 1, "movieId": 42 },
+  { "logId": 2, "movieId": 17 }
+]
+```
+
+**PATCH `/api/recommendations/click` Request Body**
+
+```json
+{ "logId": 1 }
+```
 
 dev 프로파일에서만 노출되는 배치 수동 트리거:
 
@@ -146,7 +169,7 @@ dev 프로파일에서만 노출되는 배치 수동 트리거:
 
 epsilon · kmeans · calculate 는 body 에 UUID 목록을 받으며, 비어 있으면 어제 활성 유저를 자동 조회한다.
 
-자세한 스펙: Swagger UI `http://localhost:8089/swagger-ui.html`.
+자세한 스펙: Swagger UI `http://localhost:8089/swagger-ui/index.html`.
 
 ---
 
@@ -156,7 +179,7 @@ epsilon · kmeans · calculate 는 body 에 UUID 목록을 받으며, 비어 있
 |---|---|
 | External | OpenAI API (`text-embedding-3-small`, `gpt-4o-mini`, Batch API) |
 | Kafka inbound | 위 표 7종 |
-| Infra | PostgreSQL 16 + pgvector, Redis 7, Kafka |
+| Infra | PostgreSQL 18 + pgvector (hibernate-vector), Redis 7, Kafka |
 
 ---
 
@@ -165,7 +188,7 @@ epsilon · kmeans · calculate 는 body 에 UUID 목록을 받으며, 비어 있
 ### 사전 요구사항
 
 - Java 21
-- PostgreSQL 16 (pgvector 확장 설치 필요)
+- PostgreSQL 18 (pgvector 확장 설치 필요)
 - Redis 7
 - Kafka 브로커
 - OpenAI API Key
