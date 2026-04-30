@@ -194,4 +194,3 @@ SPRING_PROFILES_ACTIVE=prod ./gradlew bootRun
 - 인프라 (Redis 키 / TTL 매트릭스, Quartz 체이닝, Kafka 상세, AFTER_COMMIT + CookieCompensationHelper) — `docs/reference/infra/`
 - 트러블슈팅 (RES / TX / KFK / MEM / SCH 카테고리별 인시던트) — `docs/troubleshooting/`
 - 학습 노트 (self-invocation, `setRollbackOnly`, Redis atomicity, Quartz) — `docs/study/`
-- Claude 가이드 — [CLAUDE.md](CLAUDE.md)
