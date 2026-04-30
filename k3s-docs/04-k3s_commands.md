@@ -105,6 +105,21 @@ kubectl top node
 
 ---
 
+## 디스크 / 이미지 관리
+
+```bash
+# 디스크 사용량 확인
+df -h
+
+# 노드에 캐시된 컨테이너 이미지 목록 (워커 노드에서 실행)
+sudo crictl images
+
+# 사용하지 않는 이미지 일괄 삭제 (dangling 이미지 정리)
+sudo crictl rmi --prune
+```
+
+---
+
 ## Helm (서비스 배포)
 
 ```bash
