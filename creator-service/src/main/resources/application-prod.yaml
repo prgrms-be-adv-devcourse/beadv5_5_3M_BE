@@ -64,7 +64,7 @@ file:
 creator:
   schedule:
     min-registration-lead: ${CREATOR_MIN_REGISTRATION_LEAD:PT4M}
-    min-ticketing-window: ${CREATOR_MIN_TICKETING_WINDOW:PT4M}
+    min-ticketing-window: ${CREATOR_MIN_TICKETING_WINDOW:PT11M}
     batch:
       waiting-lead: ${CREATOR_BATCH_WAITING_LEAD:PT10M}
       completed-tolerance: ${CREATOR_BATCH_COMPLETED_TOLERANCE:PT10M}

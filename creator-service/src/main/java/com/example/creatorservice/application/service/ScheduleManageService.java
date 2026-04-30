@@ -42,7 +42,7 @@ public class ScheduleManageService implements ScheduleManageUseCase {
             ScheduleRepository scheduleRepository,
             ApplicationEventPublisher applicationEventPublisher,
             @Value("${creator.schedule.min-registration-lead:PT4M}") Duration minRegistrationLead,
-            @Value("${creator.schedule.min-ticketing-window:PT4M}") Duration minTicketingWindow) {
+            @Value("${creator.schedule.min-ticketing-window:PT11M}") Duration minTicketingWindow) {
         this.movieRepository = movieRepository;
         this.scheduleRepository = scheduleRepository;
         this.applicationEventPublisher = applicationEventPublisher;
