@@ -144,7 +144,6 @@ jobs:
 
             helm upgrade --install "$SVC" k8s/charts/microservice/ \
               -f "k8s/values/values-${VALUES_NAME}.yaml" \
-              --set image.tag="$TAG" \
               -n dev \
               --wait --timeout 5m
 
